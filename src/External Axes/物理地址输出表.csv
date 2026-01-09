@@ -1,0 +1,13 @@
+vertion,1
+checkposition,1
+FullName,Vaule1,value2,value3,value4
+_var_begin
+H10工作状态指示灯,,,,
+_var_begin
+H11_YB1工作指示灯,,,,
+H11_YV1工作指示灯,,,,
+_var_begin
+H12_YV2工作指示灯,,,,
+工,,,,
+_var_begin
+H13_YV3工作指示灯,,,,

@@ -1,0 +1,13 @@
+vertion,1
+checkposition,1
+FullName,Vaule1,value2,value3,value4
+_var_begin
+IO_out_,,,,
+IO_out_H10工作状态指示灯,,,,
+_var_begin
+IO_out_H11_YV1工作指示灯,,,,
+IO_out_H11工作状态指示灯,,,,
+_var_begin
+IO_out_H12_YV2工作指示灯,,,,
+_var_begin
+IO_out_H13_YV3工作指示灯,,,,

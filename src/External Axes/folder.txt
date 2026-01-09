@@ -1,0 +1,19 @@
+PROG
+ROOT
+	FILE	MAIN.LD
+	FILE	SBR_001.LD
+	FILE	SBR_SBR_HMI测试.ST
+	FILE	INT_001.LD
+FB
+ROOT
+	FILE	X_伺服轴调用.FB
+	FILE	Y_伺服轴调用.FB
+	FILE	Z_伺服轴调用.FB
+	FILE	对象_伺服功能块.FB
+	FILE	模式选择.FB
+FC
+ROOT
+	FILE	IO映射.FC
+	FILE	触发初始化.FC
+	FILE	运动参数设置.FC
+	FILE	运动重启.FC

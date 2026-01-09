@@ -1,0 +1,15 @@
+vertion,1
+checkposition,1
+FullName,Vaule1,value2,value3,value4
+_var_begin
+S2急停按钮,,,,
+_var_begin
+SB1复位按钮,,,,
+_var_begin
+SB2启动按钮,,,,
+_var_begin
+SB3停止按钮,,,,
+_var_begin
+SA1_工作流程选择,,,,
+_var_begin
+SA3_工作模式选择,,,,
