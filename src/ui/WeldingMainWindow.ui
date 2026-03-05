@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WeldingMainWindow</class>
+ <widget class="QMainWindow" name="WeldingMainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>WeldingMainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>20</horstretch>
+        <verstretch>10</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>15</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QTabWidget::pane {  /* 标签页内容区域 */
+    border: 2px solid #b4b4b4;
+    border-radius: 6px;
+    background: #f6f6f6;
+    margin-top: 0px; /* 与标签栏重叠边框 */
+}
+
+QTabWidget::tab-bar {  /* 标签栏整体 */
+    left: 0px; /* 标题左侧留空（类似QGroupBox的title缩进） */
+}
+
+QTabBar::tab {  /* 单个标签页 */
+    background: #d0d0d0;
+    border: 2px solid #b4b4b4;
+    border-bottom: none; /* 隐藏底部边框（与pane区域衔接） */
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    color: #000000;
+    padding: 5px 15px; /* 标签内边距 */
+    margin-right: 2px; /* 标签间距 */
+}
+
+QTabBar::tab:selected {  /* 选中的标签页 */
+    background: #f6f6f6; /* 与pane区域背景一致 */
+    border-bottom: 2px solid #f6f6f6; /* 覆盖pane的上边框 */
+}
+
+QTabBar::tab:!selected {  /* 未选中的标签页 */
+    margin-top: 3px; /* 模拟QGroupBox的margin-top */
+}</string>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="rail_tab">
+       <attribute name="title">
+        <string>地轨状态</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="0">
+         <widget class="RailWidget" name="railWidget" native="true"/>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>17</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>RailWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">src/rail/RailWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

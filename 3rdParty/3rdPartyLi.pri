@@ -1,0 +1,49 @@
+# 引入OpenCV库
+# INCLUDEPATH += D:/ProgramData/opencv/build/include/
+# INCLUDEPATH += D:/ProgramData/opencv/build/include/opencv2/
+# LIBS += -LD:/ProgramData/opencv/build/x64/vc15/lib/ -lopencv_world440
+INCLUDEPATH += D:/qt/opencv/opencv/build/include
+CONFIG(debug, debug|release){
+    LIBS += D:/qt/opencv/opencv/build/x64/vc15/lib/opencv_world460d.lib
+} else {
+    LIBS += D:/qt/opencv/opencv/build/x64/vc15/lib/opencv_world460.lib
+}
+
+# 引入Eigen矩阵运算库
+INCLUDEPATH += D:\ProgramData\eigen-git-mirror-master
+
+# # 引入PCL点云库
+include(D:\ProgramData\PCL1.9.1new\PCL191new.pri)
+
+# 引入Coin3d机器人显示库
+INCLUDEPATH += D:/ProgramData/Coin3d/include
+LIBS += D:\ProgramData\Coin3d\lib\*.lib
+# 引入Basler相机库
+INCLUDEPATH += $$quote(D:/Basler/pylon7/Development/include)
+LIBS +=  $$quote(D:/Basler/pylon7/Development/lib/x64/*.lib)
+
+# TJ_TCP
+INCLUDEPATH += D:/ProgramData/TJ_Projector/TCP
+LIBS += D:/ProgramData/TJ_Projector/TCP/TJSTProjectorApi.lib
+
+# 引入plog日志库
+INCLUDEPATH += ./3rdparty/plog/include
+
+# 引入cereal序列化反序列化库
+INCLUDEPATH += ./3rdparty/cereal/include
+
+# 宝元机器人
+INCLUDEPATH += ./3rdParty/BaoYuanRobot
+LIBS += ./3rdParty/BaoYuanRobot/sc2_vc_x64.lib
+#引入libmous
+INCLUDEPATH +=./3rdparty/libmodbus/include
+LIBS +=./3rdparty/libmodbus/X64/*.lib
+
+# CUDA合并TensorRT12.6
+# INCLUDEPATH += 'D:/YOLO/NVIDIA GPU Computing Toolkit/CUDA/v12.6/include'
+# LIBS += 'D:/YOLO/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64/*.lib'
+# CUDA合并TensorRT11.8
+INCLUDEPATH += 'D:/YOLO/NVIDIA GPU Computing Toolkit/CUDA/v11.8/include'
+LIBS += 'D:/YOLO/NVIDIA GPU Computing Toolkit/CUDA/v11.8/lib/x64/*.lib'
+INCLUDEPATH += 'D:/YOLO/NVIDIA GPU Computing Toolkit/TensorRT-8.6.1.6.Windows10.x86_64.cuda-11.8/TensorRT-8.6.1.6/include'
+LIBS += 'D:/YOLO/NVIDIA GPU Computing Toolkit/TensorRT-8.6.1.6.Windows10.x86_64.cuda-11.8/TensorRT-8.6.1.6/lib/*.lib'

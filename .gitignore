@@ -11,16 +11,10 @@
 *.gch
 *.pch
 
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
 # Compiled Dynamic libraries
 *.so
 *.dylib
-*.dll
+# *.dll
 
 # Fortran module files
 *.mod
@@ -30,12 +24,39 @@
 *.lai
 *.la
 *.a
-*.lib
+# *.lib
 
 # Executables
 *.exe
 *.out
 *.app
 
-# debug information files
-*.dwo
+# add
+/debug
+/release
+/.qtc_clangd
+/data/Corner/*
+/data/BeamButt/*
+/data/Up/*
+/data/error/*
+/data/seamDetWithPointCloud/*
+/data/seamDetWithSeg/*
+/data/SeamCoordinate.txt
+/data/calib/*
+/data/result/*
+/data/3D_Models/robot/an_chuan_SW/*
+/data/3D_Models/rail/SW/*
+/data/robotPose/*
+/output/*
+/.VSCodeCounter/*
+*.user
+*.pcd
+*.idb
+*.pdb
+*.exp
+*.opt
+Makefile*
+data/log/log*
+data/debug
+data/paper
+/data/workpieceCoaLoc
