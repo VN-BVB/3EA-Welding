@@ -35,6 +35,7 @@ private:
     modbus_t *modbusTcp = nullptr;
     bool m_isConnected = false;
     const int MAX_WRITE_REGISTERS = 123;  // Modbus协议规定 单次写入寄存器的数量最多为123个。
+    std::mutex m_modbusMutex;
 };
 
 #endif  // PLCCOMMUNICATION_H

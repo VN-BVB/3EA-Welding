@@ -1,6 +1,7 @@
 ﻿#include "PLCCommunication.h"
 
 #include <errno.h>
+#include <plog/Log.h>
 
 #include <QDebug>
 #include <QString>
@@ -54,6 +55,8 @@ void PLCCommunication::whenDisconnectFromPLC() {
 
 bool PLCCommunication::isConnected() const { return m_isConnected && modbusTcp && modbus_get_socket(modbusTcp) >= 0; }
 bool PLCCommunication::writeCoils(int address, const QVector<bool> &values) {
+    std::lock_guard<std::mutex> lock(m_modbusMutex);
+
     if (!isConnected()) {
         emit errorOccurred(u8"Modbus未连接，无法写入线圈");
         return false;
@@ -74,6 +77,7 @@ bool PLCCommunication::writeCoils(int address, const QVector<bool> &values) {
     return true;
 }
 bool PLCCommunication::writeRegisters(int address, const QVector<quint16> &values) {
+    std::lock_guard<std::mutex> lock(m_modbusMutex);
     if (!isConnected()) {
         emit errorOccurred(u8"Modbus未连接，无法写入寄存器");
         return false;
@@ -92,6 +96,7 @@ bool PLCCommunication::writeRegisters(int address, const QVector<quint16> &value
     return true;
 }
 bool PLCCommunication::readCoils(int address, int num, QVector<bool> &results) {
+    std::lock_guard<std::mutex> lock(m_modbusMutex);
     if (!isConnected()) {
         emit errorOccurred(u8"Modbus未连接，无法读取线圈");
         return false;
@@ -114,6 +119,7 @@ bool PLCCommunication::readCoils(int address, int num, QVector<bool> &results) {
 }
 
 bool PLCCommunication::readRegisters(int address, int num, QVector<quint16> &results) {
+    std::lock_guard<std::mutex> lock(m_modbusMutex);
     if (!isConnected()) {
         emit errorOccurred(u8"Modbus未连接，无法读取寄存器");
         return false;

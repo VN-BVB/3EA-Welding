@@ -2,8 +2,9 @@
 
 #include <QTextCodec>
 
-#include "axis_manager.h"
+#include "AbstractAxisFactory.h"
 #include "PLCCommunication.h"
+#include "concrete_axis/AxisManager.h"
 #include "ui_RailWidget.h"
 // #pragma execution_character_set("utf-8")
 
@@ -13,55 +14,113 @@ RailWidget::RailWidget(QWidget *parent) : QWidget(parent), ui(new Ui::RailWidget
     qRegisterMetaType<QString>("QString");
     qRegisterMetaType<QVector<bool>>("QVector<bool>");
     qRegisterMetaType<QVector<quint16>>("QVector<quint16>");
+    qRegisterMetaType<std::shared_ptr<AbstractAxis>>("std::shared_ptr<AbstractAxis>");
     // 可学习QMetaObject代替
     ui->label_X_CurrentPosition->setStyleSheet("background-color: white; border: 1px solid black;");
     ui->label_X_CurrentSpeed->setStyleSheet("background-color: white; border: 1px solid black;");
+    ui->label_Y_CurrentPosition->setStyleSheet("background-color: white; border: 1px solid black;");
+    ui->label_Y_CurrentSpeed->setStyleSheet("background-color: white; border: 1px solid black;");
+    ui->label_Z_CurrentPosition->setStyleSheet("background-color: white; border: 1px solid black;");
+    ui->label_Z_CurrentSpeed->setStyleSheet("background-color: white; border: 1px solid black;");
+    ui->chk_ImmediateStop->setStyleSheet("QCheckBox { color: red; }");
     // 初始化通信层
     m_communication_ = std::make_unique<PLCCommunication>();
     m_communication_->moveToThread(m_commThread);
     // 初始化三轴管理器
-    m_xAxis = std::make_unique<AxisManager>(Axis::X, m_communication_.get());
-
+    m_xAxis = AbstractAxisFactory::createAxis(Axis::X, m_communication_.get());
+    m_yAxis = AbstractAxisFactory::createAxis(Axis::Y, m_communication_.get());
+    m_zAxis = AbstractAxisFactory::createAxis(Axis::Z, m_communication_.get());
     // 为每个轴分配独立线程
-
     m_xAxis->moveToThread(m_xAxisThread);
-    // m_yAxis->moveToThread(m_yAxisThread);
-    // m_zAxis->moveToThread(m_zAxisThread);
+    m_yAxis->moveToThread(m_yAxisThread);
+    m_zAxis->moveToThread(m_zAxisThread);
     m_commThread->start();
     m_xAxisThread->start();
-    // m_yAxisThread->start();
-    // m_zAxisThread->start();
+    m_yAxisThread->start();
+    m_zAxisThread->start();
     // 通信层
     connect(m_communication_.get(), &PLCCommunication::sendText, this, &RailWidget::whenAppendTextLog);
     connect(m_communication_.get(), &PLCCommunication::errorOccurred, this, &RailWidget::whenAppendErrorLog);
-    connect(m_communication_.get(), &PLCCommunication::connectionStatusChanged, m_xAxis.get(), &AxisManager::enableServo);
+    connect(m_communication_.get(), &PLCCommunication::connectionStatusChanged, m_xAxis.get(), &AbstractAxis::enableServo);
+    connect(m_communication_.get(), &PLCCommunication::connectionStatusChanged, m_yAxis.get(), &AbstractAxis::enableServo);
+    connect(m_communication_.get(), &PLCCommunication::connectionStatusChanged, m_zAxis.get(), &AbstractAxis::enableServo);
     connect(this, &RailWidget::sendConnectToPLC, m_communication_.get(), &PLCCommunication::whenConnectToPLC);
     connect(this, &RailWidget::sendDisconnectToPLC, m_communication_.get(), &PLCCommunication::whenDisconnectFromPLC);
-    // connect(m_communication, &PLCCommunication::sendPLCConnected, m_yAxis, &AxisManager::enableServo);
-    // connect(m_communication, &PLCCommunication::sendPLCConnected, m_zAxis, &AxisManager::enableServo);
     // ---轴组---
     // X轴
-    connect(m_xAxis.get(), &AxisManager::axisError, this, &RailWidget::whenAppendErrorLog);
-    connect(m_xAxis.get(), &AxisManager::sendTextState, this, &RailWidget::whenUpdateAMState);
-    connect(m_xAxis.get(), &AxisManager::sendText, this, &RailWidget::whenAppendTextLog);
-    connect(m_xAxis.get(), &AxisManager::sendPositionAndSpeed, this, &RailWidget::whenUpdatePositionAndSpeed);
-    connect(this, &RailWidget::sendMove2AbsPosition, m_xAxis.get(), &AxisManager::whenMove2AbsPosition);  // 绝对位置
+    connect(m_xAxis.get(), &AbstractAxis::axisError, this, &RailWidget::whenAppendErrorLog);
+    connect(m_xAxis.get(), &AbstractAxis::sendTextState, this, [this](const QString &messageAxis, const QString &messageMotion) {
+        whenUpdateAMState(messageAxis, messageMotion, Axis::X);
+    });
+    connect(m_xAxis.get(), &AbstractAxis::sendText, this, &RailWidget::whenAppendTextLog);
+    connect(m_xAxis.get(), &AbstractAxis::sendPositionAndSpeed, this,
+            [this](float position, float speed) { whenUpdatePositionAndSpeed(position, speed, Axis::X); });
+    connect(this, &RailWidget::sendMove2AbsPosition, m_xAxis.get(), &AbstractAxis::whenMove2AbsPosition);  // 绝对位置
 
-    // connect(this, &RailWidget::sendWriteRegisters, rail, &Rail::writeRegisters);
+    // Y轴
+    connect(m_yAxis.get(), &AbstractAxis::axisError, this, &RailWidget::whenAppendErrorLog);
+    connect(m_yAxis.get(), &AbstractAxis::sendTextState, this, [this](const QString &messageAxis, const QString &messageMotion) {
+        whenUpdateAMState(messageAxis, messageMotion, Axis::Y);
+    });
+    connect(m_yAxis.get(), &AbstractAxis::sendText, this, &RailWidget::whenAppendTextLog);
+    connect(m_yAxis.get(), &AbstractAxis::sendPositionAndSpeed, this,
+            [this](float position, float speed) { whenUpdatePositionAndSpeed(position, speed, Axis::Y); });
 
-    // connect(this, &RailWidget::sendForward, rail, &Rail::whenForward);
-    // connect(this, &RailWidget::sendReverse, rail, &Rail::whenReverse);
+    // Z轴
+    connect(m_zAxis.get(), &AbstractAxis::axisError, this, &RailWidget::whenAppendErrorLog);
+    connect(m_zAxis.get(), &AbstractAxis::sendTextState, this, [this](const QString &messageAxis, const QString &messageMotion) {
+        whenUpdateAMState(messageAxis, messageMotion, Axis::Z);
+    });
+    connect(m_zAxis.get(), &AbstractAxis::sendText, this, &RailWidget::whenAppendTextLog);
+    connect(m_zAxis.get(), &AbstractAxis::sendPositionAndSpeed, this,
+            [this](float position, float speed) { whenUpdatePositionAndSpeed(position, speed, Axis::Z); });
 }
 
 RailWidget::~RailWidget() { this->disconnectRail(); }
 
 // 设置绝对运动位置框
-void RailWidget::setEditAbsPosition(QString position) { ui->edit_X_AbsPosition->setText(position); }
+void RailWidget::setEditAbsPosition(QString position, Axis axis) {
+    switch (axis) {
+        case Axis::X:
+            ui->edit_X_AbsPosition->setText(position);
+            break;
+        case Axis::Y:
+            ui->edit_Y_AbsPosition->setText(position);
+            break;
+        case Axis::Z:
+            ui->edit_Z_AbsPosition->setText(position);
+            break;
+    }
+}
 
 // 设置速度框
-void RailWidget::setEditSpeed(QString speed) { ui->edit_X_AbsSpeed->setText(speed); }
+void RailWidget::setEditSpeed(QString speed, Axis axis) {
+    switch (axis) {
+        case Axis::X:
+            ui->edit_X_AbsSpeed->setText(speed);
+            break;
+        case Axis::Y:
+            ui->edit_Y_AbsSpeed->setText(speed);
+            break;
+        case Axis::Z:
+            ui->edit_Z_AbsSpeed->setText(speed);
+            break;
+    }
+}
+
 // 获取当前位置
-double RailWidget::getCurrentXPosition() const { return ui->label_X_CurrentPosition->text().toDouble(); }
+double RailWidget::getCurrentPosition(Axis axis) const {
+    switch (axis) {
+        case Axis::X:
+            return ui->label_X_CurrentPosition->text().toDouble();
+        case Axis::Y:
+            return ui->label_Y_CurrentPosition->text().toDouble();
+        case Axis::Z:
+            return ui->label_Z_CurrentPosition->text().toDouble();
+        default:
+            return 0.0;
+    }
+}
 
 // 在信息框推送信息
 void RailWidget::whenAppendTextLog(const QString message) { ui->textEdit->append(message); }
@@ -70,31 +129,76 @@ void RailWidget::whenAppendErrorLog(const QString message) {
     ui->textEdit->append(message);
     ui->textEdit->setTextColor(Qt::black);  // 还原
 }
-
-// 更新轴和运动状态信息
-void RailWidget::whenUpdateAMState(const QString messageAxis, const QString messageMotion) {
-    // 检查 messageAxis 是否为空，若非空则更新 edit_AxisState
+// 更新三轴状态的重载函数
+void RailWidget::whenUpdateAMState(const QString messageAxis, const QString messageMotion, Axis axis) {
+    // 检查 messageAxis 是否为空，若非空则更新对应轴的状态
     if (!messageAxis.isEmpty()) {
-        ui->edit_AxisState->clear();
-        ui->edit_AxisState->append(messageAxis);
+        switch (axis) {
+            case Axis::X:
+                ui->edit_X_AxisState->clear();
+                ui->edit_X_AxisState->append(messageAxis);
+                break;
+            case Axis::Y:
+                ui->edit_Y_AxisState->clear();
+                ui->edit_Y_AxisState->append(messageAxis);
+                break;
+            case Axis::Z:
+                ui->edit_Z_AxisState->clear();
+                ui->edit_Z_AxisState->append(messageAxis);
+                break;
+        }
     }
 
-    // 检查 messageMotion 是否为空，若非空则更新 edit_MotionState
+    // 检查 messageMotion 是否为空，若非空则更新对应轴的运动状态
     if (!messageMotion.isEmpty()) {
-        ui->edit_MotionState->clear();
-        ui->edit_MotionState->append(messageMotion);
+        switch (axis) {
+            case Axis::X:
+                ui->edit_X_MotionState->clear();
+                ui->edit_X_MotionState->append(messageMotion);
+                break;
+            case Axis::Y:
+                ui->edit_Y_MotionState->clear();
+                ui->edit_Y_MotionState->append(messageMotion);
+                break;
+            case Axis::Z:
+                ui->edit_Z_MotionState->clear();
+                ui->edit_Z_MotionState->append(messageMotion);
+                break;
+        }
     }
 }
-
-// 更新地轨当前位置和速度
-void RailWidget::whenUpdatePositionAndSpeed(float position, float speed) {
+// 更新三轴位置和速度的重载函数
+void RailWidget::whenUpdatePositionAndSpeed(float position, float speed, Axis axis) {
     if (!std::isnan(position) && !std::isnan(speed)) {
-        // 处理数据并更新 UI
-        ui->label_X_CurrentPosition->setText(QString::number(position, 'f', 3));
-        ui->label_X_CurrentSpeed->setText(QString::number(speed, 'f', 3));
+        switch (axis) {
+            case Axis::X:
+                ui->label_X_CurrentPosition->setText(QString::number(position, 'f', 3));
+                ui->label_X_CurrentSpeed->setText(QString::number(speed, 'f', 3));
+                break;
+            case Axis::Y:
+                ui->label_Y_CurrentPosition->setText(QString::number(position, 'f', 3));
+                ui->label_Y_CurrentSpeed->setText(QString::number(speed, 'f', 3));
+                break;
+            case Axis::Z:
+                ui->label_Z_CurrentPosition->setText(QString::number(position, 'f', 3));
+                ui->label_Z_CurrentSpeed->setText(QString::number(speed, 'f', 3));
+                break;
+        }
     } else {
-        ui->label_X_CurrentPosition->setText("Read failed!");
-        ui->label_X_CurrentSpeed->setText("Read failed!");
+        switch (axis) {
+            case Axis::X:
+                ui->label_X_CurrentPosition->setText("Read failed!");
+                ui->label_X_CurrentSpeed->setText("Read failed!");
+                break;
+            case Axis::Y:
+                ui->label_Y_CurrentPosition->setText("Read failed!");
+                ui->label_Y_CurrentSpeed->setText("Read failed!");
+                break;
+            case Axis::Z:
+                ui->label_Z_CurrentPosition->setText("Read failed!");
+                ui->label_Z_CurrentSpeed->setText("Read failed!");
+                break;
+        }
     }
 }
 
@@ -105,46 +209,51 @@ void RailWidget::connectRail() { emit sendConnectToPLC(ip, port); }
 void RailWidget::disconnectRail() {
     // 先禁用所有轴的伺服（安全措施）
     QMetaObject::invokeMethod(m_xAxis.get(), [=]() { m_xAxis->enableServo(false); }, Qt::BlockingQueuedConnection);
-    // m_yAxis->enableServo(false);
-    // m_zAxis->enableServo(false);
+    QMetaObject::invokeMethod(m_yAxis.get(), [=]() { m_yAxis->enableServo(false); }, Qt::BlockingQueuedConnection);
+    QMetaObject::invokeMethod(m_zAxis.get(), [=]() { m_zAxis->enableServo(false); }, Qt::BlockingQueuedConnection);
+
     // 断开PLC连接
     emit sendDisconnectToPLC();
 
     // 更新状态信息
-    whenUpdateAMState(u8"断开连接", u8"断开连接");
+    whenUpdateAMState(u8"断开连接", u8"断开连接", Axis::X);
+    whenUpdateAMState(u8"断开连接", u8"断开连接", Axis::Y);
+    whenUpdateAMState(u8"断开连接", u8"断开连接", Axis::Z);
 }
-// 地轨回归原点按钮点击事件
-void RailWidget::on_btn_regressOrigin_clicked() {
-    QMetaObject::invokeMethod(m_xAxis.get(), &AxisManager::setHome, Qt::QueuedConnection);
+void RailWidget::on_btn_contectRail_clicked() { connectRail(); }
+
+void RailWidget::on_btn_discontectRail_clicked() { disconnectRail(); }
+// 地轨紧急停止按钮状态切换事件
+void RailWidget::on_chk_ImmediateStop_toggled(bool checked) {
+    // 对所有轴执行急停操作
+    QMetaObject::invokeMethod(m_xAxis.get(), [=]() { m_xAxis->immediateStop(checked); }, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_yAxis.get(), [=]() { m_yAxis->immediateStop(checked); }, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_zAxis.get(), [=]() { m_zAxis->immediateStop(checked); }, Qt::QueuedConnection);
+}
+// 地轨重置按钮状态切换事件
+void RailWidget::on_btn_chk_Rest_clicked() {
+    QMetaObject::invokeMethod(m_xAxis.get(), &AbstractAxis::reset, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_yAxis.get(), &AbstractAxis::reset, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_zAxis.get(), &AbstractAxis::reset, Qt::QueuedConnection);
 }
 
+// 地轨回归原点按钮点击事件
+void RailWidget::on_btn_X_regressOrigin_clicked() {
+    QMetaObject::invokeMethod(m_xAxis.get(), &AbstractAxis::setHome, Qt::QueuedConnection);
+}
 // 绝对位置运动按钮
 void RailWidget::on_btn_X_AbsPositionCommand_clicked() {
     float v = ui->edit_X_AbsSpeed->text().toFloat();
-    emit sendMove2AbsPosition(ui->edit_X_AbsPosition->text().toFloat(), ui->edit_X_AbsSpeed->text().toFloat());
+    emit sendMove2AbsPosition(ui->edit_X_AbsSpeed->text().toFloat(), ui->edit_X_AbsPosition->text().toFloat());
 }
-
 // 运动绝对位置滑块
 void RailWidget::on_horizontalSlider_X_AbsPosition_sliderMoved(int val) { ui->edit_X_AbsPosition->setText(QString::number(val)); }
-
 // 运动速度滑块
 void RailWidget::on_horizontalSlider_X_AbsSpeed_sliderMoved(int val) { ui->edit_X_AbsSpeed->setText(QString::number(val)); }
-
 // 地轨停止按钮状态切换事件
-void RailWidget::on_chk_Stop_toggled(bool checked) {
+void RailWidget::on_chk_X_Stop_toggled(bool checked) {
     QMetaObject::invokeMethod(m_xAxis.get(), [=]() { m_xAxis->stopSport(checked); }, Qt::QueuedConnection);
 }
-
-// 地轨重置按钮状态切换事件
-void RailWidget::on_btn_chk_Rest_clicked() {
-    QMetaObject::invokeMethod(m_xAxis.get(), &AxisManager::reset, Qt::QueuedConnection);
-}
-
-// 地轨紧急停止按钮状态切换事件
-void RailWidget::on_chk_ImmediateStop_toggled(bool checked) {
-    QMetaObject::invokeMethod(m_xAxis.get(), [=]() { m_xAxis->immediateStop(checked); }, Qt::QueuedConnection);
-}
-
 // 地轨正向点动按钮按下事件
 void RailWidget::on_btn_X_JogForward_pressed() {
     float v = ui->edit_X_AbsSpeed->text().toFloat();
@@ -168,6 +277,98 @@ void RailWidget::on_btn_X_JogReverse_released() {
     float v = ui->edit_X_AbsSpeed->text().toFloat();
     QMetaObject::invokeMethod(m_xAxis.get(), [=]() { m_xAxis->moveReverse(v, false); }, Qt::QueuedConnection);
 }
-void RailWidget::on_btn_contectRail_clicked() { connectRail(); }
+// --------------------------------------- Y轴按钮事件 --------------------------------------------
+// Y轴回归原点按钮点击事件
+void RailWidget::on_btn_Y_regressOrigin_clicked() {
+    QMetaObject::invokeMethod(m_yAxis.get(), &AbstractAxis::setHome, Qt::QueuedConnection);
+}
 
-void RailWidget::on_btn_discontectRail_clicked() { disconnectRail(); }
+// Y轴绝对位置运动按钮
+void RailWidget::on_btn_Y_AbsPositionCommand_clicked() {
+    float v = ui->edit_Y_AbsSpeed->text().toFloat();
+    float p = ui->edit_Y_AbsPosition->text().toFloat();
+    QMetaObject::invokeMethod(m_yAxis.get(), [=]() { m_yAxis->whenMove2AbsPosition(v, p); }, Qt::QueuedConnection);
+}
+
+// Y轴运动绝对位置滑块
+void RailWidget::on_horizontalSlider_Y_AbsPosition_sliderMoved(int val) { ui->edit_Y_AbsPosition->setText(QString::number(val)); }
+
+// Y轴运动速度滑块
+void RailWidget::on_horizontalSlider_Y_AbsSpeed_sliderMoved(int val) { ui->edit_Y_AbsSpeed->setText(QString::number(val)); }
+
+// Y轴停止按钮状态切换事件
+void RailWidget::on_chk_Y_Stop_toggled(bool checked) {
+    QMetaObject::invokeMethod(m_yAxis.get(), [=]() { m_yAxis->stopSport(checked); }, Qt::QueuedConnection);
+}
+
+// Y轴正向点动按钮按下事件
+void RailWidget::on_btn_Y_JogForward_pressed() {
+    float v = ui->edit_Y_AbsSpeed->text().toFloat();
+    QMetaObject::invokeMethod(m_yAxis.get(), [=]() { m_yAxis->moveForward(v, true); }, Qt::QueuedConnection);
+}
+
+// Y轴正向点动按钮释放事件
+void RailWidget::on_btn_Y_JogForward_released() {
+    float v = ui->edit_Y_AbsSpeed->text().toFloat();
+    QMetaObject::invokeMethod(m_yAxis.get(), [=]() { m_yAxis->moveForward(v, false); }, Qt::QueuedConnection);
+}
+
+// Y轴反向点动按钮按下事件
+void RailWidget::on_btn_Y_JogReverse_pressed() {
+    float v = ui->edit_Y_AbsSpeed->text().toFloat();
+    QMetaObject::invokeMethod(m_yAxis.get(), [=]() { m_yAxis->moveReverse(v, true); }, Qt::QueuedConnection);
+}
+
+// Y轴反向点动按钮释放事件
+void RailWidget::on_btn_Y_JogReverse_released() {
+    float v = ui->edit_Y_AbsSpeed->text().toFloat();
+    QMetaObject::invokeMethod(m_yAxis.get(), [=]() { m_yAxis->moveReverse(v, false); }, Qt::QueuedConnection);
+}
+
+// --------------------------------------- Z轴按钮事件 --------------------------------------------
+// Z轴回归原点按钮点击事件
+void RailWidget::on_btn_Z_regressOrigin_clicked() {
+    QMetaObject::invokeMethod(m_zAxis.get(), &AbstractAxis::setHome, Qt::QueuedConnection);
+}
+
+// Z轴绝对位置运动按钮
+void RailWidget::on_btn_Z_AbsPositionCommand_clicked() {
+    float v = ui->edit_Z_AbsSpeed->text().toFloat();
+    float p = ui->edit_Z_AbsPosition->text().toFloat();
+    QMetaObject::invokeMethod(m_zAxis.get(), [=]() { m_zAxis->whenMove2AbsPosition(v, p); }, Qt::QueuedConnection);
+}
+
+// Z轴运动绝对位置滑块
+void RailWidget::on_horizontalSlider_Z_AbsPosition_sliderMoved(int val) { ui->edit_Z_AbsPosition->setText(QString::number(val)); }
+
+// Z轴运动速度滑块
+void RailWidget::on_horizontalSlider_Z_AbsSpeed_sliderMoved(int val) { ui->edit_Z_AbsSpeed->setText(QString::number(val)); }
+
+// Z轴停止按钮状态切换事件
+void RailWidget::on_chk_Z_Stop_toggled(bool checked) {
+    QMetaObject::invokeMethod(m_zAxis.get(), [=]() { m_zAxis->stopSport(checked); }, Qt::QueuedConnection);
+}
+
+// Z轴正向点动按钮按下事件
+void RailWidget::on_btn_Z_JogForward_pressed() {
+    float v = ui->edit_Z_AbsSpeed->text().toFloat();
+    QMetaObject::invokeMethod(m_zAxis.get(), [=]() { m_zAxis->moveForward(v, true); }, Qt::QueuedConnection);
+}
+
+// Z轴正向点动按钮释放事件
+void RailWidget::on_btn_Z_JogForward_released() {
+    float v = ui->edit_Z_AbsSpeed->text().toFloat();
+    QMetaObject::invokeMethod(m_zAxis.get(), [=]() { m_zAxis->moveForward(v, false); }, Qt::QueuedConnection);
+}
+
+// Z轴反向点动按钮按下事件
+void RailWidget::on_btn_Z_JogReverse_pressed() {
+    float v = ui->edit_Z_AbsSpeed->text().toFloat();
+    QMetaObject::invokeMethod(m_zAxis.get(), [=]() { m_zAxis->moveReverse(v, true); }, Qt::QueuedConnection);
+}
+
+// Z轴反向点动按钮释放事件
+void RailWidget::on_btn_Z_JogReverse_released() {
+    float v = ui->edit_Z_AbsSpeed->text().toFloat();
+    QMetaObject::invokeMethod(m_zAxis.get(), [=]() { m_zAxis->moveReverse(v, false); }, Qt::QueuedConnection);
+}

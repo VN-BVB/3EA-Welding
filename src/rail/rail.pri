@@ -1,14 +1,15 @@
 HEADERS += \
     $$PWD/AbstractAxis.h \
+    $$PWD/AbstractAxisFactory.h \
     $$PWD/PLCCommunication.h \
     $$PWD/RailWidget.h \
-    $$PWD/axis_manager.h \
-    $$PWD/axis_register.h
+    $$PWD/concrete_axis/AxisManager.h \
+    $$PWD/concrete_axis/axis_register.h
 
 SOURCES += \
     $$PWD/PLCCommunication.cpp \
     $$PWD/RailWidget.cpp \
-    $$PWD/axis_manager.cpp
+    $$PWD/concrete_axis/AxisManager.cpp
 
 FORMS += \
     $$PWD/RailWidget.ui

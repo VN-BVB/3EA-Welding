@@ -1,11 +1,10 @@
-﻿#include "axis_manager.h"
+﻿#include "AxisManager.h"
 
 #include <QDebug>
 
-#include "PLCCommunication.h"
+#include "../PLCCommunication.h"
 
-AxisManager::AxisManager(Axis axis, PLCCommunication *comm, QObject *parent)
-    : QObject(parent), m_axis(axis), m_communication(comm) {
+AxisManager::AxisManager(Axis axis, PLCCommunication *comm, QObject *parent) : AbstractAxis(comm, parent), m_axis(axis) {
     m_previousCoilStatuses = QVector<bool>(32, false);
     switch (m_axis) {
         case Axis::X:
@@ -27,21 +26,25 @@ AxisManager::~AxisManager() {
     // qDebug() << "AxisManager destroyed at" << QTime::currentTime().toString() << "thread =" << QThread::currentThread();
 }
 
-void AxisManager::setTimer() {
+void AxisManager::startMonitoring(int intervalMs) {
     if (!m_realTimer) {
         m_realTimer = new QTimer(this);
         connect(m_realTimer, &QTimer::timeout, this, &AxisManager::onRealTimeout);
     }
 
-    m_realTimer->start(100);
+    m_realTimer->start(intervalMs);
 }
+void AxisManager::stopMonitoring() {
+    if (m_realTimer && m_realTimer->isActive()) m_realTimer->stop();
+}
+
 void AxisManager::setAxisVel(float vel, int address) {
     QVector<quint16> values = floatToQuint16(vel);
     m_communication->writeRegisters(address, values);
 }
 
-void AxisManager::whenMove2AbsPosition(float pos, float vel) {
-    if (!m_isEnable) {
+void AxisManager::whenMove2AbsPosition(float vel, float pos) {
+    if (!m_communication || !m_isEnable) {
         emit sendText(QString(axisName + u8"未使能"));
         return;
     }
@@ -60,7 +63,7 @@ void AxisManager::whenMove2AbsPosition(float pos, float vel) {
 }
 
 void AxisManager::moveForward(float vel, bool checked) {
-    if (!m_isEnable) {
+    if (!m_communication || !m_isEnable) {
         emit sendText(QString(axisName + u8"未使能"));
         return;
     }
@@ -70,7 +73,7 @@ void AxisManager::moveForward(float vel, bool checked) {
 }
 
 void AxisManager::moveReverse(float vel, bool checked) {
-    if (!m_isEnable) {
+    if (!m_communication || !m_isEnable) {
         emit sendText(QString(axisName + u8"未使能"));
         return;
     }
@@ -80,15 +83,21 @@ void AxisManager::moveReverse(float vel, bool checked) {
 }
 
 void AxisManager::enableServo(bool enable) {
+    if (!m_communication) {
+        emit sendText(QString(axisName + u8"PLC通讯注入失败"));
+        return;
+    }
     int reg = addr(m_axis, RegB::ServoEnable);
+    // QMetaObject::invokeMethod(m_communication, [=]() { m_communication->writeCoils(reg, {enable}); }, Qt::QueuedConnection);
     m_communication->writeCoils(reg, {enable});
     if (enable) {
         reset();
-        setTimer();
+        startMonitoring(100);
         m_isEnable = true;
     } else {
+        m_previousCoilStatuses = QVector<bool>(32, false);
+        stopMonitoring();
         m_isEnable = false;
-        if (m_realTimer && m_realTimer->isActive()) m_realTimer->stop();
     }
 }
 
@@ -101,7 +110,7 @@ void AxisManager::reset() {
     m_communication->writeCoils(reg, {true});
 }
 void AxisManager::setHome() {
-    if (!m_isEnable) {
+    if (!m_communication || !m_isEnable) {
         emit sendText(QString(axisName + u8"未使能"));
         return;
     }
@@ -109,7 +118,7 @@ void AxisManager::setHome() {
     m_communication->writeCoils(reg, {true});
 }
 void AxisManager::stopSport(bool checked) {
-    if (!m_isEnable) {
+    if (!m_communication || !m_isEnable) {
         emit sendText(QString(axisName + u8"未使能"));
         return;
     }
@@ -117,7 +126,7 @@ void AxisManager::stopSport(bool checked) {
     m_communication->writeCoils(reg, {checked});
 }
 void AxisManager::immediateStop(bool checked) {
-    if (!m_isEnable) {
+    if (!m_communication || !m_isEnable) {
         emit sendText(QString(axisName + u8"未使能"));
         return;
     }

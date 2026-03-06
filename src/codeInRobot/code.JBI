@@ -1,0 +1,143 @@
+// JBI Code for robot welding operation
+
+// ************* 变量含义说明 *************
+// P001: 奇数次接收路径点的位置数据
+// P002: 偶数次接收路径点的位置数据
+// P003: 错误处理时的备用位置数据
+// P004, P005, P006: 用于关节运动转换工作台操作
+// P007: 奇数次接收路径点的摆焊参考点
+// P008: 偶数次接收路径点的摆焊参考点
+// P009: 奇数次接收路径点的摆焊上一点
+// P010: 偶数次接收路径点的摆焊上一点
+
+// B004: 结束标志位
+// B005: 数据接收完成标志位
+// B006: 运动中标志位
+// B007: 开始焊接标志位
+// B013 & B014: 切换工作台运动标志位
+// B015: 是否摆焊标志位
+
+// I001: 奇数次接收点的运动速度
+// I002: 偶数次接收点的运动速度
+// I003: 奇数次接收点的摆焊类型
+// I004: 偶数次接收点的摆焊类型
+// I005: 焊接电流
+// I006: 焊接电压
+
+NOP
+*LABELWELD
+SET I005 150
+SET I006 20
+SET B015 0
+SET B014 0
+SET B013 0
+SET B010 0
+SET B009 0
+SET B007 0
+SET B006 0
+SET B005 0
+SET B004 0
+SKILLSND "connect"
+TIMER T=0.10
+SKILLSND "startspray"
+WAIT B007=1
+
+IF(B013=1 OR B014=1)THEN
+    JUMP *MOVEJLR
+ENDIF
+
+// 请求第1次接收时放入P001区
+SKILLSND "askpath"
+
+
+*LABELMOVEL
+
+*MOVE
+JUMP *OVER IF B004=1  // 防止执行顺序错误导致的无法正确结束
+JUMP *MOVE IF B005=0  // 等P001存完
+SET B006 1
+IF(B015=1)THEN
+    MOVL P009 V=I001 PL=0 TRAP *ERR
+    WVON WEV#1
+    REFP 1 P007
+    MOVL P001 V=I001 PL=0 NWAIT TRAP *ERR
+    SET B005=0
+    SET B015=0
+    // 请求2, 4, 6...次接收时放入P002区
+    SKILLSND "askpath"
+    CWAIT
+    WVOF
+ELSE
+    MOVL P001 V=I001 PL=0 NWAIT TRAP *ERR
+    SET B005=0
+    // 请求2, 4, 6...次接收时放入P002区
+    SKILLSND "askpath"
+    CWAIT
+ENDIF
+IF(B011=1)THEN
+    ARCON AC=I005 AV=I006 RETRY REPLAY
+ELSE
+    ARCOF AC=200 AV=26.2 ANTSTK
+ENDIF
+*QY
+SET B006 0
+IF(B005=0 AND B004=1)THEN
+    JUMP *OVER
+ENDIF
+
+*MOVE2
+JUMP *OVER IF B004=1  // 防止执行顺序错误导致的无法正确结束
+JUMP *MOVE2 IF B005=0  // 等P002存完
+SET B006 1
+IF(B015=1)THEN
+    MOVL P010 V=I002 PL=0 TRAP *ERR2
+    WVON WEV#1
+    REFP 1 P008
+    MOVL P002 V=I002 PL=0 NWAIT TRAP *ERR2
+    SET B005=0
+    SET B015=0
+    // 请求3, 5, 7...次接收时放入P001区
+    SKILLSND "askpath"
+    CWAIT
+    WVOF
+ELSE
+    MOVL P002 V=I002 PL=0 NWAIT TRAP *ERR2
+    SET B005=0
+    // 请求3, 5, 7...次接收时放入P001区
+    SKILLSND "askpath"
+    CWAIT
+ENDIF
+IF(B012=1)THEN
+    ARCON AC=I005 AV=I006 RETRY REPLAY
+ELSE
+    ARCOF AC=200 AV=26.2 ANTSTK
+ENDIF
+*QY2
+SET B006 0
+IF(B005=0 AND B004=1)THEN
+    JUMP *OVER
+ENDIF
+
+JUMP *LABELMOVEL
+
+*ERR
+IMOV P003 V=30
+MOVL P001 V=I001 PL=0 TRAP *ERR
+JUMP *QY
+
+*ERR2
+IMOV P003 V=30
+MOVL P002 V=I002 PL=0 TRAP *ERR2
+JUMP *QY2
+
+*OVER
+JUMP *LABELWELD
+
+// 以下为关节运动逻辑
+*MOVEJLR
+MOVJ P004 VJ=20.00
+MOVJ P005 VJ=20.00
+MOVJ P006 VJ=20.00
+JUMP *LABELWELD
+
+END
