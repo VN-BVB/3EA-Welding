@@ -18,10 +18,11 @@ DEFINES += _SILENCE_FPOS_SEEKPOS_DEPRECATION_WARNING
 
 QMAKE_CXXFLAGS += /MP
 QMAKE_CXXFLAGS_RELEASE = -ZI -MD
-# 这是一个链接器标志, 它告诉链接器在生成的可执行文件中包含调试信息。这使得即使在发布模式下, 也可以使用调试器来调试程序。
+# 在发布模式下, 也可以使用调试器来调试程序。
 QMAKE_LFLAGS_RELEASE = /DEBUG
-# 以下为智能相机配置选项, 开启后结构光相机将具备目标检测功能
+
 DEFINES += SMART_CAMERA
+QMAKE_CXXFLAGS += /bigobj
 
 # 以下为第三方库配置选项
 DEFINES += LI_CONFIG

@@ -1,7 +1,264 @@
-﻿#include "WeldingMainwindow.h"
+﻿#include "WeldingMainWindow.h"
 
-#include "ui_WeldingMainwindow.h"
+#include "ui_WeldingMainWindow.h"
 
-WeldingMainWindow::WeldingMainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::WeldingMainWindow) { ui->setupUi(this); }
+// clang-format off
+#include "cameraFactory/AbstractCamera.h"
+#include "robotFactory/AbstractRobot.h"
+#include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
+#include "settingPara/SettingPara.h"
+#include "structLightCamera/StructLightCamera.h"
+#include "ui/SystemMirrorWidget.h"
+#include "utils/common/WeldSeamInfo.h"
+#include "utils/stateLight/StateLight.h"
+#include "weldingSystem/RailWeldingSystem.h"
+#include "ui/common.hpp"
+// clang-format on
+WeldingMainWindow::WeldingMainWindow(QWidget* parent)
+    : QMainWindow(parent), ui(new Ui::WeldingMainWindow), railWeldingSystem(std::make_shared<RailWeldingSystem>(nullptr)) {
+    ui->setupUi(this);
+    setWindowState(Qt::WindowMaximized);  // 设置全屏
+    this->initIcon();                     // 初始化图标
+    this->initVtkWindow();                // 初始化点云显示页面
+    this->initStatusLight();              // 初始化指示灯
+    this->initRailWeldingSystem();        // 初始化地轨焊接系统
+
+    PLOGD << "三轴焊接系统软件启动成功";
+}
 
 WeldingMainWindow::~WeldingMainWindow() { delete ui; }
+
+void WeldingMainWindow::initIcon() {}
+void WeldingMainWindow::initStatusLight() {
+    std::vector<DEVICE> device;
+    std::vector<QString> color;
+
+    device.push_back(DEVICE::PRIMARY_CAMERA);
+    device.push_back(DEVICE::SECONDARY_CAMERA);
+    device.push_back(DEVICE::PROJECTOR);
+    color.push_back(MY_COLOR::GRAY);
+    color.push_back(MY_COLOR::GRAY);
+    color.push_back(MY_COLOR::GRAY);
+
+    this->whenStructLightStatusRenew(device, color);  // 初始化指示灯状态
+}
+// 初始化点云显示页面
+void WeldingMainWindow::initVtkWindow() {
+    cloud_visual.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    pclVisualizer.reset(new pcl::visualization::PCLVisualizer("viewer", false));
+    pclVisualizer->addPointCloud(cloud_visual, "cloud");
+    ui->qvtkWidget->SetRenderWindow(pclVisualizer->getRenderWindow());
+    pclVisualizer->setupInteractor(ui->qvtkWidget->GetInteractor(), ui->qvtkWidget->GetRenderWindow());
+}
+// 初始化地轨焊接系统
+void WeldingMainWindow::initRailWeldingSystem() {
+    if (railWeldingSystem) {
+        railWeldingSystem->moveToThread(railWeldingSystemThread);
+        railWeldingSystemThread->start();
+
+        // 依赖注入
+        ui->settingWidget->structLightCamera = this->railWeldingSystem->structLightCamera;
+        ui->settingWidget->initSetting();
+
+        // clang-format off
+        // ************************************ 与本页面有关的信号槽链接 ************************************
+        // 连接和断开结构光相机信号槽
+        connect(this, &WeldingMainWindow::connectStructLightCamera, railWeldingSystem.get(), &RailWeldingSystem::whenConnectingStructLight);
+        connect(this, &WeldingMainWindow::disconnectStructLightCamera, railWeldingSystem.get(), &RailWeldingSystem::whenDisconnectingStructLight);
+
+        // 重建『焊缝区域或全局/局部点云』信号槽
+        connect(this, &WeldingMainWindow::sendScanWorkpiece, railWeldingSystem->structLightCamera.get(), &StructLightCamera::whenScanWorkpiece);
+        connect(this, &WeldingMainWindow::sendGlobalReconstruct, railWeldingSystem->structLightCamera.get(), &StructLightCamera::whenGlobalReconstruct);
+        connect(this, &WeldingMainWindow::sendLocalReconstruct, railWeldingSystem->structLightCamera.get(), &StructLightCamera::whenLocalReconstruct);
+
+        // 更新『硬件状态指示灯』信号槽
+        connect(railWeldingSystem->structLightCamera.get(), &StructLightCamera::sendStructLightStatus, this, &WeldingMainWindow::whenStructLightStatusRenew);
+        connect(railWeldingSystem->robot.get(), &AbstractRobot::sendRobotStatus, this, &WeldingMainWindow::whenRobotStatusRenew);
+        // connect(railWeldingSystem->rail, &Rail::sendRailStatus, this, &WeldingMainWindow::whenRailStatusRenew);
+        // connect(ui->workpieceCoarseLocWidget->baslerControl, &CoarsePositioningCamera::sendCameraStatus, this, &WeldingMainWindow::whenCoarseLocCameraStatusRenew);
+
+        // 获取到『点云或图像』信号槽
+        connect(railWeldingSystem->structLightCamera.get(), &StructLightCamera::sendPointCloud, this, &WeldingMainWindow::whenGetWorkbenchPointCloud);
+        connect(railWeldingSystem->structLightCamera->primaryCamera.get(), &AbstractCamera::sendImage, this, &WeldingMainWindow::whenGetImg2Ui);
+        connect(railWeldingSystem.get(), &RailWeldingSystem::sendFinalSeams, this, &WeldingMainWindow::whenGetSeamInfo);
+
+        // 获取到需要显示的『Message』的信号槽
+        connect(railWeldingSystem->structLightCamera.get(), &StructLightCamera::sendMessage2Ui, this, &WeldingMainWindow::whenGetMessage);
+        connect(railWeldingSystem.get(), &RailWeldingSystem::sendMessage2Ui, this, &WeldingMainWindow::whenGetMessage);
+
+        // 『自动焊接』信号槽
+        connect(this, &WeldingMainWindow::sendAutoWelding, railWeldingSystem.get(), &RailWeldingSystem::whenAutoWelding);
+
+        // // 『工件粗定位』信号槽
+        // connect(railWeldingSystem.get(), &RailWeldingSystem::sendWeldCoarseLocInfo, this, &WeldingMainWindow::whenGetWeldCoarseLocInfo);
+
+        // 机器人信息信号槽
+        connect(railWeldingSystem.get(), &RailWeldingSystem::sendRobotCurrentPose, this, &WeldingMainWindow::whenGetRobotCurrentPose);
+        connect(railWeldingSystem.get(), &RailWeldingSystem::sendRobotCurrentJointAngle, this, &WeldingMainWindow::whenGetRobotCurrentJointAngle);
+        connect(this, &WeldingMainWindow::sendSaveRobotPose, railWeldingSystem.get(), &RailWeldingSystem::whenGetRobotPose2Save);
+        // connect(this, &WeldingMainWindow::sendRobotMoveJ2SouthWorkbench, railWeldingSystem->robot.get(), &AbstractRobot::whenRobotMoveJ2SouthWorkbench);
+        // connect(this, &WeldingMainWindow::sendRobotMoveJ2NorthWorkbench, railWeldingSystem->robot.get(), &AbstractRobot::whenRobotMoveJ2NorthWorkbench);
+
+        // // 粗定位表格信号槽
+        // connect(ui->tableWidgetCoarseLoc, &QTableWidget::currentCellChanged,this, &WeldingMainWindow::on_tableWidgetCoarseLoc_currentCellChanged);
+        // connect(ui->comboBoxCoarseLocInfo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &WeldingMainWindow::on_comboBoxCoarseLocInfo_currentIndexChanged);
+        // connect(railWeldingSystem.get(), &RailWeldingSystem::sendWorkpieceResidualPhotoPos, this, &WeldingMainWindow::whenWorkpieceResidualPhotoPos);
+        // connect(railWeldingSystem.get(), &RailWeldingSystem::sendRenewTableRow, this, &WeldingMainWindow::whenTableRowRenew);
+        // connect(railWeldingSystem.get(), &RailWeldingSystem::sendMove2NextWorkpiece, this, &WeldingMainWindow::on_btn_nextWorkpiece_clicked);
+        // connect(ui->settingWidget, &SettingWidget::sendCoarseCameraExposure, ui->workpieceCoarseLocWidget->baslerControl,
+        //         &CoarsePositioningCamera::whenGetCameraExposure);
+        // clang-format on
+
+        PLOGD << "地轨焊接系统类初始化成功";
+    } else {
+        PLOGE << "地轨焊接系统类初始化失败";
+    }
+}
+// 更新结构光指示灯
+void WeldingMainWindow::whenStructLightStatusRenew(std::vector<DEVICE> device, std::vector<QString> color) {
+    for (int i = 0; i < device.size(); ++i) {
+        if (device[i] == DEVICE::PRIMARY_CAMERA) {
+            ui->labelPrimaryCameraStatusLight->setStyleSheet(color[i]);
+        } else if (device[i] == DEVICE::SECONDARY_CAMERA) {
+            ui->labelSecondaryCameraStatusLight->setStyleSheet(color[i]);
+        } else if (device[i] == DEVICE::PROJECTOR) {
+            ui->labelProjectorStatusLight->setStyleSheet(color[i]);
+        }
+    }
+}
+
+// 更新机器人指示灯
+void WeldingMainWindow::whenRobotStatusRenew(QString color) { ui->labelRobotStatusLight->setStyleSheet(color); }
+
+// 更新地轨指示灯
+void WeldingMainWindow::whenRailStatusRenew(QString color) { ui->labelRailStatusLight->setStyleSheet(color); }
+
+// // 更新粗定位相机指示灯
+// void WeldingMainWindow::whenCoarseLocCameraStatusRenew(std::vector<COARES_LOC_CAMERA> device, std::vector<QString> color) {}
+
+// 获取到工作台点云
+void WeldingMainWindow::whenGetWorkbenchPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+    if (cloud) {
+        // VTK界面点云显示
+        pclVisualizer->removeAllShapes();       // 清空上次的shape显示
+        pclVisualizer->removeAllPointClouds();  // 清空点云
+        pclVisualizer->addPointCloud(cloud, "cloud");
+
+        // 获取点云边界框大小
+        pcl::PointXYZ minPt, maxPt;
+        pcl::getMinMax3D(*cloud, minPt, maxPt);
+        Eigen::Vector3f center((maxPt.x + minPt.x) / 2, (maxPt.y + minPt.y) / 2, (maxPt.z + minPt.z) / 2);
+        pclVisualizer->setCameraPosition(center(0), center(1), center(2) - 0.1, center(0), center(1), center(2), 0, -1, 0);
+        pclVisualizer->resetCamera();
+        ui->qvtkWidget->update();
+    }
+}
+
+// 获取到检测完成的焊缝信息
+void WeldingMainWindow::whenGetSeamInfo(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo) {
+    PLOGD << L"显示焊缝... ...";
+
+    handleWeldAreaInfo2Display(weldAreaInfo, pclVisualizer, ObjDetImg);
+    if (!ObjDetImg.empty()) {
+        this->whenGetImg2Ui(ObjDetImg);
+    }
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr visualCloud(new pcl::PointCloud<pcl::PointXYZ>);  // 用于显示的点云
+    std::set<int> seamAreaPointCloudNum;
+    for (auto& info : weldAreaInfo) {
+        if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
+            seamAreaPointCloudNum.insert(info->areaNum);
+
+            // 转换区域点
+            if (info->weldAreaPointCloud && info->weldAreaPointCloud->size() > 0) {
+                info->weldAreaPointCloud = MyToolFunc::transformPointCloud(info->weldAreaPointCloud,
+                                                                           TrajectoryPlanningConfig::getInstance().matrixEyeHand);
+            }
+            if (TrajectoryPlanningConfig::getInstance().handEyeType ==
+                MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
+                if (info->weldAreaPointCloud && info->weldAreaPointCloud->size() > 0) {
+                    info->weldAreaPointCloud = MyToolFunc::transformPointCloud(
+                        info->weldAreaPointCloud, TrajectoryPlanningConfig::getInstance().matrixEnd2Base);
+                }
+            }
+
+            *visualCloud = *visualCloud + *(info->weldAreaPointCloud);
+        }
+
+        if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
+            ui->systemMirrorWidget->displayLines(info->weldEndPointsInRobot, {1.0, 0.0, 0.0});  // 在系统镜像中显示焊缝
+        }
+    }
+
+    ui->systemMirrorWidget->displayPointCloud(visualCloud, {0.0, 1.0, 0.0});  // 在系统镜像中显示点云
+    ui->qvtkWidget->update();
+}
+
+// 获取到需要显示的信息
+void WeldingMainWindow::whenGetMessage(QString message) { ui->textBrowser->append(message); }
+
+// 获取到需要显示的图像
+void WeldingMainWindow::whenGetImg2Ui(cv::Mat img) { ui->imageWidget->setOpenCVImage(img); }
+// 收到机器人当前位姿
+void WeldingMainWindow::whenGetRobotCurrentPose(robotPose p) {
+    currRobotPose = p;
+
+    ui->labelRobotCurrentX->setText(QString::number(p.x_));
+    ui->labelRobotCurrentY->setText(QString::number(p.y_));
+    ui->labelRobotCurrentZ->setText(QString::number(p.z_));
+    ui->labelRobotCurrentA->setText(QString::number(p.a_));
+    ui->labelRobotCurrentB->setText(QString::number(p.b_));
+    ui->labelRobotCurrentC->setText(QString::number(p.c_));
+}
+
+// 收到机器人当前关节角
+void WeldingMainWindow::whenGetRobotCurrentJointAngle(robotJointAngle j) {
+    ui->labelRobotCurrentJoint1->setText(QString::number(j.joint1));
+    ui->labelRobotCurrentJoint2->setText(QString::number(j.joint2));
+    ui->labelRobotCurrentJoint3->setText(QString::number(j.joint3));
+    ui->labelRobotCurrentJoint4->setText(QString::number(j.joint4));
+    ui->labelRobotCurrentJoint5->setText(QString::number(j.joint5));
+    ui->labelRobotCurrentJoint6->setText(QString::number(j.joint6));
+
+    ui->systemMirrorWidget->setRobotJointAngle(j);
+}
+
+void WeldingMainWindow::on_btnConnectStructLight_clicked() { emit connectStructLightCamera(); }
+
+void WeldingMainWindow::on_btnDisConnectStructLight_clicked() { emit disconnectStructLightCamera(); }
+
+void WeldingMainWindow::on_btnGlobalReconstruct_clicked() { emit sendGlobalReconstruct(); }
+
+void WeldingMainWindow::on_btnLocalReconstruct_clicked() {
+    emit sendLocalReconstruct(ui->lineEditReconstructMinU->text().toDouble(), ui->lineEditReconstructMaxU->text().toDouble(),
+                              ui->lineEditReconstructMinV->text().toDouble(), ui->lineEditReconstructMaxV->text().toDouble());
+}
+
+void WeldingMainWindow::on_ProScan_clicked() { emit sendScanWorkpiece(); }
+
+void WeldingMainWindow::on_btnConnectRobot_clicked() { this->railWeldingSystem->connectRobot(); }
+
+void WeldingMainWindow::on_btnDisconnectRobot_clicked() { this->railWeldingSystem->disconnectRobot(); }
+
+void WeldingMainWindow::on_btnRobotSavePose_clicked() {
+    emit sendSaveRobotPose(robotPose(ui->labelRobotCurrentX->text().toDouble(), ui->labelRobotCurrentY->text().toDouble(),
+                                     ui->labelRobotCurrentZ->text().toDouble(), ui->labelRobotCurrentA->text().toDouble(),
+                                     ui->labelRobotCurrentB->text().toDouble(), ui->labelRobotCurrentC->text().toDouble()));
+}
+
+void WeldingMainWindow::on_pushButtonWelding_clicked() { this->railWeldingSystem->welding(); }
+
+void WeldingMainWindow::on_comboBox_currentTextChanged(const QString& arg1) {
+    if (arg1 == u8"模拟模式") {
+        this->railWeldingSystem->robot->robotWorkMode = ROBOT_WORK_MODE::SIMULATION_MODE;
+    } else if (arg1 == u8"焊接模式") {
+        this->railWeldingSystem->robot->robotWorkMode = ROBOT_WORK_MODE::WELDING_MODE;
+    }
+}
+void WeldingMainWindow::on_btnRobotMoveL_clicked() {
+    robotPose p(ui->lineEditRobotTargetX->text().toDouble(), ui->lineEditRobotTargetY->text().toDouble(),
+                ui->lineEditRobotTargetZ->text().toDouble(), ui->lineEditRobotTargetA->text().toDouble(),
+                ui->lineEditRobotTargetB->text().toDouble(), ui->lineEditRobotTargetC->text().toDouble());
+
+    this->railWeldingSystem->whenGetRobotMoveLData(p, SettingPara::getInstance().Value_MoveSpeed);
+}

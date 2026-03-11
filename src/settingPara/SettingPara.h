@@ -105,13 +105,17 @@ public:
     double Back_Beam_Region2_X_Shift_R = 0, Back_Beam_Region2_Y_Shift_R = 0, Back_Beam_Region2_Z_Shift_R = 0;
 
     // 焊接机器人相关
-    double Value_MoveSpeed = 170;             // 过渡运动速度
-    double Value_WedlingSpeed = 5;            // 焊接速度(默认焊接速度, 焊缝宽度检测失败用这个速度)
-    double Value_WedlingSpeed0To1 = 5;        // 焊接速度(焊缝宽度1mm以下用这个速度)
-    double Value_WedlingSpeed1To3 = 5;        // 焊接速度(焊缝宽度1mm到3mm用这个速度)
-    double Value_WedlingSpeed3To5 = 5;        // 焊接速度(焊缝宽度3mm到5mm用这个速度)
-    double Value_WedlingSpeedHorizontal = 5;  // 焊接速度(水平焊缝用这个速度)
-    double Value_WedlingSpeedVertical = 5;    // 焊接速度(水平焊缝用这个速度)
+    double Value_MoveSpeed = 170;                // 过渡运动速度
+    double Value_WeldingSpeed = 5;               // 焊接速度(默认焊接速度, 焊缝宽度检测失败用这个速度)
+    double Value_WeldingSpeed0To1 = 5;           // 焊接速度(焊缝宽度1mm以下用这个速度)
+    double Value_WeldingSpeed1To3 = 5;           // 焊接速度(焊缝宽度1mm到3mm用这个速度)
+    double Value_WeldingSpeed3To5 = 5;           // 焊接速度(焊缝宽度3mm到5mm用这个速度)
+    double Value_WeldingSpeedHorizontal = 5;     // 焊接速度(水平焊缝用这个速度)
+    double Value_WeldingSpeedVertical = 5;       // 焊接速度(水平焊缝用这个速度)
+    double Value_WeldingCurrent = 160;           // 焊接电流(默认焊接电流)
+    double Value_WeldingCurrent_Vertical = 130;  // 焊接电流(竖直焊缝用这个电流)
+    double Value_WeldingVoltage = 24;            // 焊接电压(默认焊接电压)
+    double Value_WeldingVoltage_Vertical = 18;   // 焊接电压(竖直焊缝用这个电压)
 
     bool weldingVerticalWeld = 0;  // 是否焊接竖直焊缝
 

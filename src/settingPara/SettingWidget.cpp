@@ -4,6 +4,7 @@
 #include "settingPara/SettingPara.h"
 #include "structLightCamera/StructLightCamera.h"
 #include "ui_SettingWidget.h"
+// #include "workpieceCoarseLocalization/WorkpieceCoarseLocalization.h"
 
 SettingWidget::SettingWidget(QWidget *parent)
     : QWidget(parent), ui(new Ui::SettingWidget), settingPara(&SettingPara::getInstance()) {
@@ -195,12 +196,16 @@ void SettingWidget::renewSetting() {
 
     // 机器人焊接以及过渡速度显示
     ui->lineEdit_Value_MoveSpeed->setText(QString::number(settingPara->Value_MoveSpeed));
-    ui->lineEdit_Value_WedlingSpeed->setText(QString::number(settingPara->Value_WedlingSpeed));
-    ui->lineEdit_Value_WedlingSpeed_0To1->setText(QString::number(settingPara->Value_WedlingSpeed0To1));
-    ui->lineEdit_Value_WedlingSpeed_1To3->setText(QString::number(settingPara->Value_WedlingSpeed1To3));
-    ui->lineEdit_Value_WedlingSpeed_3To5->setText(QString::number(settingPara->Value_WedlingSpeed3To5));
-    ui->lineEdit_Value_WedlingSpeed_Horizontal->setText(QString::number(settingPara->Value_WedlingSpeedHorizontal));
-    ui->lineEdit_Value_WedlingSpeed_Vertical->setText(QString::number(settingPara->Value_WedlingSpeedVertical));
+    ui->lineEdit_Value_WeldingSpeed->setText(QString::number(settingPara->Value_WeldingSpeed));
+    ui->lineEdit_Value_WeldingSpeed_0To1->setText(QString::number(settingPara->Value_WeldingSpeed0To1));
+    ui->lineEdit_Value_WeldingSpeed_1To3->setText(QString::number(settingPara->Value_WeldingSpeed1To3));
+    ui->lineEdit_Value_WeldingSpeed_3To5->setText(QString::number(settingPara->Value_WeldingSpeed3To5));
+    ui->lineEdit_Value_WeldingSpeed_Horizontal->setText(QString::number(settingPara->Value_WeldingSpeedHorizontal));
+    ui->lineEdit_Value_WeldingSpeed_Vertical->setText(QString::number(settingPara->Value_WeldingSpeedVertical));
+    ui->lineEdit_Value_WeldingCurrent->setText(QString::number(settingPara->Value_WeldingCurrent));
+    ui->lineEdit_Value_WeldingCurrent_Vertical->setText(QString::number(settingPara->Value_WeldingCurrent_Vertical));
+    ui->lineEdit_Value_WeldingVoltage->setText(QString::number(settingPara->Value_WeldingVoltage));
+    ui->lineEdit_Value_WeldingVoltage_Vertical->setText(QString::number(settingPara->Value_WeldingVoltage_Vertical));
 
     // 是否焊接竖直焊缝
     ui->comboBoxWeldingVerticalWeld->setCurrentIndex(settingPara->weldingVerticalWeld);
@@ -235,17 +240,17 @@ void SettingWidget::on_spinBoxGain_editingFinished() {
     PLOGD << "GainRaw: " << value;
 }
 
-// 设置相机硬件触发
-void SettingWidget::on_btnHardwareTrigger_clicked() {
-    emit sendCameraWorkMode(CAMERA_WORK_MODE::HARDWARE_TRIGGER);
-    PLOGD << "设置相机硬件触发";
-}
+// // 设置相机硬件触发
+// void SettingWidget::on_btnHardwareTrigger_clicked() {
+//     emit sendCameraWorkMode(CAMERA_WORK_MODE::HARDWARE_TRIGGER);
+//     PLOGD << "设置相机硬件触发";
+// }
 
-// 设置相机软件触发
-void SettingWidget::on_btnSoftwareTrigger_clicked() {
-    emit sendCameraWorkMode(CAMERA_WORK_MODE::SOFTWARE_TRIGGER);
-    PLOGD << "设置相机软件触发";
-}
+// // 设置相机软件触发
+// void SettingWidget::on_btnSoftwareTrigger_clicked() {
+//     emit sendCameraWorkMode(CAMERA_WORK_MODE::SOFTWARE_TRIGGER);
+//     PLOGD << "设置相机软件触发";
+// }
 
 // 投影仪亮度
 void SettingWidget::on_spinBoxProjBrightness_editingFinished() {
@@ -342,44 +347,44 @@ void SettingWidget::on_lineEdit_Value_MoveSpeed_editingFinished() {
 }
 
 // 机器人默认焊接速度
-void SettingWidget::on_lineEdit_Value_WedlingSpeed_editingFinished() {
-    settingPara->Value_WedlingSpeed = ui->lineEdit_Value_WedlingSpeed->text().toDouble();
-    settingPara->qSetting->setValue("Welding/Value_WedlingSpeed", settingPara->Value_WedlingSpeed);
-    PLOGD << "Value_WedlingSpeed: " << settingPara->Value_WedlingSpeed;
+void SettingWidget::on_lineEdit_Value_WeldingSpeed_editingFinished() {
+    settingPara->Value_WeldingSpeed = ui->lineEdit_Value_WeldingSpeed->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingSpeed", settingPara->Value_WeldingSpeed);
+    PLOGD << "Value_WeldingSpeed: " << settingPara->Value_WeldingSpeed;
 }
 
 // 宽度0到1焊接速度
-void SettingWidget::on_lineEdit_Value_WedlingSpeed_0To1_editingFinished() {
-    settingPara->Value_WedlingSpeed0To1 = ui->lineEdit_Value_WedlingSpeed_0To1->text().toDouble();
-    settingPara->qSetting->setValue("Welding/Value_WedlingSpeed0To1", settingPara->Value_WedlingSpeed0To1);
-    PLOGD << "Value_WedlingSpeed0To1: " << settingPara->Value_WedlingSpeed0To1;
+void SettingWidget::on_lineEdit_Value_WeldingSpeed_0To1_editingFinished() {
+    settingPara->Value_WeldingSpeed0To1 = ui->lineEdit_Value_WeldingSpeed_0To1->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingSpeed0To1", settingPara->Value_WeldingSpeed0To1);
+    PLOGD << "Value_WeldingSpeed0To1: " << settingPara->Value_WeldingSpeed0To1;
 }
 
 // 宽度1到3焊接速度
-void SettingWidget::on_lineEdit_Value_WedlingSpeed_1To3_editingFinished() {
-    settingPara->Value_WedlingSpeed1To3 = ui->lineEdit_Value_WedlingSpeed_1To3->text().toDouble();
-    settingPara->qSetting->setValue("Welding/Value_WedlingSpeed1To3", settingPara->Value_WedlingSpeed1To3);
-    PLOGD << "Value_WedlingSpeed1To3: " << settingPara->Value_WedlingSpeed1To3;
+void SettingWidget::on_lineEdit_Value_WeldingSpeed_1To3_editingFinished() {
+    settingPara->Value_WeldingSpeed1To3 = ui->lineEdit_Value_WeldingSpeed_1To3->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingSpeed1To3", settingPara->Value_WeldingSpeed1To3);
+    PLOGD << "Value_WeldingSpeed1To3: " << settingPara->Value_WeldingSpeed1To3;
 }
 
 // 宽度3到5焊接速度
-void SettingWidget::on_lineEdit_Value_WedlingSpeed_3To5_editingFinished() {
-    settingPara->Value_WedlingSpeed3To5 = ui->lineEdit_Value_WedlingSpeed_3To5->text().toDouble();
-    settingPara->qSetting->setValue("Welding/Value_WedlingSpeed3To5", settingPara->Value_WedlingSpeed3To5);
-    PLOGD << "Value_WedlingSpeed3To5: " << settingPara->Value_WedlingSpeed3To5;
+void SettingWidget::on_lineEdit_Value_WeldingSpeed_3To5_editingFinished() {
+    settingPara->Value_WeldingSpeed3To5 = ui->lineEdit_Value_WeldingSpeed_3To5->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingSpeed3To5", settingPara->Value_WeldingSpeed3To5);
+    PLOGD << "Value_WeldingSpeed3To5: " << settingPara->Value_WeldingSpeed3To5;
 }
 
 // 水平焊缝焊接速度
-void SettingWidget::on_lineEdit_Value_WedlingSpeed_Horizontal_editingFinished() {
-    settingPara->Value_WedlingSpeedHorizontal = ui->lineEdit_Value_WedlingSpeed_Horizontal->text().toDouble();
-    settingPara->qSetting->setValue("Welding/Value_WedlingSpeedHorizontal", settingPara->Value_WedlingSpeedHorizontal);
-    PLOGD << "Value_WedlingSpeedHorizontal: " << settingPara->Value_WedlingSpeedHorizontal;
+void SettingWidget::on_lineEdit_Value_WeldingSpeed_Horizontal_editingFinished() {
+    settingPara->Value_WeldingSpeedHorizontal = ui->lineEdit_Value_WeldingSpeed_Horizontal->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingSpeedHorizontal", settingPara->Value_WeldingSpeedHorizontal);
+    PLOGD << "Value_WeldingSpeedHorizontal: " << settingPara->Value_WeldingSpeedHorizontal;
 }
 // 竖直焊缝焊接速度
-void SettingWidget::on_lineEdit_Value_WedlingSpeed_Vertical_editingFinished() {
-    settingPara->Value_WedlingSpeedVertical = ui->lineEdit_Value_WedlingSpeed_Vertical->text().toDouble();
-    settingPara->qSetting->setValue("Welding/Value_WedlingSpeedVertical", settingPara->Value_WedlingSpeedVertical);
-    PLOGD << "Value_WedlingSpeedVertical: " << settingPara->Value_WedlingSpeedVertical;
+void SettingWidget::on_lineEdit_Value_WeldingSpeed_Vertical_editingFinished() {
+    settingPara->Value_WeldingSpeedVertical = ui->lineEdit_Value_WeldingSpeed_Vertical->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingSpeedVertical", settingPara->Value_WeldingSpeedVertical);
+    PLOGD << "Value_WeldingSpeedVertical: " << settingPara->Value_WeldingSpeedVertical;
 }
 
 // 是否焊接竖直焊缝
@@ -389,7 +394,30 @@ void SettingWidget::on_comboBoxWeldingVerticalWeld_activated(int index) {
     PLOGD << "是否焊接竖直焊缝: " << settingPara->weldingVerticalWeld;
     (void)index;
 }
+// 焊接电流电压
+void SettingWidget::on_lineEdit_Value_WeldingCurrent_editingFinished() {
+    settingPara->Value_WeldingCurrent = ui->lineEdit_Value_WeldingCurrent->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingCurrent", settingPara->Value_WeldingCurrent);
+    PLOGD << "Value_WeldingCurrent: " << settingPara->Value_WeldingCurrent;
+}
 
+void SettingWidget::on_lineEdit_Value_WeldingVoltage_editingFinished() {
+    settingPara->Value_WeldingVoltage = ui->lineEdit_Value_WeldingVoltage->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingVoltage", settingPara->Value_WeldingVoltage);
+    PLOGD << "Value_WeldingVoltage: " << settingPara->Value_WeldingVoltage;
+}
+
+void SettingWidget::on_lineEdit_Value_WeldingCurrent_Vertical_editingFinished() {
+    settingPara->Value_WeldingCurrent_Vertical = ui->lineEdit_Value_WeldingCurrent_Vertical->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingCurrent_Vertical", settingPara->Value_WeldingCurrent_Vertical);
+    PLOGD << "Value_WeldingCurrent_Vertical: " << settingPara->Value_WeldingCurrent_Vertical;
+}
+
+void SettingWidget::on_lineEdit_Value_WeldingVoltage_Vertical_editingFinished() {
+    settingPara->Value_WeldingVoltage_Vertical = ui->lineEdit_Value_WeldingVoltage_Vertical->text().toDouble();
+    settingPara->qSetting->setValue("Welding/Value_WeldingVoltage_Vertical", settingPara->Value_WeldingVoltage_Vertical);
+    PLOGD << "Value_WeldingVoltage_Vertical: " << settingPara->Value_WeldingVoltage_Vertical;
+}
 // 点云X方向放缩
 void SettingWidget::on_lineEditScaleOfPointX_editingFinished() {
     settingPara->scaleOfPointX = ui->lineEditScaleOfPointX->text().toDouble();

@@ -1,0 +1,179 @@
+{
+  "config about Trajectory Planning": {
+    "robotType": "an chuan",
+    "handEyeType": "eye in hand",
+    "HandEyeMatrix": {
+      "_data": [
+        [0.992538665493678, -0.05142811083588041, -0.1105538190922444, 47.04850894363007],
+        [-0.03427683928371922, 0.7524464211734704, -0.6577609607995551, 4.274095886384497],
+        [0.1170132291185335, 0.6566426217350573, 0.7450693736372247, -353.4562482894041],
+        [0, 0, 0, 1]
+      ]
+    },
+    "leftErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "leftMiddleErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "middleErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "rightMiddleErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "rightErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamButtLeftErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamButtLeftMiddleErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamButtMiddleErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamButtRightMiddleErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamButtRightErrorCompensation": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamLeftErrorCompensationF": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamLeftMiddleErrorCompensationF": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamMiddleErrorCompensationF": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamRightMiddleErrorCompensationF": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "beamRightErrorCompensationF": {
+      "_data": [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+      ]
+    },
+    "leftWeldingPose": {
+      "_data": [-148.67, -34.70, -13.18]
+    },
+    "rightWeldingPose": {
+      "_data": [143.94, -25.86, 13.24]
+    },
+    "beamButtWeldingPose": {
+      "_data": [180, 0, 0]
+    },
+    "startPointPositionPose": {
+      "_data": [940, 0, 150, -180, 0, 0]
+    },
+    "takePhotoPositionPose": {
+      "_data": [698.278, -49.597, 171.619, -179.7462, 24.155, -1.1142]
+    },
+    "leftWeldingPose_LEFT": {
+      "_data": [-144.5, 26.4, 7.75]
+    },
+    "rightWeldingPose_LEFT": {
+      "_data": [-144.5, -26.4, -7.75]
+    },
+    "beamButtWeldingPose_LEFT": {
+      "_data": [180, 0, 0]
+    },
+    "startPointPositionPose_LEFT": {
+      "_data": [50, 980, 165, 180, 0, 0]
+    },
+    "takePhotoPositionPose_LEFT": {
+      "_data": [0, 600, 160, 150, 0, 0]
+    },
+    "leftWeldingPose_RIGHT": {
+      "_data": [-144.5, 26.4, -172.25]
+    },
+    "rightWeldingPose_RIGHT": {
+      "_data": [-144.5, -26.4, 172.25]
+    },
+    "beamButtWeldingPose_RIGHT": {
+      "_data": [180, 0, 180]
+    },
+    "startPointPositionPose_RIGHT": {
+      "_data": [-50, -980, 165, 180, 0, 180]
+    },
+    "takePhotoPositionPose_RIGHT": {
+      "_data": [0, -600, 160, 150, 0, -178]
+    }
+  }
+}

@@ -168,28 +168,42 @@ void SettingPara::loadSetting() {
         Value_MoveSpeed = std::min(Value_MoveSpeed, 300.0);  // 最大不能超过300
         Value_MoveSpeed = std::max(Value_MoveSpeed, 1.0);    // 最小不能小过1
         // 默认焊接速度
-        Value_WedlingSpeed = qSetting->value("Welding/Value_WedlingSpeed", Value_WedlingSpeed).toDouble();
-        Value_WedlingSpeed = std::min(Value_WedlingSpeed, 20.0);  // 最大不能超过20
-        Value_WedlingSpeed = std::max(Value_WedlingSpeed, 1.0);   // 最小不能小过1
+        Value_WeldingSpeed = qSetting->value("Welding/Value_WeldingSpeed", Value_WeldingSpeed).toDouble();
+        Value_WeldingSpeed = std::min(Value_WeldingSpeed, 20.0);  // 最大不能超过20
+        Value_WeldingSpeed = std::max(Value_WeldingSpeed, 1.0);   // 最小不能小过1
 
         // 不同焊缝焊接速度
-        Value_WedlingSpeed0To1 =
-            qSetting->value("Welding/Value_WedlingSpeed0To1", Value_WedlingSpeed).toDouble();  // 焊接速度(焊缝宽度1mm以下用这个速度)
-        Value_WedlingSpeed0To1 = std::min(Value_WedlingSpeed0To1, 20.0);                       // 最大不能超过20m
-        Value_WedlingSpeed0To1 = std::max(Value_WedlingSpeed0To1, 1.0);                        // 最小不能小过1
-        Value_WedlingSpeed1To3 =
-            qSetting->value("Welding/Value_WedlingSpeed1To3", Value_WedlingSpeed).toDouble();  // 焊接速度(焊缝宽度1mm到3mm用这个速度)
-        Value_WedlingSpeed1To3 = std::min(Value_WedlingSpeed1To3, 20.0);                       // 最大不能超过20
-        Value_WedlingSpeed1To3 = std::max(Value_WedlingSpeed1To3, 1.0);                        // 最小不能小过1
-        Value_WedlingSpeed3To5 =
-            qSetting->value("Welding/Value_WedlingSpeed3To5", Value_WedlingSpeed).toDouble();  // 焊接速度(焊缝宽度3mm到5mm用这个速度)
-        Value_WedlingSpeed3To5 = std::min(Value_WedlingSpeed3To5, 20.0);                       // 最大不能超过20
-        Value_WedlingSpeed3To5 = std::max(Value_WedlingSpeed3To5, 1.0);                        // 最小不能小过1
-        Value_WedlingSpeedHorizontal =
-            qSetting->value("Welding/Value_WedlingSpeedHorizontal", Value_WedlingSpeed).toDouble();  // 焊接速度(水平焊缝用这个速度)
-        Value_WedlingSpeedVertical = qSetting->value("Welding/Value_WedlingSpeedVertical", Value_WedlingSpeed).toDouble();
-        Value_WedlingSpeedHorizontal = std::min(Value_WedlingSpeedHorizontal, 20.0);  // 最大不能超过20
-        Value_WedlingSpeedHorizontal = std::max(Value_WedlingSpeedHorizontal, 1.0);   // 最小不能小过1
+        Value_WeldingSpeed0To1 =
+            qSetting->value("Welding/Value_WeldingSpeed0To1", Value_WeldingSpeed).toDouble();  // 焊接速度(焊缝宽度1mm以下用这个速度)
+        Value_WeldingSpeed0To1 = std::min(Value_WeldingSpeed0To1, 20.0);                       // 最大不能超过20m
+        Value_WeldingSpeed0To1 = std::max(Value_WeldingSpeed0To1, 1.0);                        // 最小不能小过1
+        Value_WeldingSpeed1To3 =
+            qSetting->value("Welding/Value_WeldingSpeed1To3", Value_WeldingSpeed).toDouble();  // 焊接速度(焊缝宽度1mm到3mm用这个速度)
+        Value_WeldingSpeed1To3 = std::min(Value_WeldingSpeed1To3, 20.0);                       // 最大不能超过20
+        Value_WeldingSpeed1To3 = std::max(Value_WeldingSpeed1To3, 1.0);                        // 最小不能小过1
+        Value_WeldingSpeed3To5 =
+            qSetting->value("Welding/Value_WeldingSpeed3To5", Value_WeldingSpeed).toDouble();  // 焊接速度(焊缝宽度3mm到5mm用这个速度)
+        Value_WeldingSpeed3To5 = std::min(Value_WeldingSpeed3To5, 20.0);                       // 最大不能超过20
+        Value_WeldingSpeed3To5 = std::max(Value_WeldingSpeed3To5, 1.0);                        // 最小不能小过1
+        Value_WeldingSpeedHorizontal =
+            qSetting->value("Welding/Value_WeldingSpeedHorizontal", Value_WeldingSpeed).toDouble();  // 焊接速度(水平焊缝用这个速度)
+        Value_WeldingSpeedHorizontal = std::min(Value_WeldingSpeedHorizontal, 20.0);  // 最大不能超过20
+        Value_WeldingSpeedHorizontal = std::max(Value_WeldingSpeedHorizontal, 1.0);   // 最小不能小过1 
+        Value_WeldingSpeedVertical = qSetting->value("Welding/Value_WeldingSpeedVertical", Value_WeldingSpeed).toDouble(); // 焊接速度(竖直焊缝用这个速度)
+        Value_WeldingSpeedVertical = std::min(Value_WeldingSpeedVertical, 20.0);  // 最大不能超过20
+        Value_WeldingSpeedVertical = std::max(Value_WeldingSpeedVertical, 1.0);   // 最小不能小过1
+        Value_WeldingCurrent = qSetting->value("Welding/Value_WeldingCurrent", Value_WeldingCurrent).toDouble(); // 焊接电流
+        Value_WeldingCurrent = std::min(Value_WeldingCurrent, 300.0);  // 最大不能超过
+        Value_WeldingCurrent = std::max(Value_WeldingCurrent, 1.0);   // 最小不能小过1
+        Value_WeldingCurrent_Vertical = qSetting->value("Welding/Value_WeldingCurrent_Vertical", Value_WeldingCurrent_Vertical).toDouble(); // 焊接电流(竖直焊缝用这个电流)
+        Value_WeldingCurrent_Vertical = std::min(Value_WeldingCurrent_Vertical, 300.0);  // 最大不能超过
+        Value_WeldingCurrent_Vertical = std::max(Value_WeldingCurrent_Vertical, 1.0);   // 最小不能小过1
+        Value_WeldingVoltage = qSetting->value("Welding/Value_WeldingVoltage", Value_WeldingVoltage).toDouble(); // 焊接电压
+        Value_WeldingVoltage = std::min(Value_WeldingVoltage, 100.0);  // 最大不能超过
+        Value_WeldingVoltage = std::max(Value_WeldingVoltage, 1.0);   // 最小不能小过1
+        Value_WeldingVoltage_Vertical = qSetting->value("Welding/Value_WeldingVoltage_Vertical", Value_WeldingVoltage_Vertical).toDouble(); // 焊接电压(竖直焊缝用这个电压)
+        Value_WeldingVoltage_Vertical = std::min(Value_WeldingVoltage_Vertical, 100.0);  // 最大不能超过
+        Value_WeldingVoltage_Vertical = std::max(Value_WeldingVoltage_Vertical, 1.0);   // 最小不能小过1
 
         // 是否焊接竖直焊缝
         weldingVerticalWeld = qSetting->value("Welding/weldingVerticalWeld", weldingVerticalWeld).toBool();

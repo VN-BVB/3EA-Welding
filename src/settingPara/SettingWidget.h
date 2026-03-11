@@ -11,7 +11,7 @@ class SettingWidget;
 }
 
 class SettingPara;
-class RailWeldingMainWindow;
+class WeldingMainWindow;
 class StructLightCamera;
 
 class SettingWidget : public QWidget {
@@ -38,8 +38,8 @@ signals:
 private slots:
     void on_spinBoxExp_editingFinished();
     void on_spinBoxGain_editingFinished();
-    void on_btnHardwareTrigger_clicked();
-    void on_btnSoftwareTrigger_clicked();
+    // void on_btnHardwareTrigger_clicked();
+    // void on_btnSoftwareTrigger_clicked();
     void on_spinBoxProjBrightness_editingFinished();
     void on_spinBoxProjFps_editingFinished();
     // void on_spinBoxProjNum_editingFinished();
@@ -55,11 +55,11 @@ private slots:
     // void on_lineEdit_StatisticalFilter_Std_editingFinished();
 
     void on_lineEdit_Value_MoveSpeed_editingFinished();
-    void on_lineEdit_Value_WedlingSpeed_editingFinished();
-    void on_lineEdit_Value_WedlingSpeed_0To1_editingFinished();
-    void on_lineEdit_Value_WedlingSpeed_1To3_editingFinished();
-    void on_lineEdit_Value_WedlingSpeed_3To5_editingFinished();
-    void on_lineEdit_Value_WedlingSpeed_Horizontal_editingFinished();
+    void on_lineEdit_Value_WeldingSpeed_editingFinished();
+    void on_lineEdit_Value_WeldingSpeed_0To1_editingFinished();
+    void on_lineEdit_Value_WeldingSpeed_1To3_editingFinished();
+    void on_lineEdit_Value_WeldingSpeed_3To5_editingFinished();
+    void on_lineEdit_Value_WeldingSpeed_Horizontal_editingFinished();
 
     void on_comboBoxWeldingVerticalWeld_activated(int index);
 
@@ -146,62 +146,38 @@ private slots:
     void on_lineEdit_Back_Beam_Region2_Z_Shift_R_editingFinished();
     void on_coarseSpinBoxExp_editingFinished();
     void on_lineEdit_Front_L_Beam_H_X_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_H_Y_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_H_Z_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_V_X_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_V_Y_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_V_Z_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_DH_X_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_DH_Y_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_DH_Z_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_DV_X_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_DV_Y_Shift_editingFinished();
-
     void on_lineEdit_Front_L_Beam_DV_Z_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_H_X_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_H_Y_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_H_Z_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_V_X_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_V_Y_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_V_Z_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_DH_X_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_DH_Y_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_DH_Z_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_DV_X_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_DV_Y_Shift_editingFinished();
-
     void on_lineEdit_Front_R_Beam_DV_Z_Shift_editingFinished();
-
     void on_lineEdit_FrontVBeamLeft_ExtendStart_editingFinished();
-
     void on_lineEdit_FrontVBeamLeft_ExtendEnd_editingFinished();
-
     void on_lineEdit_FrontVBeamRight_ExtendStart_editingFinished();
-
     void on_lineEdit_FrontVBeamRight_ExtendEnd_editingFinished();
-
-    void on_lineEdit_Value_WedlingSpeed_Vertical_editingFinished();
+    void on_lineEdit_Value_WeldingSpeed_Vertical_editingFinished();
+    void on_lineEdit_Value_WeldingCurrent_editingFinished();
+    void on_lineEdit_Value_WeldingVoltage_editingFinished();
+    void on_lineEdit_Value_WeldingCurrent_Vertical_editingFinished();
+    void on_lineEdit_Value_WeldingVoltage_Vertical_editingFinished();
 
 private:
     Ui::SettingWidget *ui;
@@ -209,7 +185,7 @@ private:
     SettingPara *settingPara = nullptr;                             // 参数配置类
     std::shared_ptr<StructLightCamera> structLightCamera{nullptr};  // 结构光相机
 
-    friend class RailWeldingMainWindow;  // 友元类
+    friend class WeldingMainWindow;  // 友元类
 };
 
 #endif  // SETTINGWIDGET_H

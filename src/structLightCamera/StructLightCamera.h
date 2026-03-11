@@ -118,7 +118,7 @@ private:
 #endif
 
     friend class SettingWidget;
-    friend class RailWeldingMainWindow;
+    friend class WeldingMainWindow;
 #ifdef SMART_CAMERA
     friend class RailWeldiongSystem;  // 友元类
 #endif

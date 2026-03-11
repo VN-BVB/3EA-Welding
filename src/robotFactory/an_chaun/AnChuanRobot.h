@@ -87,7 +87,7 @@ private:
     int faceFlag = 0;      // 正反面标志
     QTimer *update_timer;  // 仿真渲染界面更新定时器
 
-    friend class RailWeldingMainWindow;
+    friend class WeldingMainWindow;
 };
 
 #endif  // ANCHUANROBOT_H

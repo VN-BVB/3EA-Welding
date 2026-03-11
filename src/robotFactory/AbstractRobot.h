@@ -80,7 +80,7 @@ protected:
     ROBOT_WORK_MODE robotWorkMode = SIMULATION_MODE;  // 默认模拟模式
 
 private:
-    friend class RailWeldingMainWindow;
+    friend class WeldingMainWindow;
 };
 
 #endif  // ABSTRACTROBOT_H
