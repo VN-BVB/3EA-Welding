@@ -1,4 +1,4 @@
-QT       += core gui serialbus network opengl
+QT       += core gui serialbus network opengl concurrent
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -16,6 +16,8 @@ DEFINES += _CRT_SECURE_NO_WARNINGS
 DEFINES += _SCL_SECURE_NO_WARNINGS
 DEFINES += _SILENCE_FPOS_SEEKPOS_DEPRECATION_WARNING
 
+QMAKE_LFLAGS += -openmp
+QMAKE_CXXFLAGS += -openmp
 QMAKE_CXXFLAGS += /MP
 QMAKE_CXXFLAGS_RELEASE = -ZI -MD
 # 在发布模式下, 也可以使用调试器来调试程序。
@@ -23,6 +25,7 @@ QMAKE_LFLAGS_RELEASE = /DEBUG
 
 DEFINES += SMART_CAMERA
 QMAKE_CXXFLAGS += /bigobj
+
 
 # 以下为第三方库配置选项
 DEFINES += LI_CONFIG

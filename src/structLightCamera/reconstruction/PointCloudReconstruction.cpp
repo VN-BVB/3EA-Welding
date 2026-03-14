@@ -43,8 +43,27 @@ void PointCloudReconstruction::initPara() {
     projectorDistortion = (cv::Mat_<double>(5, 1) << structLightConfig.project_distortion[0],
                            structLightConfig.project_distortion[1], structLightConfig.project_distortion[3],
                            structLightConfig.project_distortion[4], structLightConfig.project_distortion[2]);
+    // 初始化畸变表
+    QtConcurrent::run([this]() { initDistortionMap(); });
 }
+void PointCloudReconstruction::initDistortionMap() {
+    cameraMapX = cv::Mat(cameraHeight, cameraWidth, CV_32F);
+    cameraMapY = cv::Mat(cameraHeight, cameraWidth, CV_32F);
 
+    for (int v = 0; v < cameraHeight; v++) {
+        for (int u = 0; u < cameraWidth; u++) {
+            std::vector<cv::Point2f> src(1);
+            std::vector<cv::Point2f> dst;
+
+            src[0] = cv::Point2f(u, v);
+
+            cv::undistortPoints(src, dst, structLightConfig.Kc, cameraDistortion, cv::Mat(), structLightConfig.Kc);
+
+            cameraMapX.at<float>(v, u) = dst[0].x;
+            cameraMapY.at<float>(v, u) = dst[0].y;
+        }
+    }
+}
 // 初始化目标检测类
 #ifdef SMART_CAMERA
 void PointCloudReconstruction::initObjectDetect() {
@@ -453,19 +472,18 @@ void PointCloudReconstruction::cameraProjectMatch(std::vector<cv::Point2d>& came
 #pragma omp for nowait
         for (int i = 0; i < cameraHeight; i++) {
             double* pixelAbsolutePhase = (double*)absolutePhase.data + i * cameraWidth;  // 当前像素绝对相位
+            float* mapXptr = cameraMapX.ptr<float>(i);
+            float* mapYptr = cameraMapY.ptr<float>(i);
             for (int j = 0; j < cameraWidth; j++) {
                 if (i > minV && i < maxV && j > minU && j < maxU) {
                     double up = *pixelAbsolutePhase * projectorWidth;  // 求出投影仪对应的列像素
-                    // 相机畸变矫正
-                    std::vector<cv::Point2f> currentPoint;
-                    currentPoint.push_back(cv::Point2f(j, i));  // 当前已经畸变的当前点
-                    std::vector<cv::Point2f> undistortPoint;    // 对应的原始未畸变点
-                    cv::undistortPoints(currentPoint, undistortPoint, structLightConfig.Kc, cameraDistortion, cv::Mat(),
-                                        structLightConfig.Kc);  // 离散点的畸变矫正
-                    if ((undistortPoint[0].x > 0) && (undistortPoint[0].y > 0) && (undistortPoint[0].x < cameraWidth - 1) &&
-                        (undistortPoint[0].y < cameraHeight - 1)) {  // 对应原始未畸变点范围进行限制
+
+                    float uc = mapXptr[j];
+                    float vc = mapYptr[j];
+
+                    if (uc > 0 && vc > 0 && uc < cameraWidth - 1 && vc < cameraHeight - 1) {
                         projectCoordinatePrivate.push_back(up);
-                        cameraCoordinatePrivate.push_back(undistortPoint[0]);
+                        cameraCoordinatePrivate.emplace_back(uc, vc);
                     }
                 }
                 pixelAbsolutePhase++;
@@ -483,10 +501,49 @@ void PointCloudReconstruction::cameraProjectMatch(std::vector<cv::Point2d>& came
 void PointCloudReconstruction::calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud,
                                               std::vector<cv::Point2d>& cameraCoord, std::vector<double>& projectCoord) {
     std::cout << projectCoord.size() << std::endl;
+    const cv::Mat& Ac = structLightConfig.Ac;
+    const cv::Mat& Ap = structLightConfig.Ap;
+
+    // -------- 相机矩阵缓存 --------
+    double Ac00 = Ac.at<double>(0, 0);
+    double Ac01 = Ac.at<double>(0, 1);
+    double Ac02 = Ac.at<double>(0, 2);
+    double Ac03 = Ac.at<double>(0, 3);
+
+    double Ac10 = Ac.at<double>(1, 0);
+    double Ac11 = Ac.at<double>(1, 1);
+    double Ac12 = Ac.at<double>(1, 2);
+    double Ac13 = Ac.at<double>(1, 3);
+
+    double Ac20 = Ac.at<double>(2, 0);
+    double Ac21 = Ac.at<double>(2, 1);
+    double Ac22 = Ac.at<double>(2, 2);
+    double Ac23 = Ac.at<double>(2, 3);
+
+    // -------- 投影仪矩阵缓存 --------
+    double Ap00 = Ap.at<double>(0, 0);
+    double Ap01 = Ap.at<double>(0, 1);
+    double Ap02 = Ap.at<double>(0, 2);
+    double Ap03 = Ap.at<double>(0, 3);
+
+    double Ap10 = Ap.at<double>(1, 0);
+    double Ap11 = Ap.at<double>(1, 1);
+    double Ap12 = Ap.at<double>(1, 2);
+    double Ap13 = Ap.at<double>(1, 3);
+
+    double Ap20 = Ap.at<double>(2, 0);
+    double Ap21 = Ap.at<double>(2, 1);
+    double Ap22 = Ap.at<double>(2, 2);
+    double Ap23 = Ap.at<double>(2, 3);
 
 #pragma omp parallel num_threads(12)
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr recons_cloud_private(new pcl::PointCloud<pcl::PointXYZ>);  // 重建点云
+        cv::Mat A(3, 3, CV_64FC1);
+        cv::Mat B(3, 1, CV_64FC1);
+        cv::Mat XYZ(3, 1, CV_64FC1);
+        cv::Mat XYZ_new(3, 1, CV_64FC1);
+
 #pragma omp for nowait
         for (int i = 0; i < cameraCoord.size(); i++) {
             // 1. 求出带有投影仪畸变的三维点坐标
@@ -495,23 +552,23 @@ void PointCloudReconstruction::calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Pt
             double vc = cameraCoord[i].y;
             double up = projectCoord[i];
             //(AX=B) 最小二乘法中A矩阵(3*3)
-            cv::Mat A = cv::Mat(3, 3, CV_64FC1);
-            A.at<double>(0, 0) = structLightConfig.Ac.at<double>(0, 0) - uc * structLightConfig.Ac.at<double>(2, 0);
-            A.at<double>(0, 1) = structLightConfig.Ac.at<double>(0, 1) - uc * structLightConfig.Ac.at<double>(2, 1);
-            A.at<double>(0, 2) = structLightConfig.Ac.at<double>(0, 2) - uc * structLightConfig.Ac.at<double>(2, 2);
-            A.at<double>(1, 0) = structLightConfig.Ac.at<double>(1, 0) - vc * structLightConfig.Ac.at<double>(2, 0);
-            A.at<double>(1, 1) = structLightConfig.Ac.at<double>(1, 1) - vc * structLightConfig.Ac.at<double>(2, 1);
-            A.at<double>(1, 2) = structLightConfig.Ac.at<double>(1, 2) - vc * structLightConfig.Ac.at<double>(2, 2);
-            A.at<double>(2, 0) = structLightConfig.Ap.at<double>(0, 0) - up * structLightConfig.Ap.at<double>(2, 0);
-            A.at<double>(2, 1) = structLightConfig.Ap.at<double>(0, 1) - up * structLightConfig.Ap.at<double>(2, 1);
-            A.at<double>(2, 2) = structLightConfig.Ap.at<double>(0, 2) - up * structLightConfig.Ap.at<double>(2, 2);
+            A.at<double>(0, 0) = Ac00 - uc * Ac20;
+            A.at<double>(0, 1) = Ac01 - uc * Ac21;
+            A.at<double>(0, 2) = Ac02 - uc * Ac22;
+
+            A.at<double>(1, 0) = Ac10 - vc * Ac20;
+            A.at<double>(1, 1) = Ac11 - vc * Ac21;
+            A.at<double>(1, 2) = Ac12 - vc * Ac22;
+
+            A.at<double>(2, 0) = Ap00 - up * Ap20;
+            A.at<double>(2, 1) = Ap01 - up * Ap21;
+            A.at<double>(2, 2) = Ap02 - up * Ap22;
             //(AX=B) 最小二乘法中B矩阵(3*1)
-            cv::Mat B = cv::Mat(3, 1, CV_64FC1);
-            B.at<double>(0, 0) = uc * structLightConfig.Ac.at<double>(2, 3) - structLightConfig.Ac.at<double>(0, 3);
-            B.at<double>(1, 0) = vc * structLightConfig.Ac.at<double>(2, 3) - structLightConfig.Ac.at<double>(1, 3);
-            B.at<double>(2, 0) = up * structLightConfig.Ap.at<double>(2, 3) - structLightConfig.Ap.at<double>(0, 3);
+            B.at<double>(0, 0) = uc * Ac23 - Ac03;
+            B.at<double>(1, 0) = vc * Ac23 - Ac13;
+            B.at<double>(2, 0) = up * Ap23 - Ap03;
             // 最小二乘法X矩阵(3*1)
-            cv::Mat XYZ = cv::Mat(3, 1, CV_64FC1);
+            XYZ.setTo(0);
             // 采用SVD、LU等方法最小二乘法求解XYZ
             cv::solve(A, B, XYZ, cv::DECOMP_LU);
             // 世界坐标系中坐标
@@ -520,11 +577,8 @@ void PointCloudReconstruction::calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Pt
             coordinate.y = XYZ.at<double>(1, 0);
             coordinate.z = XYZ.at<double>(2, 0);
             // 2. 求出带畸变的vp
-            double vp =
-                (structLightConfig.Ap.at<double>(1, 0) * coordinate.x + structLightConfig.Ap.at<double>(1, 1) * coordinate.y +
-                 structLightConfig.Ap.at<double>(1, 2) * coordinate.z + structLightConfig.Ap.at<double>(1, 3)) /
-                (structLightConfig.Ap.at<double>(2, 0) * coordinate.x + structLightConfig.Ap.at<double>(2, 1) * coordinate.y +
-                 structLightConfig.Ap.at<double>(2, 2) * coordinate.z + structLightConfig.Ap.at<double>(2, 3));
+            double vp = (Ap10 * coordinate.x + Ap11 * coordinate.y + Ap12 * coordinate.z + Ap13) /
+                        (Ap20 * coordinate.x + Ap21 * coordinate.y + Ap22 * coordinate.z + Ap23);
             // 3. 投影仪畸变矫正
             std::vector<cv::Point2f> currentPoint;
             currentPoint.push_back(cv::Point2f(up, vp));  // 当前已经畸变的当前点
@@ -532,15 +586,15 @@ void PointCloudReconstruction::calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Pt
             cv::undistortPoints(currentPoint, undistortPoint, structLightConfig.Kp, projectorDistortion, cv::Mat(),
                                 structLightConfig.Kp);  // 畸变矫正
             // 4. 求出无畸变的三维坐标点
-            cv::Mat XYZ_new = cv::Mat(3, 1, CV_64FC1);
+            XYZ_new.setTo(0);
             if ((undistortPoint[0].x > 0) && (undistortPoint[0].y > 0) && (undistortPoint[0].x < projectorWidth - 1) &&
                 (undistortPoint[0].y < projectorHeight - 1) && up > 0) {  // 对应原始未畸变点范围进行限制
                 double up_new = undistortPoint[0].x;
                 // 将AX=B中, 存在up项的重新赋值
-                A.at<double>(2, 0) = structLightConfig.Ap.at<double>(0, 0) - up_new * structLightConfig.Ap.at<double>(2, 0);
-                A.at<double>(2, 1) = structLightConfig.Ap.at<double>(0, 1) - up_new * structLightConfig.Ap.at<double>(2, 1);
-                A.at<double>(2, 2) = structLightConfig.Ap.at<double>(0, 2) - up_new * structLightConfig.Ap.at<double>(2, 2);
-                B.at<double>(2, 0) = up_new * structLightConfig.Ap.at<double>(2, 3) - structLightConfig.Ap.at<double>(0, 3);
+                A.at<double>(2, 0) = Ap00 - up_new * Ap20;
+                A.at<double>(2, 1) = Ap01 - up_new * Ap21;
+                A.at<double>(2, 2) = Ap02 - up_new * Ap22;
+                B.at<double>(2, 0) = up_new * Ap23 - Ap03;
                 // 采用SVD、LU等方法最小二乘法求解XYZ
                 cv::solve(A, B, XYZ_new, cv::DECOMP_LU);
                 coordinate.x = XYZ_new.at<double>(0, 0);
@@ -694,6 +748,7 @@ void PointCloudReconstruction::reconstructForSeamArea() {
 
 // 5.3 点云三维重建
 void PointCloudReconstruction::reconstructPoint() {
+    auto t0 = std::chrono::high_resolution_clock::now();
     PLOGD << "点云三维重建...";
 
     // 0. 定义变量
@@ -702,17 +757,30 @@ void PointCloudReconstruction::reconstructPoint() {
     pcl::PointCloud<pcl::PointXYZ>::Ptr reconstructPointCloud(new pcl::PointCloud<pcl::PointXYZ>);
 
     // 1. 相机和投影仪匹配对应点, 然后对相机点进行畸变矫正
+    auto t1 = std::chrono::high_resolution_clock::now();
     cameraProjectMatch(cameraCoordinate, projectCoordinate);
+    auto t2 = std::chrono::high_resolution_clock::now();
 
     // 2. 根据相机的(u,v)和投影仪对应的u, 进行每个匹配点的三维重建
     PLOGD << "根据相机的(u,v)和投影仪对应的u, 进行每个匹配点的三维重建";
     calcPointCloud(reconstructPointCloud, cameraCoordinate, projectCoordinate);
+    auto t3 = std::chrono::high_resolution_clock::now();
 
     // 3. 点云后处理
     if (reconstructPointCloud->size() > 0) {
         pointCloudPostProcess(reconstructPointCloud);
-        pcl::io::savePCDFile("./data/common/CommonPC.pcd", *reconstructPointCloud);
+        // pcl::io::savePCDFile("./data/common/CommonPC.pcd", *reconstructPointCloud);
     }
 
     pointCloud = reconstructPointCloud;
+    auto t4 = std::chrono::high_resolution_clock::now();
+    // 输出耗时
+    std::cout << "cameraProjectMatch time: " << std::chrono::duration<double, std::milli>(t2 - t1).count() << " ms" << std::endl;
+
+    std::cout << "calcPointCloud time: " << std::chrono::duration<double, std::milli>(t3 - t2).count() << " ms" << std::endl;
+
+    std::cout << "postProcess time: " << std::chrono::duration<double, std::milli>(t4 - t3).count() << " ms" << std::endl;
+
+    std::cout << "total reconstructPoint time: " << std::chrono::duration<double, std::milli>(t4 - t0).count() << " ms"
+              << std::endl;
 }

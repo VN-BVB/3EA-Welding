@@ -13,12 +13,12 @@
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <QtConcurrent>
 #include <array>
 #include <cmath>
 #include <iostream>
 #include <memory>
 #include <opencv2/opencv.hpp>
-
 class StructLightConfig;
 class WeldSeamInfo;
 class AbstractObjectDetect;
@@ -32,6 +32,8 @@ public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr localReconstruct(int minU, int maxU, int minV, int maxV);  // 局部点云重建
     std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToSA();  // 焊缝区域点云重建(加拟合背景平面)
     std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToSD();  // 焊缝区域点云重建(加拟合背景平面)
+
+    void initDistortionMap();
 
 private:
     // 计算过程中需要用到的参数
@@ -51,6 +53,8 @@ private:
     cv::Mat projectorDistortion;                // 畸变系数集合 Opencv: k1, k2, p1, p2, k3
     double sinTable[phaseShiftImgNum];          // sin表
     double cosTable[phaseShiftImgNum];          // cos表
+    cv::Mat cameraMapX;                         // 畸变表x
+    cv::Mat cameraMapY;                         // 畸变表y
 
     // 初始化函数
     void initPara();  // 初始化需要用到的参数
