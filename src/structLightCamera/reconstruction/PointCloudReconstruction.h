@@ -20,11 +20,9 @@
 #include <opencv2/opencv.hpp>
 
 class StructLightConfig;
-#ifdef SMART_CAMERA
 class WeldSeamInfo;
 class AbstractObjectDetect;
 class DetResult;
-#endif
 
 class PointCloudReconstruction {
 public:
@@ -32,9 +30,8 @@ public:
 
     // 点云重建函数
     pcl::PointCloud<pcl::PointXYZ>::Ptr localReconstruct(int minU, int maxU, int minV, int maxV);  // 局部点云重建
-#ifdef SMART_CAMERA
-    std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstruct();  // 焊缝区域点云重建(加拟合背景平面)
-#endif
+    std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToSA();  // 焊缝区域点云重建(加拟合背景平面)
+    std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToSD();  // 焊缝区域点云重建(加拟合背景平面)
 
 private:
     // 计算过程中需要用到的参数
@@ -44,9 +41,9 @@ private:
     static const int cameraHeight = 1200;
     static const int projectorWidth = 1280;  // 投影仪分辨率
     static const int projectorHeight = 720;
-    static const int phaseShiftImgNum = 12;     // 相移步数
-    const int garyCodeTotalImgNum = 9;          // 格雷码总图片数, 6个传统格雷码 + 2个全黑白 + 1个互补格雷码 = 9
-    const int garyCodeEncodeImgNum = 6;         // 传统格雷码编解码的图像数量
+    static const int phaseShiftImgNum = 12;  // 相移步数
+    const int garyCodeTotalImgNum = 9;   // 格雷码总图片数, 6个传统格雷码 + 2个全黑白 + 1个互补格雷码 = 9
+    const int garyCodeEncodeImgNum = 6;  // 传统格雷码编解码的图像数量
     const double ransacPlaneThreshold = 2;      // Ransac拟合背景平面的距离阈值
     const double workPlaneRemoveThreshold = 2;  // 计算采集点云各点距离拟合平面的距离，大于此阈值，则保留
     double modulationThreshold = 2;             // 调制度阈值
@@ -63,14 +60,15 @@ private:
     void reInitialize();  //  变量重新初始化
 
     // 点云重建的具体计算步骤函数
-    void imageDistribute();                                               // 0. 将采集到的图像放入相移和格雷码容器
+    void imageDistribute();  // 0. 将采集到的图像放入相移和格雷码容器
     void makeMaskForReconstruct(int minU, int maxU, int minV, int maxV);  // 1.1 更新全点云重建的mask
     void makeMaskForSeamsDet();                                           // 1.2 更新焊缝区域目标框的mask
+    void makeMaskForSeamsDetToSD();                                       // 1.2 更新焊缝区域目标框的mask
     void solveWrapPhase();                                                // 2. 相移法求包裹相位
     void decodeGrayCode();                                                // 3. 解码格雷码
     void phaseUnwrap();                                                   // 4. 相位展开, 求绝对相位
-    void cameraProjectMatch(std::vector<cv::Point2d>& cameraCoord, std::vector<double>& projectCoord, int minU = 0, int maxU = cameraWidth,
-                            int minV = 0, int maxV = cameraHeight);  // 5.0.1 相机和投影仪匹配对应点
+    void cameraProjectMatch(std::vector<cv::Point2d>& cameraCoord, std::vector<double>& projectCoord, int minU = 0,
+                            int maxU = cameraWidth, int minV = 0, int maxV = cameraHeight);  // 5.0.1 相机和投影仪匹配对应点
     void calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud, std::vector<cv::Point2d>& cameraCoord,
                         std::vector<double>& projectCoord);                      // 5.0.2 计算点云
     void pointCloudPostProcess(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud);  // 5.0.3 点云后处理
@@ -96,11 +94,13 @@ private:
     cv::Mat binarizationThreshold = cv::Mat::zeros(cameraHeight, cameraWidth, CV_64FC1);      // 每一像素的二值化阈值
     cv::Mat absolutePhase = cv::Mat::zeros(cameraHeight, cameraWidth, CV_64FC1);              // 绝对相位
     cv::Mat unDistortionAbsolutePhase = cv::Mat::zeros(cameraHeight, cameraWidth, CV_64FC1);  // 去除相机畸变后的绝对相位
-    cv::Mat maskForReconstruct = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);          // 用于重建的掩模(每次重建时更新)
-    cv::Mat maskForGlobal = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);               // 全局重建的掩模(初始化时更新一次)
+    cv::Mat maskForReconstruct = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 用于重建的掩模(每次重建时更新)
+    cv::Mat maskForGlobal = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 全局重建的掩模(初始化时更新一次)
 #ifdef SMART_CAMERA
-    cv::Mat maskForWorkbench = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 工作台重建的掩模(去除焊缝区域, 重建焊缝区域时更新)
-    cv::Mat maskForWorkpiece = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 工件焊缝区域重建的掩模(只有焊缝区域, 重建焊缝区域时更新)
+    cv::Mat maskForWorkbench =
+        cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 工作台重建的掩模(去除焊缝区域, 重建焊缝区域时更新)
+    cv::Mat maskForWorkpiece =
+        cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 工件焊缝区域重建的掩模(只有焊缝区域, 重建焊缝区域时更新)
 #endif
 
     // 计算结果
@@ -108,6 +108,7 @@ private:
 #ifdef SMART_CAMERA
     Eigen::VectorXf workbenchCoeff = Eigen::VectorXf::Ones(4);  // 工作台的背景平面参数
     pcl::PointCloud<pcl::PointXYZ>::Ptr workbenchPointCloud;    // 工作台点云
+    pcl::PointCloud<pcl::PointXYZ>::Ptr nonPlanePointCloud;     // 工件点云
     std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo;    // 焊缝区域信息
 #endif
 

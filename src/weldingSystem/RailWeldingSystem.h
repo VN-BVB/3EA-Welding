@@ -40,6 +40,7 @@ public:
     void initTrajectoryPlanning();  // 初始化轨迹规划类
     void initStructLightCamera();
     void initSeamDetWithPointCloud();
+    void initSeamDetWithSeg();
 
     void connectRobot();
     void disconnectRobot();

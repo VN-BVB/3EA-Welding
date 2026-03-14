@@ -80,13 +80,14 @@ bool AnChuanRobot::welding() {
     double x, y, z, rx, ry, rz;              // 路点的xyz型信息
     double moveSpeed, arc;                   // 焊接速度以及是否起弧（对安川机器人保留）
     double swingWeldAction;                  // 是否摆焊
+    double weldingCurrent, weldingVoltage;   // 焊接电流电压
     std::vector<QString> datai;              // 存放每个路点具体信息的变量
     std::vector<std::vector<QString>> data;  // 存放路点的变量
 
     infile.open("./data/SeamCoordinate.txt");
 
     // 将路点信息读取到内存，等待发送
-    while (infile >> x >> y >> z >> rx >> ry >> rz >> moveSpeed >> arc >> swingWeldAction) {
+    while (infile >> x >> y >> z >> rx >> ry >> rz >> moveSpeed >> arc >> swingWeldAction >> weldingCurrent >> weldingVoltage) {
         datai.push_back(QString::number(x * 1000) + "$$");
         datai.push_back(QString::number(y * 1000) + "$$");
         datai.push_back(QString::number(z * 1000) + "$$");
@@ -100,6 +101,8 @@ bool AnChuanRobot::welding() {
             datai.push_back(QString::number(arc) + "$$");
         }
         datai.push_back(QString::number(swingWeldAction) + "$$");
+        datai.push_back(QString::number(weldingCurrent) + "$$");
+        datai.push_back(QString::number(weldingVoltage * 10) + "$$");
 
         data.push_back(datai);
         datai.clear();
@@ -220,10 +223,19 @@ bool AnChuanRobot::moveL(robotPose p, double speed) {
 
     moveOverFlag = false;  // 机器人开始运动, 标志位置为false
     running = true;        // 进入运动模式
-    std::vector<QString> datai = {QString::number(p.x_ * 1000) + "$$",  QString::number(p.y_ * 1000) + "$$",
-                                  QString::number(p.z_ * 1000) + "$$",  QString::number(p.a_ * 10000) + "$$",
-                                  QString::number(p.b_ * 10000) + "$$", QString::number(p.c_ * 10000) + "$$",
-                                  QString::number((int)speed) + "$$",   QString::number(0) + "$$"};
+    std::vector<QString> datai = {
+        QString::number(p.x_ * 1000) + "$$",
+        QString::number(p.y_ * 1000) + "$$",
+        QString::number(p.z_ * 1000) + "$$",
+        QString::number(p.a_ * 10000) + "$$",
+        QString::number(p.b_ * 10000) + "$$",
+        QString::number(p.c_ * 10000) + "$$",
+        QString::number((int)speed) + "$$",
+        QString::number(0) + "$$",
+        QString::number(0) + "$$",
+        QString::number(0) + "$$",
+        QString::number(0) + "$$",
+    };
     std::vector<std::vector<QString>> data;  // 存放路点的变量
     data.push_back(datai);
     data.push_back(datai);
@@ -344,6 +356,8 @@ void AnChuanRobot::Btn_Send_loop(std::vector<QString> data, int sleepTime) {
             // // 以ASCII码形式发送文本框内容
             PLOGD << clientSocket[i]->write(wayPoint.toLatin1());
             PLOGD << wayPoint.toLatin1().data();
+            /*机器人端在 socketRecv_Task() 中接收数据：
+                bytesRecv = mpRecv(sockHandle, buff, BUFF_MAX, 0);*/
             // ui->textEdit_Send->append(wayPoint);
             // }
         }
@@ -453,8 +467,8 @@ void AnChuanRobot::Unpack() {
     // 数据打包进队列
     if (q_upPackData.size() >= 1) {
         QByteArray qb_temp = q_upPackData.dequeue();
-        if (qb_temp != BUF_INITIALIZATION && qb_temp != ASK_TO_SEND_DATA && qb_temp != STOP_TO_SEND_DATA && qb_temp != STOP_TO_ACCEPT_ASK &&
-            qb_temp != JBI_START_RUN) {
+        if (qb_temp != BUF_INITIALIZATION && qb_temp != ASK_TO_SEND_DATA && qb_temp != STOP_TO_SEND_DATA &&
+            qb_temp != STOP_TO_ACCEPT_ASK && qb_temp != JBI_START_RUN) {
             // 位姿数据进pose队列
             double data = qb_temp.toDouble();
 
@@ -467,10 +481,10 @@ void AnChuanRobot::Unpack() {
 
             // 每收到六个数据 (一组位姿, 就发出一次)
             if (q_pose.size() == 12) {
-                emit sendRobotCurrentPose(
-                    robotPose(q_pose[0] / 1000, q_pose[1] / 1000, q_pose[2] / 1000, q_pose[3] / 10000, q_pose[4] / 10000, q_pose[5] / 10000));
-                emit sendRobotCurrentJointAngle(robotJointAngle(q_pose[6] / 10000, q_pose[7] / 10000, q_pose[8] / 10000, q_pose[9] / 10000,
-                                                                q_pose[10] / 10000, q_pose[11] / 10000));
+                emit sendRobotCurrentPose(robotPose(q_pose[0] / 1000, q_pose[1] / 1000, q_pose[2] / 1000, q_pose[3] / 10000,
+                                                    q_pose[4] / 10000, q_pose[5] / 10000));
+                emit sendRobotCurrentJointAngle(robotJointAngle(q_pose[6] / 10000, q_pose[7] / 10000, q_pose[8] / 10000,
+                                                                q_pose[9] / 10000, q_pose[10] / 10000, q_pose[11] / 10000));
                 q_pose.clear();
             }
 

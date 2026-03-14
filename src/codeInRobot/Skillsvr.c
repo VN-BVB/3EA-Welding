@@ -387,7 +387,7 @@ void socketRecv_Task(void) {  // 套接字接收
                                     SetBVar(12, (int)fbuff);  // 2，4，6...的起弧存进B012
                                 }
                                 buffNum++;
-                            } else {  // 如果到了8个, 说明当前数据是摆焊指令, 就存到摆焊处
+                            } else if (buffNum < 9)  {  // 如果到了9个, 说明当前数据是摆焊指令, 就存到摆焊处
                                 CURR_SWING_METHOD = (int)fbuff;
 
                                 if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)) {  // 也就是prevTarget不为空且确实需要摆焊
@@ -396,7 +396,7 @@ void socketRecv_Task(void) {  // 套接字接收
                                         swingRefTarget[j] = prevTarget[j];
                                         swingPrevTarget[j] = prevTarget[j];
                                     }
-                                    // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册
+                                    // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册，有点歧义，前一接近点swingPrevTarget作为水平的方向以实际实验为准
                                     switch (CURR_SWING_METHOD) {
                                         case FRONT_LEFT_VERTICAL_SWING_WELD:
                                             swingRefTarget[1] -= 10 * 1000;
@@ -466,10 +466,24 @@ void socketRecv_Task(void) {  // 套接字接收
                                         SetIVar(4, (int)fbuff);  // 2，4，6...的摆焊类型存进I004
                                     }
                                 buffNum++;
+                            } else if (buffNum < 10) {  // 如果到了10个, 说明当前数据是电流指令。
+                                 if (targetNum % 2 == 0) {
+                                    SetIVar(5, (int)fbuff);  // 1，3，5...的起弧存进B011
+                                } else {
+                                    SetIVar(7, (int)fbuff);  // 2，4，6...的起弧存进B012
+                                }
+                                buffNum++;
+                            } else if (buffNum < 11) {  // 如果到了11个, 说明当前数据是电压指令。
+                                 if (targetNum % 2 == 0) {
+                                    SetIVar(6, (int)fbuff);  // 1，3，5...的起弧存进B011
+                                } else {
+                                    SetIVar(8, (int)fbuff);  // 2，4，6...的起弧存进B012
+                                }
+                                buffNum++;
                             }
 
                             // 每解包出9组数据打包一次 (第7个数为速度, 第8个数为是否起弧, 第9个数为摆焊类型)
-                            if (buffNum == 9) {
+                            if (buffNum == 11) {
                                 targetNum++;
 
                                 int j = 0;

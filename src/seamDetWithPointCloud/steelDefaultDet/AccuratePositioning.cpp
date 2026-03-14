@@ -1018,7 +1018,7 @@ void AccuratePositioning::computePlaneIntersectionLines(const std::vector<pcl::M
 
         filteredClouds.push_back(filtered);
     }
-    //计算平面交线
+    // 计算平面交线
     for (size_t i = 0; i < planeEquations.size(); ++i) {
         for (size_t j = i + 1; j < planeEquations.size(); ++j) {
             Eigen::Vector3d n1(planeEquations[i].values[0], planeEquations[i].values[1], planeEquations[i].values[2]);
@@ -1032,7 +1032,7 @@ void AccuratePositioning::computePlaneIntersectionLines(const std::vector<pcl::M
             A << n1.transpose(), n2.transpose(), dir.transpose();
 
             Eigen::Vector3d b(-planeEquations[i].values[3], -planeEquations[j].values[3], 0.0);
-            //使用QR分解求解线性方程组，得到交线上的一点P0
+            // 使用QR分解求解线性方程组，得到交线上的一点P0
             Eigen::Vector3d P0 = A.colPivHouseholderQr().solve(b);
 
             auto extractProjectedT = [&](const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, std::vector<double>& t_values) {

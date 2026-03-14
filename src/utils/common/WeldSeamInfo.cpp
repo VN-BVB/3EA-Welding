@@ -94,6 +94,14 @@ WELD_AREA_TYPE MyToolFunc::getWeldAreaType(int areaNum) {
             return WELD_AREA_TYPE::BACK_BEAM;
         case 4:
             return WELD_AREA_TYPE::FRONT_UP_BEAM;
+        case 100:
+            return WELD_AREA_TYPE::Plate_Plate_F;
+        case 101:
+            return WELD_AREA_TYPE::TubeSide_Plate_F;
+        case 102:
+            return WELD_AREA_TYPE::Tube_Plate_F;
+        case 103:
+            return WELD_AREA_TYPE::Tube_Tube_F;
         default:
             return WELD_AREA_TYPE::Default;
     }
@@ -112,6 +120,16 @@ std::string MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE weldAreaType) {
             return "BACK_BEAM";
         case WELD_AREA_TYPE::FRONT_UP_BEAM:
             return "FRONT_UP_BEAM";
+        case WELD_AREA_TYPE::Plate_Plate_F:
+            return "Plate_Plate_F";
+        case WELD_AREA_TYPE::TubeSide_Plate_F:
+            return "TubeSide_Plate_F";
+        case WELD_AREA_TYPE::Tube_Plate_F:
+            return "Tube_Plate_F";
+        case WELD_AREA_TYPE::Tube_Tube_F:
+            return "Tube_Tube_F";
+        case WELD_AREA_TYPE::Default:
+            return "Default";
         default:
             return "unknown type";
     }
@@ -132,6 +150,14 @@ std::string MyToolFunc::getWeldTypeString(WELD_TYPE weldType) {
             return "FRONT_HORIZONTAL_FILLET";
         case WELD_TYPE::FRONT_VERTICAL_FILLET:
             return "FRONT_VERTICAL_FILLET";
+        case WELD_TYPE::Plate_Plate_Fillet:
+            return "Plate_Plate_Fillet";
+        case WELD_TYPE::TubeSide_Plate_Fillet:
+            return "TubeSide_Plate_Fillet";
+        case WELD_TYPE::Tube_Plate_Fillet:
+            return "Tube_Plate_Fillet";
+        case WELD_TYPE::Tube_Tube_Fillet:
+            return "Tube_Tube_Fillet";
         default:
             return "unknown type";
     }

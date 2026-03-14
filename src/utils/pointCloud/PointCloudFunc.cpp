@@ -449,3 +449,19 @@ std::vector<pcl::PointXYZ> MyToolFunc::lineCloudEndPoints(pcl::PointCloud<pcl::P
 
     return lineEndpoints;
 }
+
+// 在球体邻域内保留一个点，避免密度不均
+void MyToolFunc::pointcloudUniformDownsampling(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float leafSize,
+                                               pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudResult) {
+    if (!cloud || cloud->points.empty()) {
+        PLOGE << "点云为空，无法进行下采样";
+        return;
+    }
+    pcl::UniformSampling<pcl::PointXYZ> filter;
+    filter.setInputCloud(cloud);
+    filter.setRadiusSearch(leafSize);
+    filter.filter(*cloudResult);
+    if (cloudResult->points.empty()) {
+        PLOGE << "下采样后点云为空";
+    }
+}

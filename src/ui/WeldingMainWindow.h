@@ -69,6 +69,8 @@ private slots:
 
     void on_comboBox_currentTextChanged(const QString &arg1);
 
+    void on_combWorkpiece_currentTextChanged(const QString &arg1);
+
 private:
     boost::shared_ptr<pcl::visualization::PCLVisualizer> pclVisualizer;  // 点云可视化界面
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_visual;

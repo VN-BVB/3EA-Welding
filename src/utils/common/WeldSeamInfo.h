@@ -23,15 +23,26 @@ enum WELD_TYPE {              // 焊缝类型
     BACK_BEAM_BUTT,           // 背面横梁对接
     FRONT_BEAM_BUTT,          // 正面横梁对接
     FRONT_HORIZONTAL_FILLET,  // 正面水平角接
-    FRONT_VERTICAL_FILLET     // 正面垂直角接
+    FRONT_VERTICAL_FILLET,    // 正面垂直角接
+    // 大型工件
+    Plate_Plate_Fillet,
+    TubeSide_Plate_Fillet,
+    Tube_Plate_Fillet,
+    Tube_Tube_Fillet
 };
 
-enum WELD_AREA_TYPE {     // 焊缝区域类型
+enum WELD_AREA_TYPE {  // 焊缝区域类型
+    // 角钢
     BACK_CORNER = 0,      // 背面边角
     FRONT_CORNER = 1,     // 正面边角
     FRONT_DOWN_BEAM = 2,  // 正面倒立横梁
     BACK_BEAM = 3,        // 背面横梁
     FRONT_UP_BEAM = 4,    // 正面正立横梁
+    // 大型工件
+    Plate_Plate_F = 100,
+    TubeSide_Plate_F = 101,
+    Tube_Plate_F = 102,
+    Tube_Tube_F = 103,
     Default
 };
 

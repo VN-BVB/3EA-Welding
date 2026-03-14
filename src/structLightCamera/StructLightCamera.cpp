@@ -9,10 +9,7 @@
 #include "structLightCamera/reconstruction/PointCloudReconstruction.h"
 #include "utils/stateLight/StateLight.h"
 
-StructLightCamera::StructLightCamera(QObject *parent) {
-    workbenchPointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
-    (void)parent;
-}
+StructLightCamera::StructLightCamera(QObject *parent) { (void)parent; }
 
 // 带抽象工厂参数的构造函数
 StructLightCamera::StructLightCamera(std::shared_ptr<AbstractCameraFactory> camFac,
@@ -240,17 +237,34 @@ void StructLightCamera::whenGetPrimaryCameraImage(cv::Mat img, CAMERA_WORK_MODE 
                 projector->closeLed();  // 关闭投影仪LED灯
                 PLOGD << "采集到一组图像, 进行重建...";
                 if (reconstructionMode == RECONSTRUCTION_MODE::WORKPIECE) {
-                    weldAreaInfo = pointCloudReconstruction->weldAreaReconstruct();       // 焊缝区域点云重建
-                    workbenchPointCloud = pointCloudReconstruction->workbenchPointCloud;  // 获取工作台平面点云
+                    if (workpieceType == WORKPIECE_TYPE::STEEL_ANGLE) {
+                        PLOGD << "重建角钢工件";
+                        weldAreaInfo = pointCloudReconstruction->weldAreaReconstructToSA();   // 焊缝区域点云重建
+                        workbenchPointCloud = pointCloudReconstruction->workbenchPointCloud;  // 获取工作台平面点云
 
-                    QString message = QString(QStringLiteral("拟合平面的参数为: %1, %2, %3, %4"))
-                                          .arg(QString::number(pointCloudReconstruction->workbenchCoeff[0], 'f', 6),
-                                               QString::number(pointCloudReconstruction->workbenchCoeff[1], 'f', 6),
-                                               QString::number(pointCloudReconstruction->workbenchCoeff[2], 'f', 6),
-                                               QString::number(pointCloudReconstruction->workbenchCoeff[3], 'f', 6));
-                    emit sendMessage2Ui(message);              // 发送信息到UI界面
-                    emit sendPointCloud(workbenchPointCloud);  // 发送工作台点云
-                    emit sendWeldAreaInfo(weldAreaInfo);       // 发送焊缝区域点云
+                        QString message = QString(QStringLiteral("拟合平面的参数为: %1, %2, %3, %4"))
+                                              .arg(QString::number(pointCloudReconstruction->workbenchCoeff[0], 'f', 6),
+                                                   QString::number(pointCloudReconstruction->workbenchCoeff[1], 'f', 6),
+                                                   QString::number(pointCloudReconstruction->workbenchCoeff[2], 'f', 6),
+                                                   QString::number(pointCloudReconstruction->workbenchCoeff[3], 'f', 6));
+                        emit sendMessage2Ui(message);              // 发送信息到UI界面
+                        emit sendPointCloud(workbenchPointCloud);  // 发送工作台点云
+                        emit sendWeldAreaInfo(weldAreaInfo);       // 发送焊缝区域点云
+                    } else if (workpieceType == WORKPIECE_TYPE::STEEL_DEFAULT) {
+                        PLOGD << "重建三轴工件";
+                        weldAreaInfo = pointCloudReconstruction->weldAreaReconstructToSD();   // 焊缝区域点云重建
+                        workbenchPointCloud = pointCloudReconstruction->workbenchPointCloud;  // 获取工作台平面点云
+
+                        QString message = QString(QStringLiteral("拟合平面的参数为: %1, %2, %3, %4"))
+                                              .arg(QString::number(pointCloudReconstruction->workbenchCoeff[0], 'f', 6),
+                                                   QString::number(pointCloudReconstruction->workbenchCoeff[1], 'f', 6),
+                                                   QString::number(pointCloudReconstruction->workbenchCoeff[2], 'f', 6),
+                                                   QString::number(pointCloudReconstruction->workbenchCoeff[3], 'f', 6));
+                        emit sendMessage2Ui(message);              // 发送信息到UI界面
+                        emit sendPointCloud(workbenchPointCloud);  // 发送工作台点云
+                        emit sendWeldAreaInfoSD(weldAreaInfo);     // 发送焊缝区域点云
+                    }
+
                 } else if (reconstructionMode == RECONSTRUCTION_MODE::COMMON) {
                     pointCloud = pointCloudReconstruction->localReconstruct(
                         normMinU * pointCloudReconstruction->cameraWidth, normMaxU * pointCloudReconstruction->cameraWidth,

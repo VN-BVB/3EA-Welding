@@ -17,12 +17,12 @@ void SystemMirrorWidget::setRailPosition(float position) {
 
 // 设置机器人关节角
 void SystemMirrorWidget::setRobotJointAngle(robotJointAngle angle) {
-    parameter[2].assembly->SetOrientation(0, 0, angle.joint1);
-    parameter[3].assembly->SetOrientation(0, angle.joint2 - 90, 0);
-    parameter[4].assembly->SetOrientation(0, -angle.joint3, 0);
-    parameter[5].assembly->SetOrientation(0, 0, angle.joint4);
-    parameter[6].assembly->SetOrientation(0, -angle.joint5, 0);
-    parameter[7].assembly->SetOrientation(0, 0, angle.joint6);
+    parameter[0].assembly->SetOrientation(0, 0, angle.joint1);
+    parameter[1].assembly->SetOrientation(0, angle.joint2 - 90, 0);
+    parameter[2].assembly->SetOrientation(0, -angle.joint3, 0);
+    parameter[3].assembly->SetOrientation(0, 0, angle.joint4);
+    parameter[4].assembly->SetOrientation(0, -angle.joint5, 0);
+    parameter[5].assembly->SetOrientation(0, 0, angle.joint6);
 
     this->GetRenderWindow()->Render();
 }
@@ -30,19 +30,21 @@ void SystemMirrorWidget::setRobotJointAngle(robotJointAngle angle) {
 // 加载各模块模型
 void SystemMirrorWidget::importSTL() {
     parameter = {
-        {rail,  "./data/3D_Models/rail/STL/rail.stl",              {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {1.0, 1.0, 0.85} },
-        {link0, "./data/3D_Models/robot/an_chuan_STL/newBase.stl", {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {1.0, 0.85, 0.85}},
-        {link1, "./data/3D_Models/robot/an_chuan_STL/Link 1.stl",  {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {0.2, 0.45, 1.0} },
-        {link2, "./data/3D_Models/robot/an_chuan_STL/Link 2.stl",  {155, 0, 450},  {0, 0, 0},   {155, 0, 450},  {0.2, 0.45, 1.0} },
-        {link3, "./data/3D_Models/robot/an_chuan_STL/Link 3.stl",  {769, 0, 450},  {90, 0, 0},  {769, 0, 450},  {0.2, 0.45, 1.0} },
-        {link4, "./data/3D_Models/robot/an_chuan_STL/Link 4.stl",  {969, 0, -190}, {180, 0, 0}, {969, 0, -190}, {0.2, 0.45, 1.0} },
-        {link5, "./data/3D_Models/robot/an_chuan_STL/Link 5.stl",  {969, 0, -190}, {90, 0, 0},  {969, 0, -190}, {0.2, 0.45, 1.0} },
-        {link6, "./data/3D_Models/robot/an_chuan_STL/Link 6.stl",  {969, 0, -190}, {180, 0, 0}, {969, 0, -190}, {0.2, 0.45, 1.0} },
+        // {rail,  "./data/3D_Models/rail/STL/rail.stl",              {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {1.0, 1.0,
+        // 0.85} },
+        // {link0, "./data/3D_Models/robot/an_chuan_STL/newBase.stl", {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {1.0, 0.85,
+        // 0.85}},
+        {link1, "./data/3D_Models/robot/an_chuan_STL/Link 1.stl", {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {0.2, 0.45, 1.0}},
+        {link2, "./data/3D_Models/robot/an_chuan_STL/Link 2.stl", {155, 0, 450},  {90, 0, 0},  {155, 0, 450},  {0.2, 0.45, 1.0}},
+        {link3, "./data/3D_Models/robot/an_chuan_STL/Link 3.stl", {769, 0, 450},  {90, 0, 0},  {769, 0, 450},  {0.2, 0.45, 1.0}},
+        {link4, "./data/3D_Models/robot/an_chuan_STL/Link 4.stl", {969, 0, -190}, {180, 0, 0}, {969, 0, -190}, {0.2, 0.45, 1.0}},
+        {link5, "./data/3D_Models/robot/an_chuan_STL/Link 5.stl", {969, 0, -190}, {90, 0, 0},  {969, 0, -190}, {0.2, 0.45, 1.0}},
+        {link6, "./data/3D_Models/robot/an_chuan_STL/Link 6.stl", {969, 0, -190}, {180, 0, 0}, {969, 0, -190}, {0.2, 0.45, 1.0}},
         {Tlink,
-         "./data/3D_Models/robot/an_chuan_STL/weldgun.stl",        {969, 0, -290},
+         "./data/3D_Models/robot/an_chuan_STL/weldgun.stl",       {969, 0, -290},
          {180, -90, 0},
          {969, 0, -290},
-         {0.4, 0.4, 0.4}                                                                                                         },
+         {0.4, 0.4, 0.4}                                                                                                       },
     };
 
     // 连接各模块
@@ -53,7 +55,7 @@ void SystemMirrorWidget::importSTL() {
         }
         parameter[i].assembly->SetOrigin(parameter[i].Origin);
     }
-    renderer->AddActor(rail);
+    renderer->AddActor(link1);
 
     renderer->SetBackground(0.85, 0.85, 0.85);
     this->GetRenderWindow()->AddRenderer(renderer);

@@ -9,7 +9,7 @@
 #include "robotTrajectoryPlanning/RobotTrajectoryPlanning.h"
 #include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
 #include "seamDetWithPointCloud/SeamDetWithPointCloud.h"
-// #include "seamDetWithSeg/SeamDetWithSeg.h"
+#include "seamDetWithSeg/SeamDetWithSeg.h"
 #include "structLightCamera/StructLightCamera.h"
 #include "structLightCamera/config/StructLightConfig.h"
 #include "utils/common/WeldSeamInfo.h"
@@ -23,7 +23,7 @@ RailWeldingSystem::RailWeldingSystem(QObject* parent)
       seamDetWithPointCloud(std::make_shared<SeamDetWithPointCloud>(nullptr)) {
     this->initStructLightCamera();
     this->initSeamDetWithPointCloud();
-    // this->initSeamDetWithSeg();
+    this->initSeamDetWithSeg();
     this->initTrajectoryPlanning();
     // this->initErrorSave();
     this->initRobot();
@@ -54,10 +54,28 @@ void RailWeldingSystem::initSeamDetWithPointCloud() {
         // 相机重建出最初的焊缝区域点云, 发送到点云方法检测焊缝线程
         connect(structLightCamera.get(), &StructLightCamera::sendWeldAreaInfo, seamDetWithPointCloud.get(),
                 &SeamDetWithPointCloud::whenDetSeamWithPointCloud);
+        connect(structLightCamera.get(), &StructLightCamera::sendWeldAreaInfoSD, seamDetWithPointCloud.get(),
+                &SeamDetWithPointCloud::whenDetSeamWithPointCloudSD);
 
         PLOGD << "点云方法焊缝检测类初始化成功";
     } else {
         PLOGE << "点云方法焊缝检测类初始化失败";
+    }
+}
+// 初始化分割方法检测焊缝类
+void RailWeldingSystem::initSeamDetWithSeg() {
+    seamDetWithSeg = std::make_shared<SeamDetWithSeg>(nullptr);
+
+    if (seamDetWithSeg) {
+        seamDetWithSeg->moveToThread(seamDetWithSegThread);
+        seamDetWithSegThread->start();
+        // 点云方法检测焊缝类计算出焊缝, 发送到分割方法检测焊缝线程
+        connect(seamDetWithPointCloud.get(), &SeamDetWithPointCloud::sendDetSeamWithPointCloud, seamDetWithSeg.get(),
+                &SeamDetWithSeg::whenDetSeamWithSeg);
+
+        PLOGD << "分割方法焊缝检测类初始化成功";
+    } else {
+        PLOGE << "分割方法焊缝检测类初始化失败";
     }
 }
 // 初始化轨迹规划类
@@ -68,10 +86,10 @@ void RailWeldingSystem::initTrajectoryPlanning() {
         robotTrajectoryPlanning->moveToThread(robotTrajectoryPlanningThread);
         robotTrajectoryPlanningThread->start();
         // // 分割方法检测焊缝类计算出焊缝, 发送到轨迹规划线程. 同时发送到本类暂存, 以便未来保存错误数据以及显示.
-        // connect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
-        //         &RobotTrajectoryPlanning::whenPlanningTrajectory);
-        // connect(robotTrajectoryPlanning.get(), &RobotTrajectoryPlanning::sendDetSeamWithSeg, this,
-        //         &RailWeldingSystem::whenGetFinalSeams);
+        connect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
+                &RobotTrajectoryPlanning::whenPlanningTrajectory);
+        connect(robotTrajectoryPlanning.get(), &RobotTrajectoryPlanning::sendDetSeamWithSeg, this,
+                &RailWeldingSystem::whenGetFinalSeams);
 
         // 轨迹规划完成后, 发送到本类以便自动模式直接开始焊接
         connect(robotTrajectoryPlanning.get(), &RobotTrajectoryPlanning::sendTrajectoryPlanOver, this,

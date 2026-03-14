@@ -55,8 +55,10 @@ namespace MyToolFunc {
 // ###################################### 点 ######################################
 // 对点做矩阵变换
 pcl::PointXYZ transformSinglePoint(const pcl::PointXYZ& point, const Eigen::Matrix4f& transform);
-pcl::PointCloud<pcl::PointXYZ>::Ptr transformPointCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, const Eigen::Matrix4f& transform);
-void scalePointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud, double scaleX, double transX, double scaleY, double transY);  // 点云放缩与平移
+pcl::PointCloud<pcl::PointXYZ>::Ptr transformPointCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                                                        const Eigen::Matrix4f& transform);
+void scalePointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud, double scaleX, double transX, double scaleY,
+                      double transY);  // 点云放缩与平移
 
 // ###################################### 直线 ######################################
 // 计算两直线夹角
@@ -71,11 +73,13 @@ Eigen::Vector4f projPoint2Line(Eigen::Vector4f& point, pcl::ModelCoefficients::P
 pcl::PointXYZ projPoint2Line(pcl::PointXYZ& p, pcl::ModelCoefficients::Ptr& line_coff);
 Eigen::Vector4f projPoint2Line(Eigen::Vector4f& point, Eigen::Vector4f& line_pt, Eigen::Vector4f& line_dir);
 // 计算直线内点端点
-void lineCloudEndPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::VectorXf& line_coff_vector, Eigen::Vector4f specified_start_point,
-                        std::vector<Eigen::Vector4f>& two_endpoints);
-std::vector<pcl::PointXYZ> lineCloudEndPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr lineCloud, pcl::ModelCoefficients::Ptr coefficients);
+void lineCloudEndPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::VectorXf& line_coff_vector,
+                        Eigen::Vector4f specified_start_point, std::vector<Eigen::Vector4f>& two_endpoints);
+std::vector<pcl::PointXYZ> lineCloudEndPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr lineCloud,
+                                              pcl::ModelCoefficients::Ptr coefficients);
 // 计算点到直线垂线
-void Solve_ProjectVerticalLine(Eigen::Vector4f& point, pcl::ModelCoefficients::Ptr& line_coff, Eigen::Vector4f& VerticalLine_vector);
+void Solve_ProjectVerticalLine(Eigen::Vector4f& point, pcl::ModelCoefficients::Ptr& line_coff,
+                               Eigen::Vector4f& VerticalLine_vector);
 
 // ###################################### 点与平面 ######################################
 // 点投影到平面
@@ -83,17 +87,22 @@ void projPoint2Plane(const pcl::PointXYZ& point, const pcl::ModelCoefficients& c
 
 // ###################################### 点云算法 ######################################
 // 直通滤波
-void passthroughFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, double min, double max);
+void passthroughFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered,
+                       double min, double max);
 // 统计滤波
-void statisticalFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, int nr_k, float std_mul);
+void statisticalFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, int nr_k,
+                       float std_mul);
 // 计算向量的标准差, v为输入向量, avg为均值
 float calcSigma(std::vector<float>& v, float& avg);
 // 计算高斯聚类最大点集
 void myFastMaxCluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double cluster_tolerance_);
 // 计算高曲率点
-void highCurvaturePointsDetect(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_detect, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double K_Radius,
-                               double sm_ratio, pcl::PointCloud<pcl::PointXYZ>::Ptr high_curvature_scatter_points);
+void highCurvaturePointsDetect(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_detect, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+                               double K_Radius, double sm_ratio,
+                               pcl::PointCloud<pcl::PointXYZ>::Ptr high_curvature_scatter_points);
 
+void pointcloudUniformDownsampling(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float leafSize,
+                                   pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudResult);
 }  // namespace MyToolFunc
 
 #endif  // POINTCLOUDFUNC_H

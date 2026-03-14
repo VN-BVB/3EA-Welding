@@ -1218,7 +1218,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>165</string>
+             <string>130</string>
             </property>
            </widget>
           </item>
@@ -1263,7 +1263,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>530</string>
+             <string>-55</string>
             </property>
            </widget>
           </item>
@@ -1410,7 +1410,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>150</string>
+             <string>180</string>
             </property>
            </widget>
           </item>
@@ -1431,7 +1431,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>50</string>
+             <string>600</string>
             </property>
            </widget>
           </item>
@@ -1527,7 +1527,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>0</string>
+             <string>30</string>
             </property>
            </widget>
           </item>
@@ -1548,7 +1548,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>-3</string>
+             <string>0</string>
             </property>
            </widget>
           </item>
@@ -2679,7 +2679,7 @@ border-radius: 15px;</string>
     <item row="0" column="1" rowspan="3">
      <widget class="QTabWidget" name="tabWidget">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
         <horstretch>15</horstretch>
         <verstretch>10</verstretch>
        </sizepolicy>
@@ -2741,7 +2741,14 @@ QTabBar::tab:!selected {  /* 未选中的标签页 */
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
-         <widget class="RailWidget" name="railWidget" native="true"/>
+         <widget class="RailWidget" name="railWidget" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>15</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -2825,7 +2832,20 @@ color: rgb(0, 0, 0);
         <number>9</number>
        </property>
        <item row="1" column="0">
-        <widget class="openGLImageWidget" name="imageWidget"/>
+        <widget class="openGLImageWidget" name="imageWidget">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>10</horstretch>
+           <verstretch>10</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>125</height>
+          </size>
+         </property>
+        </widget>
        </item>
        <item row="0" column="0">
         <widget class="QLabel" name="label_17">
@@ -2859,8 +2879,8 @@ color: rgb(0, 0, 0);
       </property>
       <property name="minimumSize">
        <size>
-        <width>0</width>
-        <height>0</height>
+        <width>300</width>
+        <height>125</height>
        </size>
       </property>
       <property name="font">
@@ -2891,16 +2911,6 @@ color: rgb(0, 0, 0);
        <string>点云显示</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_5">
-       <item row="1" column="0">
-        <widget class="QVTKWidget" name="qvtkWidget" native="true">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="0">
         <widget class="QLabel" name="label_16">
          <property name="sizePolicy">
@@ -2917,6 +2927,16 @@ color: rgb(0, 0, 0);
          </property>
          <property name="text">
           <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QVTKWidget" name="qvtkWidget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>10</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
         </widget>
        </item>
@@ -2963,7 +2983,7 @@ color: rgb(0, 0, 0);
         <widget class="QTextBrowser" name="textBrowser">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
+           <horstretch>10</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
@@ -3041,7 +3061,57 @@ color: rgb(0, 0, 0);
        <property name="horizontalSpacing">
         <number>0</number>
        </property>
-       <item row="0" column="3">
+       <item row="0" column="2">
+        <widget class="QPushButton" name="ProScan">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>1</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>150</width>
+           <height>50</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>18</pointsize>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>扫描工件</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QPushButton" name="pushButton_UpdataWorkbench">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>1</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>18</pointsize>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="4">
         <widget class="QComboBox" name="comboBox">
          <property name="minimumSize">
           <size>
@@ -3067,7 +3137,20 @@ color: rgb(0, 0, 0);
          </item>
         </widget>
        </item>
-       <item row="0" column="4">
+       <item row="0" column="3">
+        <spacer name="horizontalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="5">
         <widget class="QPushButton" name="pushButtonWelding">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -3093,51 +3176,7 @@ color: rgb(0, 0, 0);
         </widget>
        </item>
        <item row="0" column="0">
-        <widget class="QPushButton" name="pushButton_UpdataWorkbench">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>1</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>18</pointsize>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <spacer name="horizontalSpacer_4">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="0" column="1">
-        <widget class="QPushButton" name="ProScan">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>1</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
+        <widget class="QComboBox" name="combWorkpiece">
          <property name="minimumSize">
           <size>
            <width>150</width>
@@ -3150,9 +3189,21 @@ color: rgb(0, 0, 0);
            <bold>true</bold>
           </font>
          </property>
-         <property name="text">
-          <string>扫描工件</string>
-         </property>
+         <item>
+          <property name="text">
+           <string>三轴工件</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>角钢</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string/>
+          </property>
+         </item>
         </widget>
        </item>
       </layout>

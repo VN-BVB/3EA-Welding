@@ -60,3 +60,5 @@ data/log/log*
 data/debug
 data/paper
 /data/workpieceCoaLoc
+*.bmp
+

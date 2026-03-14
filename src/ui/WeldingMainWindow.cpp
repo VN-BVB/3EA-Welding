@@ -262,3 +262,11 @@ void WeldingMainWindow::on_btnRobotMoveL_clicked() {
 
     this->railWeldingSystem->whenGetRobotMoveLData(p, SettingPara::getInstance().Value_MoveSpeed);
 }
+
+void WeldingMainWindow::on_combWorkpiece_currentTextChanged(const QString& arg1) {
+    if (arg1 == u8"角钢") {
+        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::STEEL_ANGLE;
+    } else {
+        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::STEEL_DEFAULT;
+    }
+}

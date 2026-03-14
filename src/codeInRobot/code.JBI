@@ -21,13 +21,13 @@
 // I002: 偶数次接收点的运动速度
 // I003: 奇数次接收点的摆焊类型
 // I004: 偶数次接收点的摆焊类型
-// I005: 焊接电流
-// I006: 焊接电压
+// I005: 奇数次焊接电流
+// I006: 奇数次焊接电压
+// I007: 偶数次焊接电流
+// I008: 偶数次焊接电压
 
 NOP
 *LABELWELD
-SET I005 150
-SET I006 20
 SET B015 0
 SET B014 0
 SET B013 0
@@ -108,7 +108,7 @@ ELSE
     CWAIT
 ENDIF
 IF(B012=1)THEN
-    ARCON AC=I005 AV=I006 RETRY REPLAY
+    ARCON AC=I007 AV=I008 RETRY REPLAY
 ELSE
     ARCOF AC=200 AV=26.2 ANTSTK
 ENDIF
