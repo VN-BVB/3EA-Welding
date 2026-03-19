@@ -34,14 +34,14 @@ enum WORKPIECE_TYPE {
     STEEL_ANGLE,     // 角钢
     LARGE_WORKPIECE  // 大型工件
 };
-enum WELD_AREA_TYPE {  // 焊缝区域类型
-                       // 角钢
+enum WELD_AREA_TYPE {     // 焊缝区域类型
+                          // 角钢
     BACK_CORNER = 0,      // 背面边角
     FRONT_CORNER = 1,     // 正面边角
     FRONT_DOWN_BEAM = 2,  // 正面倒立横梁
     BACK_BEAM = 3,        // 背面横梁
     FRONT_UP_BEAM = 4,    // 正面正立横梁
-                        // 大型工件
+                          // 大型工件
     Plate_Plate_F = 100,
     TubeSide_Plate_F = 101,
     Tube_Plate_F = 102,
@@ -88,6 +88,7 @@ public:
     std::shared_ptr<std::vector<pcl::PointXYZ>> weldEndPointsInCamera;  // 焊缝端点 (相机坐标系下)
     std::shared_ptr<std::vector<pcl::PointXYZ>> weldEndPointsInRobot;   // 焊缝端点 (机器人坐标系下)
     pcl::ModelCoefficients::Ptr weldPlane;                              // 焊缝所在平面
+    std::vector<pcl::ModelCoefficients::Ptr> otherSurface;              // 其他母材表面
     WELD_TYPE weldType;                                                 // 焊缝类型
     pcl::ModelCoefficients::Ptr seamsLineToVal;                         // 焊缝验证直线
 

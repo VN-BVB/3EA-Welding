@@ -69,6 +69,13 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
             pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea3.pcd",
                                  *cloudPlaneInWeldAreaWithSeam);
         }
+        MyToolFunc::myFastMaxCluster(cloudPlaneInWeldAreaWithSeam, 2);
+        if (saveFlag) {
+            cloudPlaneInWeldAreaWithSeam->height = 1;
+            cloudPlaneInWeldAreaWithSeam->width = static_cast<uint32_t>(cloudPlaneInWeldAreaWithSeam->size());
+            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea4.pcd",
+                                 *cloudPlaneInWeldAreaWithSeam);
+        }
         detectSuccFlag = SolveBeamButtSeamEndPoints();
         // 保存本次检测到的信息
         tempWeldSeamsInfo[i]->detectSuccFlag = detectSuccFlag;
@@ -76,6 +83,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
             tempWeldSeamsInfo[i]->weldEndPointsInCamera.reset(
                 new std::vector<pcl::PointXYZ>(std::move(filletSeamsTSP)));  // 检测结果
             tempWeldSeamsInfo[i]->weldPlane = planeCoeffsWithWeldSeam;
+            tempWeldSeamsInfo[i]->otherSurface.emplace_back(cylinderCoeffsInWeldArea);
             tempWeldSeamsInfo[i]->weldType = TubeSide_Plate_F_H;
             tempWeldSeamsInfo[i]->seamsLineToVal = lineCoeffsWithWeldSeam2Val;
         }
@@ -89,6 +97,7 @@ void TubeSidePlateFilletSeamsDet::SingleSeam_Reinitialize() {
     cloudNoPlaneInWeldArea.reset(new pcl::PointCloud<pcl::PointXYZ>);
     cloudCylinderInWeldArea.reset(new pcl::PointCloud<pcl::PointXYZ>);
     seamEndPoints.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    axisRangeCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
     planeCoeffsWithWeldSeam.reset(new pcl::ModelCoefficients);
     cylinderCoeffsInWeldArea.reset(new pcl::ModelCoefficients);
@@ -96,6 +105,7 @@ void TubeSidePlateFilletSeamsDet::SingleSeam_Reinitialize() {
 
     filletSeamsTSP.clear();
     saveFlag = SettingPara::getInstance().bool_save_model;
+    // saveFlag = true;
     detectSuccFlag = false;
 }
 void TubeSidePlateFilletSeamsDet::Statistic_filter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud) {
@@ -183,23 +193,6 @@ void TubeSidePlateFilletSeamsDet::Ransac_cylinder(pcl::PointCloud<pcl::PointXYZ>
     for (size_t i = 0; i < cylinderCoeffsInWeldArea->values.size(); ++i) std::cout << cylinderCoeffsInWeldArea->values[i] << " ";
     std::cout << std::endl;
 }
-// 点云投影至指定平面
-void TubeSidePlateFilletSeamsDet::Project_ToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
-                                                  pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud) {
-    if (!input_cloud || !output_cloud || input_cloud->empty()) {
-        PLOGE << "Project_ToPlane: 输入参数无效";
-        return;
-    }
-    if (!planeCoeffsWithWeldSeam || planeCoeffsWithWeldSeam->values.size() < 4) {
-        PLOGE << "Project_ToPlane: 平面系数无效";
-        return;
-    }
-    pcl::ProjectInliers<pcl::PointXYZ> proj;
-    proj.setModelType(pcl::SACMODEL_PLANE);
-    proj.setInputCloud(input_cloud);
-    proj.setModelCoefficients(planeCoeffsWithWeldSeam);
-    proj.filter(*output_cloud);
-}
 
 void TubeSidePlateFilletSeamsDet::removeCylinderPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
     if (!planeCoeffsWithWeldSeam || !cylinderCoeffsInWeldArea || !cloud || cloud->empty()) {
@@ -211,7 +204,7 @@ void TubeSidePlateFilletSeamsDet::removeCylinderPoints(pcl::PointCloud<pcl::Poin
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr projectedCloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    Project_ToPlane(cloud, projectedCloud);
+    MyToolFunc::projectCloudToPlane(cloud, projectedCloud, planeCoeffsWithWeldSeam);
 
     if (projectedCloud->empty()) return;
 
@@ -407,7 +400,6 @@ bool TubeSidePlateFilletSeamsDet::SolveBeamButtSeamEndPoints() {
     double zmin = std::numeric_limits<double>::max();
     double zmax = -std::numeric_limits<double>::max();
     double threshold = R + extendCylinderInPlaneArea;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr axisRangeCloud(new pcl::PointCloud<pcl::PointXYZ>);
 #pragma omp parallel
     {
         double local_zmin = std::numeric_limits<double>::max();

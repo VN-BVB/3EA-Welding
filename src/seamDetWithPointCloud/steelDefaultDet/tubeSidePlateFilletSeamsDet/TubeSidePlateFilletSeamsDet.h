@@ -18,7 +18,6 @@ private:
                       pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_noplane);
     void Ransac_cylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud);
     void removeCylinderPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
-    void Project_ToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud);
     bool SolveBeamButtSeamEndPoints();
 signals:
 
@@ -31,6 +30,7 @@ private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloudNoPlaneInWeldArea;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloudCylinderInWeldArea;
     pcl::PointCloud<pcl::PointXYZ>::Ptr seamEndPoints;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr axisRangeCloud;
 
     double Max_cluster_radius = 8;           // 欧式聚类提取最大点集半径
     int Ransac_plane_Iterations = 10000;     // Ransac拟合平面的迭代数

@@ -55,6 +55,8 @@ namespace MyToolFunc {
 // ###################################### 点 ######################################
 // 对点做矩阵变换
 pcl::PointXYZ transformSinglePoint(const pcl::PointXYZ& point, const Eigen::Matrix4f& transform);
+pcl::ModelCoefficients::Ptr transformPlane(const pcl::ModelCoefficients::Ptr& plane, const Eigen::Matrix4f& T);
+pcl::ModelCoefficients::Ptr transformCylinder(const pcl::ModelCoefficients::Ptr& cyl, const Eigen::Matrix4f& T);
 pcl::PointCloud<pcl::PointXYZ>::Ptr transformPointCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                                         const Eigen::Matrix4f& transform);
 void scalePointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud, double scaleX, double transX, double scaleY,
@@ -103,6 +105,9 @@ void highCurvaturePointsDetect(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_detect,
 
 void pointcloudUniformDownsampling(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float leafSize,
                                    pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudResult);
+void projectCloudToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
+                         pcl::ModelCoefficients::Ptr planeCoeffs);
+pcl::PointCloud<pcl::PointXYZ>::Ptr generateCylinderCloud(pcl::ModelCoefficients::Ptr cylinder);
 }  // namespace MyToolFunc
 
 #endif  // POINTCLOUDFUNC_H

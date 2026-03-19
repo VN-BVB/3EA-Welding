@@ -97,7 +97,7 @@ private:
     Eigen::Matrix4f beamRightMiddleErrorCompensationMatrixFront;
     Eigen::Matrix4f beamRightErrorCompensationMatrixFront;
 
-    Eigen::Matrix4f matrixEnd2Base;  // 机器人末端坐标系下的点转基坐标系下的点转换矩阵
+    Eigen::Matrix4f matrixEnd2Base;  // 机器人末端坐标系下的点转基坐标系下的点转换矩阵(先标完工具，这里就默认是工具到基座坐标系了)
 
     float zeroPointX, zeroPointY, zeroPointZ, zeroPointA, zeroPointB, zeroPointC;  // 焊枪过渡点位姿
     float takePhotoX, takePhotoY, takePhotoZ, takePhotoA, takePhotoB, takePhotoC;  // 眼在手上时的拍照位姿

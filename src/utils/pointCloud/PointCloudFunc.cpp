@@ -78,7 +78,50 @@ pcl::PointXYZ MyToolFunc::transformSinglePoint(const pcl::PointXYZ& single_point
     pcl::transformPointCloud(cloud_in, cloud_out, Tranfrom_matrix);
     return cloud_out.points[0];
 }
+pcl::ModelCoefficients::Ptr MyToolFunc::transformPlane(const pcl::ModelCoefficients::Ptr& plane, const Eigen::Matrix4f& T) {
+    // p' = T * p----->πᵀ p = 0----->(T⁻¹)ᵀ π  · p' = 0
+    if (!plane || plane->values.size() != 4) return nullptr;
+    Eigen::Vector4f p;
+    p << plane->values[0], plane->values[1], plane->values[2], plane->values[3];
+    Eigen::Matrix4f T_inv_T = T.inverse().transpose();
+    Eigen::Vector4f p_new = T_inv_T * p;
+    // 归一化
+    Eigen::Vector3f n(p_new[0], p_new[1], p_new[2]);
+    float norm = n.norm();
+    if (norm > 1e-6) p_new /= norm;
+    pcl::ModelCoefficients::Ptr result(new pcl::ModelCoefficients);
+    result->values.assign(p_new.data(), p_new.data() + 4);
+    return result;
+}
+pcl::ModelCoefficients::Ptr MyToolFunc::transformCylinder(const pcl::ModelCoefficients::Ptr& cyl, const Eigen::Matrix4f& T) {
+    if (!cyl || cyl->values.size() != 7) return nullptr;
 
+    Eigen::Vector3f p(cyl->values[0], cyl->values[1], cyl->values[2]);
+    Eigen::Vector3f d(cyl->values[3], cyl->values[4], cyl->values[5]);
+    float r = cyl->values[6];
+
+    Eigen::Matrix3f R = T.block<3, 3>(0, 0);
+    Eigen::Vector3f t = T.block<3, 1>(0, 3);
+
+    Eigen::Vector3f p_new = R * p + t;
+    Eigen::Vector3f d_new = R * d;
+    d_new.normalize();
+
+    pcl::ModelCoefficients::Ptr result(new pcl::ModelCoefficients);
+    result->values.resize(7);
+
+    result->values[0] = p_new.x();
+    result->values[1] = p_new.y();
+    result->values[2] = p_new.z();
+
+    result->values[3] = d_new.x();
+    result->values[4] = d_new.y();
+    result->values[5] = d_new.z();
+
+    result->values[6] = r;
+
+    return result;
+}
 // 对点云做矩阵变换
 pcl::PointCloud<pcl::PointXYZ>::Ptr MyToolFunc::transformPointCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in,
                                                                     const Eigen::Matrix4f& Tranfrom_matrix) {
@@ -464,4 +507,79 @@ void MyToolFunc::pointcloudUniformDownsampling(const pcl::PointCloud<pcl::PointX
     if (cloudResult->points.empty()) {
         PLOGE << "下采样后点云为空";
     }
+}
+// 点云投影至指定平面
+void MyToolFunc::projectCloudToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
+                                     pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud, pcl::ModelCoefficients::Ptr planeCoeffs) {
+    if (!input_cloud || !output_cloud || input_cloud->empty()) {
+        PLOGE << "projectCloudToPlane: 输入参数无效";
+        return;
+    }
+    if (!planeCoeffs || planeCoeffs->values.size() < 4) {
+        PLOGE << "projectCloudToPlane: 平面系数无效";
+        return;
+    }
+    pcl::ProjectInliers<pcl::PointXYZ> proj;
+    proj.setModelType(pcl::SACMODEL_PLANE);
+    proj.setInputCloud(input_cloud);
+    proj.setModelCoefficients(planeCoeffs);
+    proj.filter(*output_cloud);
+}
+
+// 构造圆柱点云
+pcl::PointCloud<pcl::PointXYZ>::Ptr MyToolFunc::generateCylinderCloud(pcl::ModelCoefficients::Ptr cylinder) {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+
+    // ---------- 1. 参数检查 ----------
+    if (!cylinder || cylinder->values.size() != 7) {
+        PLOGE << "generateCylinderCloud: cylinder coeff invalid";
+        return cloud;
+    }
+
+    Eigen::Vector3f p0(cylinder->values[0], cylinder->values[1], cylinder->values[2]);
+
+    Eigen::Vector3f dir(cylinder->values[3], cylinder->values[4], cylinder->values[5]);
+
+    float radius = cylinder->values[6];
+
+    if (dir.norm() < 1e-6f) {
+        PLOGE << "generateCylinderCloud: direction invalid";
+        return cloud;
+    }
+
+    dir.normalize();
+
+    // ---------- 2. 默认高度 ----------
+    float height = 100.0f;  // ⚠️ 可根据你工件尺寸改
+    float min_t = -height / 2.0f;
+    float max_t = height / 2.0f;
+
+    // ---------- 3. 构造正交基 ----------
+    Eigen::Vector3f u = dir.unitOrthogonal();
+    Eigen::Vector3f v = dir.cross(u);
+
+    // ---------- 4. 采样密度 ----------
+    int height_samples = 100;
+    int circle_samples = 100;
+
+    cloud->points.reserve(height_samples * circle_samples);
+
+    // ---------- 5. 生成点云 ----------
+    for (int i = 0; i < height_samples; ++i) {
+        float t = min_t + (max_t - min_t) * float(i) / float(height_samples - 1);
+        Eigen::Vector3f center = p0 + t * dir;
+
+        for (int j = 0; j < circle_samples; ++j) {
+            float theta = 2.0f * M_PI * j / circle_samples;
+
+            Eigen::Vector3f pt = center + radius * std::cos(theta) * u + radius * std::sin(theta) * v;
+
+            cloud->points.emplace_back(pt.x(), pt.y(), pt.z());
+        }
+    }
+
+    cloud->width = static_cast<uint32_t>(cloud->points.size());
+    cloud->height = 1;
+
+    return cloud;
 }

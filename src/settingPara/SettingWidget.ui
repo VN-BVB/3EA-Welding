@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>880</width>
-    <height>676</height>
+    <height>669</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -989,6 +989,644 @@ QGroupBox::title {
      </item>
     </layout>
    </item>
+   <item row="0" column="2">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QGroupBox" name="groupBox_12">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>2</horstretch>
+         <verstretch>3</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>16</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QGroupBox {
+	color: rgb(0, 0, 0);
+	background-color: #f6f6f6;
+    border-width: 2px;
+    border-radius: 6px;
+   border-style:solid;
+  border-color: #b4b4b4;
+  margin-top: 2ex;
+}
+QGroupBox::title {
+     subcontrol-origin: margin;
+     subcontrol-position: top left;
+   left:25px;
+     margin-left: 0px;
+     padding:0 1px;
+}</string>
+       </property>
+       <property name="title">
+        <string>焊缝延伸距离设置</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_12">
+        <property name="leftMargin">
+         <number>1</number>
+        </property>
+        <property name="topMargin">
+         <number>3</number>
+        </property>
+        <property name="rightMargin">
+         <number>1</number>
+        </property>
+        <property name="bottomMargin">
+         <number>1</number>
+        </property>
+        <property name="horizontalSpacing">
+         <number>6</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>1</number>
+        </property>
+        <item row="0" column="0" colspan="2">
+         <widget class="QLabel" name="label">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>10</height>
+           </size>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="groupBox_10">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>5</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QGroupBox {
+	color: rgb(0, 0, 0);
+	background-color: #f6f6f6;
+    border-width: 2px;
+    border-radius: 6px;
+   border-style:solid;
+  border-color: #b4b4b4;
+  margin-top: 2ex;
+}
+QGroupBox::title {
+     subcontrol-origin: margin;
+     subcontrol-position: top left;
+   left:25px;
+     margin-left: 0px;
+     padding:0 1px;
+}</string>
+          </property>
+          <property name="title">
+           <string>工件正面</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_10">
+           <property name="leftMargin">
+            <number>1</number>
+           </property>
+           <property name="topMargin">
+            <number>1</number>
+           </property>
+           <property name="rightMargin">
+            <number>1</number>
+           </property>
+           <property name="bottomMargin">
+            <number>1</number>
+           </property>
+           <property name="horizontalSpacing">
+            <number>6</number>
+           </property>
+           <property name="verticalSpacing">
+            <number>1</number>
+           </property>
+           <item row="1" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontRight_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontHBeamLeft_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontVBeamLeft_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_Distance_ExtendTailEnd_4">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧边角起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontBeamRight_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontVBeamRight_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_21">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧对接起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="label_40">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧竖直起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_Distance_ExtendTailEnd_7">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧边角起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontBeamLeft_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_23">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧对接起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontRight_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontBeamLeft_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontHBeamLeft_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="label_37">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧水平起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontVBeamLeft_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontLeft_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontLeft_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontHBeamRight_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontHBeamRight_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontBeamRight_WithDrawDistance">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontBeamRight_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="2">
+            <widget class="QLineEdit" name="lineEdit_FrontBeamLeft_WithDrawDistance">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="0">
+            <widget class="QLabel" name="label_33">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧/右侧焊枪后撤：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="3">
+            <widget class="QLineEdit" name="lineEdit_FrontVBeamRight_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="label_80">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧竖直起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_39">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧水平起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QGroupBox" name="groupBox_11">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>3</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QGroupBox {
+	color: rgb(0, 0, 0);
+	background-color: #f6f6f6;
+    border-width: 2px;
+    border-radius: 6px;
+   border-style:solid;
+  border-color: #b4b4b4;
+  margin-top: 2ex;
+}
+QGroupBox::title {
+     subcontrol-origin: margin;
+     subcontrol-position: top left;
+   left:25px;
+     margin-left: 0px;
+     padding:0 1px;
+}</string>
+          </property>
+          <property name="title">
+           <string>工件反面</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_11">
+           <property name="leftMargin">
+            <number>1</number>
+           </property>
+           <property name="topMargin">
+            <number>1</number>
+           </property>
+           <property name="rightMargin">
+            <number>1</number>
+           </property>
+           <property name="bottomMargin">
+            <number>1</number>
+           </property>
+           <property name="horizontalSpacing">
+            <number>6</number>
+           </property>
+           <property name="verticalSpacing">
+            <number>1</number>
+           </property>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_Distance_ExtendTailEnd_13">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧边角起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="label_31">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧对接起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="lineEdit_BackLeft_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="2">
+            <widget class="QLineEdit" name="lineEdit_BackBeamRight_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_29">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧对接起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_Distance_ExtendTailEnd_14">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧边角起点/终点：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="lineEdit_BackRight_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QLineEdit" name="lineEdit_BackRight_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QLineEdit" name="lineEdit_BackBeamLeft_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLineEdit" name="lineEdit_BackBeamRight_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLineEdit" name="lineEdit_BackLeft_ExtendEnd">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="lineEdit_BackBeamLeft_ExtendStart">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
    <item row="0" column="1">
     <layout class="QVBoxLayout" name="verticalLayout_5">
      <item>
@@ -1556,6 +2194,32 @@ QGroupBox::title {
            <property name="verticalSpacing">
             <number>1</number>
            </property>
+           <item row="6" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_H_X_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="0">
+            <widget class="QLabel" name="label_65">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧反放垂直：</string>
+             </property>
+            </widget>
+           </item>
            <item row="3" column="3">
             <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DH_Z_Shift">
              <property name="font">
@@ -1566,8 +2230,66 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="6" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_H_Y_Shift">
+           <item row="5" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region2_Y_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_V_Y_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="0">
+            <widget class="QLabel" name="label_64">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧反放水平：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_54">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧水平偏移：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_H_Z_Shift">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -1598,8 +2320,46 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="9" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DV_Y_Shift">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_49">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧对接偏移：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="label_63">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧反放竖直：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DV_Z_Shift">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -1608,8 +2368,90 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region1_X_Shift">
+           <item row="6" column="0">
+            <widget class="QLabel" name="label_48">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧水平偏移：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DV_X_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_V_Z_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region1_Z_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DH_Z_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_46">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧对接偏移：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_H_X_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DH_Y_Shift">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -1620,6 +2462,32 @@ QGroupBox::title {
            </item>
            <item row="4" column="2">
             <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DV_Y_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="label_53">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧垂直偏移：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DV_Y_Shift">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -1650,70 +2518,8 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_63">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧反放竖直：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region2_Y_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_V_Y_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DH_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region2_X_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_H_X_Shift">
+           <item row="6" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_H_Y_Shift">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -1732,48 +2538,6 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="8" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DH_X_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_V_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_54">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧水平偏移：</string>
-             </property>
-            </widget>
-           </item>
            <item row="9" column="1">
             <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DV_X_Shift">
              <property name="font">
@@ -1784,234 +2548,8 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DH_X_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="0">
-            <widget class="QLabel" name="label_53">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧垂直偏移：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_46">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧对接偏移：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_V_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_V_Y_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DH_Y_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QLabel" name="label_64">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧反放水平：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_H_X_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_H_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DV_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_H_Y_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DV_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_49">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧对接偏移：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="label_48">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧水平偏移：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region1_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DV_X_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region2_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="0">
-            <widget class="QLabel" name="label_65">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧反放垂直：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_H_Z_Shift">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DH_Y_Shift">
+           <item row="5" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region2_X_Shift">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -2030,8 +2568,108 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
+           <item row="3" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DH_Y_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_DH_X_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_V_Y_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
            <item row="2" column="1">
             <widget class="QLineEdit" name="lineEdit_Front_L_Beam_V_X_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_V_Z_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DV_Z_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region2_Z_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_Beam_Region1_X_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_DH_X_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="3">
+            <widget class="QLineEdit" name="lineEdit_Front_R_Beam_H_Z_Shift">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_L_Beam_H_Y_Shift">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -2103,471 +2741,6 @@ QGroupBox::title {
         <property name="verticalSpacing">
          <number>1</number>
         </property>
-        <item row="0" column="0" colspan="2">
-         <widget class="QLabel" name="label_11">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>10</height>
-           </size>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QGroupBox" name="groupBox_16">
-          <property name="font">
-           <font>
-            <pointsize>12</pointsize>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QGroupBox {
-	color: rgb(0, 0, 0);
-	background-color: #f6f6f6;
-    border-width: 2px;
-    border-radius: 6px;
-   border-style:solid;
-  border-color: #b4b4b4;
-  margin-top: 2ex;
-}
-QGroupBox::title {
-     subcontrol-origin: margin;
-     subcontrol-position: top left;
-   left:25px;
-     margin-left: 0px;
-     padding:0 1px;
-}</string>
-          </property>
-          <property name="title">
-           <string>正面边角</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_16">
-           <property name="leftMargin">
-            <number>1</number>
-           </property>
-           <property name="topMargin">
-            <number>1</number>
-           </property>
-           <property name="rightMargin">
-            <number>1</number>
-           </property>
-           <property name="bottomMargin">
-            <number>1</number>
-           </property>
-           <property name="horizontalSpacing">
-            <number>6</number>
-           </property>
-           <property name="verticalSpacing">
-            <number>1</number>
-           </property>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_Region1_X_Shift_R">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_Region1_Y_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_17">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧xyz偏移：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_Region1_Z_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3">
-            <widget class="QLineEdit" name="lineEdit_Front_Region2_Z_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLineEdit" name="lineEdit_Front_Region2_Y_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="lineEdit_Front_Region2_X_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_18">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧xyz偏移：</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QGroupBox" name="groupBox_17">
-          <property name="font">
-           <font>
-            <pointsize>12</pointsize>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QGroupBox {
-	color: rgb(0, 0, 0);
-	background-color: #f6f6f6;
-    border-width: 2px;
-    border-radius: 6px;
-   border-style:solid;
-  border-color: #b4b4b4;
-  margin-top: 2ex;
-}
-QGroupBox::title {
-     subcontrol-origin: margin;
-     subcontrol-position: top left;
-   left:25px;
-     margin-left: 0px;
-     padding:0 1px;
-}</string>
-          </property>
-          <property name="title">
-           <string>反面边角</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_17">
-           <property name="leftMargin">
-            <number>1</number>
-           </property>
-           <property name="topMargin">
-            <number>1</number>
-           </property>
-           <property name="rightMargin">
-            <number>1</number>
-           </property>
-           <property name="bottomMargin">
-            <number>1</number>
-           </property>
-           <property name="horizontalSpacing">
-            <number>6</number>
-           </property>
-           <property name="verticalSpacing">
-            <number>1</number>
-           </property>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEdit_Back_Region1_X_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QLineEdit" name="lineEdit_Back_Region1_Z_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLineEdit" name="lineEdit_Back_Region1_Y_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLineEdit" name="lineEdit_Back_Region2_Y_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_27">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧xyz偏移：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_30">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧xyz偏移：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="lineEdit_Back_Region2_X_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3">
-            <widget class="QLineEdit" name="lineEdit_Back_Region2_Z_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QGroupBox" name="groupBox_18">
-          <property name="font">
-           <font>
-            <pointsize>12</pointsize>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QGroupBox {
-	color: rgb(0, 0, 0);
-	background-color: #f6f6f6;
-    border-width: 2px;
-    border-radius: 6px;
-   border-style:solid;
-  border-color: #b4b4b4;
-  margin-top: 2ex;
-}
-QGroupBox::title {
-     subcontrol-origin: margin;
-     subcontrol-position: top left;
-   left:25px;
-     margin-left: 0px;
-     padding:0 1px;
-}</string>
-          </property>
-          <property name="title">
-           <string>反面横梁</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_18">
-           <property name="leftMargin">
-            <number>1</number>
-           </property>
-           <property name="topMargin">
-            <number>1</number>
-           </property>
-           <property name="rightMargin">
-            <number>1</number>
-           </property>
-           <property name="bottomMargin">
-            <number>1</number>
-           </property>
-           <property name="horizontalSpacing">
-            <number>6</number>
-           </property>
-           <property name="verticalSpacing">
-            <number>1</number>
-           </property>
-           <item row="0" column="3">
-            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region1_Z_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region2_Y_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region2_X_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region1_Y_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region1_X_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_56">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧xyz偏移：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3">
-            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region2_Z_Shift_R">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_52">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧xyz偏移：</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-          <zorder>lineEdit_Back_Beam_Region1_X_Shift_R</zorder>
-          <zorder>lineEdit_Back_Beam_Region1_Z_Shift_R</zorder>
-          <zorder>lineEdit_Back_Beam_Region2_Y_Shift_R</zorder>
-          <zorder>lineEdit_Back_Beam_Region2_X_Shift_R</zorder>
-          <zorder>lineEdit_Back_Beam_Region1_Y_Shift_R</zorder>
-          <zorder>label_56</zorder>
-          <zorder>lineEdit_Back_Beam_Region2_Z_Shift_R</zorder>
-          <zorder>label_52</zorder>
-         </widget>
-        </item>
         <item row="1" column="1" rowspan="3">
          <widget class="QGroupBox" name="groupBox_19">
           <property name="font">
@@ -3082,72 +3255,8 @@ QGroupBox::title {
           </layout>
          </widget>
         </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="0" column="2">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QGroupBox" name="groupBox_12">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>2</horstretch>
-         <verstretch>3</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>16</pointsize>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QGroupBox {
-	color: rgb(0, 0, 0);
-	background-color: #f6f6f6;
-    border-width: 2px;
-    border-radius: 6px;
-   border-style:solid;
-  border-color: #b4b4b4;
-  margin-top: 2ex;
-}
-QGroupBox::title {
-     subcontrol-origin: margin;
-     subcontrol-position: top left;
-   left:25px;
-     margin-left: 0px;
-     padding:0 1px;
-}</string>
-       </property>
-       <property name="title">
-        <string>焊缝延伸距离设置</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_12">
-        <property name="leftMargin">
-         <number>1</number>
-        </property>
-        <property name="topMargin">
-         <number>3</number>
-        </property>
-        <property name="rightMargin">
-         <number>1</number>
-        </property>
-        <property name="bottomMargin">
-         <number>1</number>
-        </property>
-        <property name="horizontalSpacing">
-         <number>6</number>
-        </property>
-        <property name="verticalSpacing">
-         <number>1</number>
-        </property>
         <item row="0" column="0" colspan="2">
-         <widget class="QLabel" name="label">
+         <widget class="QLabel" name="label_11">
           <property name="maximumSize">
            <size>
             <width>16777215</width>
@@ -3159,14 +3268,8 @@ QGroupBox::title {
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QGroupBox" name="groupBox_10">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>5</verstretch>
-           </sizepolicy>
-          </property>
+        <item row="3" column="0">
+         <widget class="QGroupBox" name="groupBox_18">
           <property name="font">
            <font>
             <pointsize>12</pointsize>
@@ -3192,12 +3295,12 @@ QGroupBox::title {
 }</string>
           </property>
           <property name="title">
-           <string>工件正面</string>
+           <string>反面横梁</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
           </property>
-          <layout class="QGridLayout" name="gridLayout_10">
+          <layout class="QGridLayout" name="gridLayout_18">
            <property name="leftMargin">
             <number>1</number>
            </property>
@@ -3216,8 +3319,8 @@ QGroupBox::title {
            <property name="verticalSpacing">
             <number>1</number>
            </property>
-           <item row="0" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontLeft_ExtendStart">
+           <item row="0" column="3">
+            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region1_Z_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -3226,53 +3329,74 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="6" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontVBeamLeft_ExtendStart">
+           <item row="1" column="2">
+            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region2_Y_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
+               <bold>false</bold>
               </font>
              </property>
             </widget>
            </item>
-           <item row="8" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontBeamRight_WithDrawDistance">
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region2_X_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
+               <bold>false</bold>
               </font>
              </property>
             </widget>
            </item>
-           <item row="3" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontBeamRight_ExtendStart">
+           <item row="0" column="2">
+            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region1_Y_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
+               <bold>false</bold>
               </font>
              </property>
             </widget>
            </item>
-           <item row="5" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontHBeamRight_ExtendEnd">
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region1_X_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
+               <bold>false</bold>
               </font>
              </property>
             </widget>
            </item>
-           <item row="7" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontVBeamRight_ExtendStart">
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_56">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧xyz偏移：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLineEdit" name="lineEdit_Back_Beam_Region2_Z_Shift_R">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
               </font>
              </property>
             </widget>
            </item>
            <item row="0" column="0">
-            <widget class="QLabel" name="label_Distance_ExtendTailEnd_4">
+            <widget class="QLabel" name="label_52">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -3283,12 +3407,100 @@ QGroupBox::title {
               <string notr="true">color: rgb(0, 0, 0);</string>
              </property>
              <property name="text">
-              <string>左侧边角起点/终点：</string>
+              <string>左侧xyz偏移：</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_Distance_ExtendTailEnd_7">
+          </layout>
+          <zorder>lineEdit_Back_Beam_Region1_X_Shift_R</zorder>
+          <zorder>lineEdit_Back_Beam_Region1_Z_Shift_R</zorder>
+          <zorder>lineEdit_Back_Beam_Region2_Y_Shift_R</zorder>
+          <zorder>lineEdit_Back_Beam_Region2_X_Shift_R</zorder>
+          <zorder>lineEdit_Back_Beam_Region1_Y_Shift_R</zorder>
+          <zorder>label_56</zorder>
+          <zorder>lineEdit_Back_Beam_Region2_Z_Shift_R</zorder>
+          <zorder>label_52</zorder>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="groupBox_16">
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QGroupBox {
+	color: rgb(0, 0, 0);
+	background-color: #f6f6f6;
+    border-width: 2px;
+    border-radius: 6px;
+   border-style:solid;
+  border-color: #b4b4b4;
+  margin-top: 2ex;
+}
+QGroupBox::title {
+     subcontrol-origin: margin;
+     subcontrol-position: top left;
+   left:25px;
+     margin-left: 0px;
+     padding:0 1px;
+}</string>
+          </property>
+          <property name="title">
+           <string>正面边角</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_16">
+           <property name="leftMargin">
+            <number>1</number>
+           </property>
+           <property name="topMargin">
+            <number>1</number>
+           </property>
+           <property name="rightMargin">
+            <number>1</number>
+           </property>
+           <property name="bottomMargin">
+            <number>1</number>
+           </property>
+           <property name="horizontalSpacing">
+            <number>6</number>
+           </property>
+           <property name="verticalSpacing">
+            <number>1</number>
+           </property>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_Region1_X_Shift_R">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLineEdit" name="lineEdit_Front_Region1_Y_Shift_R">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_17">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -3299,194 +3511,32 @@ QGroupBox::title {
               <string notr="true">color: rgb(0, 0, 0);</string>
              </property>
              <property name="text">
-              <string>右侧边角起点/终点：</string>
+              <string>左侧xyz偏移：</string>
              </property>
             </widget>
            </item>
            <item row="0" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontLeft_ExtendEnd">
+            <widget class="QLineEdit" name="lineEdit_Front_Region1_Z_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
                <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QLabel" name="label_33">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧/右侧焊枪后撤：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="0">
-            <widget class="QLabel" name="label_80">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧竖直起点/终点：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontBeamRight_ExtendEnd">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontHBeamRight_ExtendStart">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontHBeamLeft_ExtendStart">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
               </font>
              </property>
             </widget>
            </item>
            <item row="1" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontRight_ExtendEnd">
+            <widget class="QLineEdit" name="lineEdit_Front_Region2_Z_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
                <bold>false</bold>
               </font>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontBeamLeft_ExtendStart">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontBeamLeft_WithDrawDistance">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_37">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧水平起点/终点：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontVBeamLeft_ExtendEnd">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontBeamLeft_ExtendEnd">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_23">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧对接起点/终点：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontHBeamLeft_ExtendEnd">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="label_40">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧竖直起点/终点：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_39">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧水平起点/终点：</string>
              </property>
             </widget>
            </item>
            <item row="1" column="2">
-            <widget class="QLineEdit" name="lineEdit_FrontRight_ExtendStart">
+            <widget class="QLineEdit" name="lineEdit_Front_Region2_Y_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -3495,27 +3545,29 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_21">
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEdit_Front_Region2_X_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_18">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
               </font>
              </property>
              <property name="styleSheet">
               <string notr="true">color: rgb(0, 0, 0);</string>
              </property>
              <property name="text">
-              <string>左侧对接起点/终点：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="3">
-            <widget class="QLineEdit" name="lineEdit_FrontVBeamRight_ExtendEnd">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
+              <string>右侧xyz偏移：</string>
              </property>
             </widget>
            </item>
@@ -3523,13 +3575,7 @@ QGroupBox::title {
          </widget>
         </item>
         <item row="2" column="0">
-         <widget class="QGroupBox" name="groupBox_11">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>3</verstretch>
-           </sizepolicy>
-          </property>
+         <widget class="QGroupBox" name="groupBox_17">
           <property name="font">
            <font>
             <pointsize>12</pointsize>
@@ -3555,12 +3601,12 @@ QGroupBox::title {
 }</string>
           </property>
           <property name="title">
-           <string>工件反面</string>
+           <string>反面边角</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
           </property>
-          <layout class="QGridLayout" name="gridLayout_11">
+          <layout class="QGridLayout" name="gridLayout_17">
            <property name="leftMargin">
             <number>1</number>
            </property>
@@ -3579,39 +3625,8 @@ QGroupBox::title {
            <property name="verticalSpacing">
             <number>1</number>
            </property>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_Distance_ExtendTailEnd_13">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧边角起点/终点：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_31">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>右侧对接起点/终点：</string>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEdit_BackLeft_ExtendStart">
+            <widget class="QLineEdit" name="lineEdit_Back_Region1_X_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -3620,86 +3635,18 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="4" column="2">
-            <widget class="QLineEdit" name="lineEdit_BackBeamRight_ExtendEnd">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_29">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧对接起点/终点：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_Distance_ExtendTailEnd_14">
+           <item row="0" column="3">
+            <widget class="QLineEdit" name="lineEdit_Back_Region1_Z_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
                <bold>false</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: rgb(0, 0, 0);</string>
-             </property>
-             <property name="text">
-              <string>左侧边角起点/终点：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QLineEdit" name="lineEdit_BackRight_ExtendStart">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QLineEdit" name="lineEdit_BackRight_ExtendEnd">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <bold>false</bold>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="2">
-            <widget class="QLineEdit" name="lineEdit_BackBeamLeft_ExtendEnd">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QLineEdit" name="lineEdit_BackBeamRight_ExtendStart">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
               </font>
              </property>
             </widget>
            </item>
            <item row="0" column="2">
-            <widget class="QLineEdit" name="lineEdit_BackLeft_ExtendEnd">
+            <widget class="QLineEdit" name="lineEdit_Back_Region1_Y_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -3708,11 +3655,64 @@ QGroupBox::title {
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
-            <widget class="QLineEdit" name="lineEdit_BackBeamLeft_ExtendStart">
+           <item row="1" column="2">
+            <widget class="QLineEdit" name="lineEdit_Back_Region2_Y_Shift_R">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_27">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>右侧xyz偏移：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_30">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">color: rgb(0, 0, 0);</string>
+             </property>
+             <property name="text">
+              <string>左侧xyz偏移：</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEdit_Back_Region2_X_Shift_R">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLineEdit" name="lineEdit_Back_Region2_Z_Shift_R">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <bold>false</bold>
               </font>
              </property>
             </widget>

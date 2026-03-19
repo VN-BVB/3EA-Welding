@@ -22,12 +22,6 @@ class WeldSeamInfo;
 class TrajectoryPlanningConfig;
 class SettingPara;
 
-enum class WORKPIECE_SIDE_OF_ROBOT {  // 当前工件位于机器人基座的方向
-    FRONT,                            // 前方
-    LEFT,                             // 左方
-    RIGHT                             // 右方
-};
-
 class RobotTrajectoryPlanning : public AbstractTrajectoryPlanning {
     Q_OBJECT
 public:

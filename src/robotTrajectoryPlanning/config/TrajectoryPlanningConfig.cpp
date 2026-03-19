@@ -71,24 +71,25 @@ void TrajectoryPlanningConfig::myDataStructure2LibDataStructure() {
     MyToolFunc::write2Eigen4x4f(beamRightMiddleErrorCompensationF, beamRightMiddleErrorCompensationMatrixFront);
     MyToolFunc::write2Eigen4x4f(beamRightErrorCompensationF, beamRightErrorCompensationMatrixFront);
 
-    MyToolFunc::write2PositionPose(startPointPositionPose, zeroPointX, zeroPointY, zeroPointZ, zeroPointA, zeroPointB, zeroPointC);
+    MyToolFunc::write2PositionPose(startPointPositionPose, zeroPointX, zeroPointY, zeroPointZ, zeroPointA, zeroPointB,
+                                   zeroPointC);
     MyToolFunc::write2PositionPose(takePhotoPositionPose, takePhotoX, takePhotoY, takePhotoZ, takePhotoA, takePhotoB, takePhotoC);
     MyToolFunc::write2Pose(leftWeldingPose, leftPoseA, leftPoseB, leftPoseC);
     MyToolFunc::write2Pose(rightWeldingPose, rightPoseA, rightPoseB, rightPoseC);
     MyToolFunc::write2Pose(beamButtWeldingPose, beamButtPoseA, beamButtPoseB, beamButtPoseC);
 
-    MyToolFunc::write2PositionPose(startPointPositionPose_LEFT, zeroPointX_LEFT, zeroPointY_LEFT, zeroPointZ_LEFT, zeroPointA_LEFT, zeroPointB_LEFT,
-                                   zeroPointC_LEFT);
-    MyToolFunc::write2PositionPose(takePhotoPositionPose_LEFT, takePhotoX_LEFT, takePhotoY_LEFT, takePhotoZ_LEFT, takePhotoA_LEFT, takePhotoB_LEFT,
-                                   takePhotoC_LEFT);
+    MyToolFunc::write2PositionPose(startPointPositionPose_LEFT, zeroPointX_LEFT, zeroPointY_LEFT, zeroPointZ_LEFT,
+                                   zeroPointA_LEFT, zeroPointB_LEFT, zeroPointC_LEFT);
+    MyToolFunc::write2PositionPose(takePhotoPositionPose_LEFT, takePhotoX_LEFT, takePhotoY_LEFT, takePhotoZ_LEFT, takePhotoA_LEFT,
+                                   takePhotoB_LEFT, takePhotoC_LEFT);
     MyToolFunc::write2Pose(leftWeldingPose_LEFT, leftPoseA_LEFT, leftPoseB_LEFT, leftPoseC_LEFT);
     MyToolFunc::write2Pose(rightWeldingPose_LEFT, rightPoseA_LEFT, rightPoseB_LEFT, rightPoseC_LEFT);
     MyToolFunc::write2Pose(beamButtWeldingPose_LEFT, beamButtPoseA_LEFT, beamButtPoseB_LEFT, beamButtPoseC_LEFT);
 
-    MyToolFunc::write2PositionPose(startPointPositionPose_RIGHT, zeroPointX_RIGHT, zeroPointY_RIGHT, zeroPointZ_RIGHT, zeroPointA_RIGHT,
-                                   zeroPointB_RIGHT, zeroPointC_RIGHT);
-    MyToolFunc::write2PositionPose(takePhotoPositionPose_RIGHT, takePhotoX_RIGHT, takePhotoY_RIGHT, takePhotoZ_RIGHT, takePhotoA_RIGHT,
-                                   takePhotoB_RIGHT, takePhotoC_RIGHT);
+    MyToolFunc::write2PositionPose(startPointPositionPose_RIGHT, zeroPointX_RIGHT, zeroPointY_RIGHT, zeroPointZ_RIGHT,
+                                   zeroPointA_RIGHT, zeroPointB_RIGHT, zeroPointC_RIGHT);
+    MyToolFunc::write2PositionPose(takePhotoPositionPose_RIGHT, takePhotoX_RIGHT, takePhotoY_RIGHT, takePhotoZ_RIGHT,
+                                   takePhotoA_RIGHT, takePhotoB_RIGHT, takePhotoC_RIGHT);
     MyToolFunc::write2Pose(leftWeldingPose_RIGHT, leftPoseA_RIGHT, leftPoseB_RIGHT, leftPoseC_RIGHT);
     MyToolFunc::write2Pose(rightWeldingPose_RIGHT, rightPoseA_RIGHT, rightPoseB_RIGHT, rightPoseC_RIGHT);
     MyToolFunc::write2Pose(beamButtWeldingPose_RIGHT, beamButtPoseA_RIGHT, beamButtPoseB_RIGHT, beamButtPoseC_RIGHT);

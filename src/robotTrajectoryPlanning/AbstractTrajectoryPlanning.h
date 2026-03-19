@@ -24,6 +24,11 @@ public slots:
     virtual void whenPlanningTrajectory(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) = 0;
 
 protected:
+    enum class WORKPIECE_SIDE_OF_ROBOT {  // 当前工件位于机器人基座的方向
+        FRONT,                            // 前方
+        LEFT,                             // 左方
+        RIGHT                             // 右方
+    };
     // 配置初始化方法（供派生类调用）
     void initConfig();
     void readConfig();
