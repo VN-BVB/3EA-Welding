@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "cameraFactory/AbstractCamera.h"
+#include "utils/common/WeldSeamInfo.h"
 
 class AbstractCamera;
 class AbstractProjector;
@@ -44,7 +45,6 @@ enum RECONSTRUCTION_MODE {
     COMMON,    // 普通模式
     WORKPIECE  // 工件模式
 };
-enum WORKPIECE_TYPE { STEEL_ANGLE, STEEL_DEFAULT };
 
 class StructLightCamera : public QObject {
     Q_OBJECT
@@ -69,7 +69,7 @@ signals:
     void sendTriggerProj();                                                              // 触发投影信号
     void sendPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr workbenchPointCloud);        // 发送重建结果点云
     void sendWeldAreaInfo(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);      // 发送焊缝区域点云
-    void sendWeldAreaInfoSD(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);    // 发送三轴焊缝区域点云
+    void sendWeldAreaInfoLW(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);    // 发送三轴焊缝区域点云
     void sendMessage2Ui(QString message);                                                // 发送信息到UI界面
     void sendUpdataWorkbenchover();                                                      // 发送背景平面重建完成
 
@@ -112,7 +112,7 @@ private:
     std::shared_ptr<std::vector<cv::Mat>> secondaryCameraCapturedImg =
         std::make_shared<std::vector<cv::Mat>>();  // 主相机采集到的图像
 
-    WORKPIECE_TYPE workpieceType = WORKPIECE_TYPE::STEEL_DEFAULT;
+    WORKPIECE_TYPE workpieceType = WORKPIECE_TYPE::LARGE_WORKPIECE;
     RECONSTRUCTION_MODE reconstructionMode = RECONSTRUCTION_MODE::WORKPIECE;  // 重建模式
     pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud;                           // 普通重建点云
 #ifdef SMART_CAMERA

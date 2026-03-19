@@ -7,6 +7,7 @@
 #include "robotFactory/an_chaun/AnChuanRobotFactory.h"
 #include "robotFactory/bao_yuan/BaoYuanRobotFactory.h"
 #include "robotTrajectoryPlanning/RobotTrajectoryPlanning.h"
+#include "robotTrajectoryPlanning/LargeWorkpieceTrajectoryPlanning.h"
 #include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
 #include "seamDetWithPointCloud/SeamDetWithPointCloud.h"
 #include "seamDetWithSeg/SeamDetWithSeg.h"
@@ -54,8 +55,8 @@ void RailWeldingSystem::initSeamDetWithPointCloud() {
         // 相机重建出最初的焊缝区域点云, 发送到点云方法检测焊缝线程
         connect(structLightCamera.get(), &StructLightCamera::sendWeldAreaInfo, seamDetWithPointCloud.get(),
                 &SeamDetWithPointCloud::whenDetSeamWithPointCloud);
-        connect(structLightCamera.get(), &StructLightCamera::sendWeldAreaInfoSD, seamDetWithPointCloud.get(),
-                &SeamDetWithPointCloud::whenDetSeamWithPointCloudSD);
+        connect(structLightCamera.get(), &StructLightCamera::sendWeldAreaInfoLW, seamDetWithPointCloud.get(),
+                &SeamDetWithPointCloud::whenDetSeamWithPointCloudLW);
 
         PLOGD << "点云方法焊缝检测类初始化成功";
     } else {
@@ -80,19 +81,19 @@ void RailWeldingSystem::initSeamDetWithSeg() {
 }
 // 初始化轨迹规划类
 void RailWeldingSystem::initTrajectoryPlanning() {
-    robotTrajectoryPlanning = std::make_shared<RobotTrajectoryPlanning>(nullptr);
+    robotTrajectoryPlanning = std::make_shared<LargeWorkpieceTrajectoryPlanning>(nullptr);
 
     if (robotTrajectoryPlanning) {
         robotTrajectoryPlanning->moveToThread(robotTrajectoryPlanningThread);
         robotTrajectoryPlanningThread->start();
         // // 分割方法检测焊缝类计算出焊缝, 发送到轨迹规划线程. 同时发送到本类暂存, 以便未来保存错误数据以及显示.
         connect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
-                &RobotTrajectoryPlanning::whenPlanningTrajectory);
-        connect(robotTrajectoryPlanning.get(), &RobotTrajectoryPlanning::sendDetSeamWithSeg, this,
+                &AbstractTrajectoryPlanning::whenPlanningTrajectory);
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendDetSeamWithSeg, this,
                 &RailWeldingSystem::whenGetFinalSeams);
 
         // 轨迹规划完成后, 发送到本类以便自动模式直接开始焊接
-        connect(robotTrajectoryPlanning.get(), &RobotTrajectoryPlanning::sendTrajectoryPlanOver, this,
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this,
                 &RailWeldingSystem::whenTrajectoryPlanOver);
 
         PLOGD << "轨迹规划类初始化成功";
@@ -100,7 +101,52 @@ void RailWeldingSystem::initTrajectoryPlanning() {
         PLOGE << "轨迹规划类初始化失败";
     }
 }
+void RailWeldingSystem::switchTrajectoryPlanning(WORKPIECE_TYPE workpieceType) {
+    if (robotTrajectoryPlanning) {
+        // 断开旧的信号连接
+        disconnect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
+                   &AbstractTrajectoryPlanning::whenPlanningTrajectory);
+        disconnect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendDetSeamWithSeg, this,
+                   &RailWeldingSystem::whenGetFinalSeams);
+        disconnect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this,
+                   &RailWeldingSystem::whenTrajectoryPlanOver);
 
+        // 旧对象会被智能指针自动释放（如果不再被引用）
+        robotTrajectoryPlanning = nullptr;
+    }
+
+    // 根据工件类型创建新的轨迹规划对象
+    if (workpieceType == WORKPIECE_TYPE::LARGE_WORKPIECE) {
+        robotTrajectoryPlanning = std::make_shared<LargeWorkpieceTrajectoryPlanning>(nullptr);
+        PLOGD << "创建大型工件轨迹规划类";
+    } else {
+        robotTrajectoryPlanning = std::make_shared<RobotTrajectoryPlanning>(nullptr);
+        PLOGD << "创建小型工件轨迹规划类";
+    }
+
+    if (robotTrajectoryPlanning) {
+        // 将新对象移动到现有的轨迹规划线程
+        // 这一步是必须的，因为新对象默认在主线程中
+        robotTrajectoryPlanning->moveToThread(robotTrajectoryPlanningThread);
+
+        // 确保线程正在运行
+        if (!robotTrajectoryPlanningThread->isRunning()) {
+            robotTrajectoryPlanningThread->start();
+        }
+
+        // 重新建立信号连接
+        connect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
+                &AbstractTrajectoryPlanning::whenPlanningTrajectory);
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendDetSeamWithSeg, this,
+                &RailWeldingSystem::whenGetFinalSeams);
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this,
+                &RailWeldingSystem::whenTrajectoryPlanOver);
+
+        PLOGD << "轨迹规划类切换成功";
+    } else {
+        PLOGE << "轨迹规划类切换失败";
+    }
+}
 void RailWeldingSystem::initRobot() {
     if (robotTrajectoryPlanning) {
         if (robotTrajectoryPlanning->trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN)) {

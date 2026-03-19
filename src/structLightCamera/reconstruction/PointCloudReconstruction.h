@@ -31,7 +31,7 @@ public:
     // 点云重建函数
     pcl::PointCloud<pcl::PointXYZ>::Ptr localReconstruct(int minU, int maxU, int minV, int maxV);  // 局部点云重建
     std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToSA();  // 焊缝区域点云重建(加拟合背景平面)
-    std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToSD();  // 焊缝区域点云重建(加拟合背景平面)
+    std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToLW();  // 焊缝区域点云重建(加拟合背景平面)
 
     void initDistortionMap();
 
@@ -67,7 +67,7 @@ private:
     void imageDistribute();  // 0. 将采集到的图像放入相移和格雷码容器
     void makeMaskForReconstruct(int minU, int maxU, int minV, int maxV);  // 1.1 更新全点云重建的mask
     void makeMaskForSeamsDet();                                           // 1.2 更新焊缝区域目标框的mask
-    void makeMaskForSeamsDetToSD();                                       // 1.2 更新焊缝区域目标框的mask
+    void makeMaskForSeamsDetToLW();                                       // 1.2 更新焊缝区域目标框的mask
     void solveWrapPhase();                                                // 2. 相移法求包裹相位
     void decodeGrayCode();                                                // 3. 解码格雷码
     void phaseUnwrap();                                                   // 4. 相位展开, 求绝对相位

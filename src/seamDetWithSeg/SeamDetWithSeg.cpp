@@ -147,6 +147,8 @@ void SeamDetWithSeg::whenDetSeamWithSeg(std::vector<std::shared_ptr<WeldSeamInfo
 
             // 将当前焊缝的分割计算放入线程池
             threadPool->addTask([this, info]() { return this->detectSignalSeamWithSeg(info); });
+        } else if (info->weldType == TubeSide_Plate_F_H) {
+            PLOGD << "TubeSide_Plate_Fillet目前未使用分割算法";
         }
     }
 
@@ -291,6 +293,8 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
                     }
                 }
             }
+        } else if (info->weldType == TubeSide_Plate_F_H) {
+            PLOGD << "TubeSide_Plate_Fillet目前不需要融合";
         }
     }
 }

@@ -25,20 +25,23 @@ enum WELD_TYPE {              // 焊缝类型
     FRONT_HORIZONTAL_FILLET,  // 正面水平角接
     FRONT_VERTICAL_FILLET,    // 正面垂直角接
     // 大型工件
-    Plate_Plate_Fillet,
-    TubeSide_Plate_Fillet,
-    Tube_Plate_Fillet,
-    Tube_Tube_Fillet
+    Plate_Plate_Fillet = 100,
+    TubeSide_Plate_F_H = 101,  // 管侧与板角接水平焊缝
+    Tube_Plate_Fillet = 102,
+    Tube_Tube_Fillet = 103
 };
-
+enum WORKPIECE_TYPE {
+    STEEL_ANGLE,     // 角钢
+    LARGE_WORKPIECE  // 大型工件
+};
 enum WELD_AREA_TYPE {  // 焊缝区域类型
-    // 角钢
+                       // 角钢
     BACK_CORNER = 0,      // 背面边角
     FRONT_CORNER = 1,     // 正面边角
     FRONT_DOWN_BEAM = 2,  // 正面倒立横梁
     BACK_BEAM = 3,        // 背面横梁
     FRONT_UP_BEAM = 4,    // 正面正立横梁
-    // 大型工件
+                        // 大型工件
     Plate_Plate_F = 100,
     TubeSide_Plate_F = 101,
     Tube_Plate_F = 102,
@@ -46,13 +49,18 @@ enum WELD_AREA_TYPE {  // 焊缝区域类型
     Default
 };
 
-enum SEAM_SIDE {  // 焊缝位置
-    FRONT,        // 正面
-    BACK,         // 反面
-    LEFT,         // 左侧
-    RIGHT         // 右侧
+enum SEAM_SIDE {
+    // 焊缝位置
+    FRONT,  // 正面
+    BACK,   // 反面
+    LEFT,   // 左侧
+    RIGHT   // 右侧
 };
-
+// 起弧熄弧动作控制
+enum ARC_ACTION {
+    ARC_START = 1,  // 起弧
+    ARC_STOP = 0    // 熄弧
+};
 namespace MyToolFunc {
 
 WELD_AREA_TYPE getWeldAreaType(int areaNum);                     // 获取焊缝区域类型

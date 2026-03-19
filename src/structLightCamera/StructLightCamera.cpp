@@ -250,9 +250,9 @@ void StructLightCamera::whenGetPrimaryCameraImage(cv::Mat img, CAMERA_WORK_MODE 
                         emit sendMessage2Ui(message);              // 发送信息到UI界面
                         emit sendPointCloud(workbenchPointCloud);  // 发送工作台点云
                         emit sendWeldAreaInfo(weldAreaInfo);       // 发送焊缝区域点云
-                    } else if (workpieceType == WORKPIECE_TYPE::STEEL_DEFAULT) {
+                    } else if (workpieceType == WORKPIECE_TYPE::LARGE_WORKPIECE) {
                         PLOGD << "重建三轴工件";
-                        weldAreaInfo = pointCloudReconstruction->weldAreaReconstructToSD();   // 焊缝区域点云重建
+                        weldAreaInfo = pointCloudReconstruction->weldAreaReconstructToLW();   // 焊缝区域点云重建
                         workbenchPointCloud = pointCloudReconstruction->workbenchPointCloud;  // 获取工作台平面点云
 
                         QString message = QString(QStringLiteral("拟合平面的参数为: %1, %2, %3, %4"))
@@ -262,7 +262,7 @@ void StructLightCamera::whenGetPrimaryCameraImage(cv::Mat img, CAMERA_WORK_MODE 
                                                    QString::number(pointCloudReconstruction->workbenchCoeff[3], 'f', 6));
                         emit sendMessage2Ui(message);              // 发送信息到UI界面
                         emit sendPointCloud(workbenchPointCloud);  // 发送工作台点云
-                        emit sendWeldAreaInfoSD(weldAreaInfo);     // 发送焊缝区域点云
+                        emit sendWeldAreaInfoLW(weldAreaInfo);     // 发送焊缝区域点云
                     }
 
                 } else if (reconstructionMode == RECONSTRUCTION_MODE::COMMON) {

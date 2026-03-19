@@ -2,7 +2,8 @@
 #define RAILWELDINGSYSTEM_H
 #include "photoPlanner/PhotoPlanner.h"
 #include "robotFactory/AbstractRobot.h"
-
+#include "robotTrajectoryPlanning/AbstractTrajectoryPlanning.h"
+class AbstractTrajectoryPlanning;
 class StructLightCamera;
 class AbstractCameraFactory;
 class AbstractProjectorFactory;
@@ -46,6 +47,7 @@ public:
     void disconnectRobot();
     void welding();
     void move2SelectedWorkpiece(int tableRow);
+    void switchTrajectoryPlanning(WORKPIECE_TYPE workpieceType);
 public slots:
     void whenConnectingStructLight();                                                 // 连接结构光相机
     void whenDisconnectingStructLight();                                              // 断开结构光相机
@@ -78,12 +80,12 @@ private:
     std::shared_ptr<AbstractCameraFactory> cameraFactory{nullptr};  // 相机工厂 (通过依赖注入的方式注入需要的类)
     std::shared_ptr<AbstractProjectorFactory> projectorFactory{nullptr};  // 投影仪工厂 (通过依赖注入的方式注入需要的类)
 
-    std::shared_ptr<SeamDetWithPointCloud> seamDetWithPointCloud{nullptr};      // 『点云方法焊缝检测』
-    QThread *seamDetWithPointCloudThread = new QThread;                         // 点云方法焊缝检测线程
-    std::shared_ptr<SeamDetWithSeg> seamDetWithSeg{nullptr};                    // 『分割方法焊缝检测』
-    QThread *seamDetWithSegThread = new QThread;                                // 分割方法焊缝检测线程
-    std::shared_ptr<RobotTrajectoryPlanning> robotTrajectoryPlanning{nullptr};  // 『机器人轨迹规划』
-    QThread *robotTrajectoryPlanningThread = new QThread;                       // 机器人轨迹规划线程
+    std::shared_ptr<SeamDetWithPointCloud> seamDetWithPointCloud{nullptr};         // 『点云方法焊缝检测』
+    QThread *seamDetWithPointCloudThread = new QThread;                            // 点云方法焊缝检测线程
+    std::shared_ptr<SeamDetWithSeg> seamDetWithSeg{nullptr};                       // 『分割方法焊缝检测』
+    QThread *seamDetWithSegThread = new QThread;                                   // 分割方法焊缝检测线程
+    std::shared_ptr<AbstractTrajectoryPlanning> robotTrajectoryPlanning{nullptr};  // 『机器人轨迹规划』
+    QThread *robotTrajectoryPlanningThread = new QThread;                          // 机器人轨迹规划线程
 
     std::shared_ptr<AbstractRobot> robot{nullptr};                // 『机器人』
     QThread *robotThread = new QThread;                           // 机器人线程
@@ -94,7 +96,7 @@ private:
     // WorkpieceCoarseLocalization *workpieceCoarseLocalization = nullptr;  // 工件粗定位类
 
     const double photoRangeWidth = 500;
-    const double photoRangeHeight = 280;
+    const double photoRangeHeight = 280;  // 投影仪
     std::shared_ptr<PhotoPlanner> photoPlanner =
         std::make_shared<PhotoPlanner>(photoRangeWidth, photoRangeHeight);  // 单一工件拍照位置规划类
 
@@ -110,8 +112,8 @@ private:
     WELD_MODE weldMode = WELD_MODE::MANUAL_WELD;                // 当前焊接模式 (默认手动焊接)
     WELDING_STAGE weldingStage = WELDING_STAGE::PREPARE_STAGE;  // 当前焊接阶段 (默认准备阶段)
 
-    double photoPosOffsetX = 15;  // 拍照位置偏移
-    double photoPosOffsetY = -320;
+    double photoPosOffsetX = 15;    // 拍照位置偏移
+    double photoPosOffsetY = -320;  // 实际投影中心与tcp
     double photoPosOffsetZ = 285;
     double photoPosOffsetExtraX = 120;  // 单一粗定位区域拍照位置进一步偏移
     float railScaleWith5000 = 1;        // 当前地轨相比于5米地轨的尺度

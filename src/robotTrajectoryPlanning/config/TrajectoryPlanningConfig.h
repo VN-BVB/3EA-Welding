@@ -30,9 +30,8 @@ private:
     TrajectoryPlanningConfig();
     ~TrajectoryPlanningConfig();
 
-    static TrajectoryPlanningConfig* instance;  // 静态实例指针
-    static std::mutex instanceMutex;            // 保护静态实例的互斥锁
-
+    static TrajectoryPlanningConfig* instance;                                                // 静态实例指针
+    static std::mutex instanceMutex;                                                          // 保护静态实例的互斥锁
     std::string robotType = MyToolFunc::getRobotTypeString(ROBOT_TYPE::AN_CHUAN);             // 机器人类型
     std::string handEyeType = MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND);  // 手眼类型
 
@@ -108,31 +107,37 @@ private:
 
     // 机器人左侧
     float zeroPointX_LEFT, zeroPointY_LEFT, zeroPointZ_LEFT, zeroPointA_LEFT, zeroPointB_LEFT, zeroPointC_LEFT;  // 焊枪过渡点位姿
-    float takePhotoX_LEFT, takePhotoY_LEFT, takePhotoZ_LEFT, takePhotoA_LEFT, takePhotoB_LEFT, takePhotoC_LEFT;  // 眼在手上时的拍照位姿
-    float leftPoseA_LEFT, leftPoseB_LEFT, leftPoseC_LEFT;                                                        // 左侧焊缝姿态
-    float rightPoseA_LEFT, rightPoseB_LEFT, rightPoseC_LEFT;                                                     // 右侧焊缝姿态
-    float beamButtPoseA_LEFT, beamButtPoseB_LEFT, beamButtPoseC_LEFT;                                            // 背面横梁对接焊枪姿态
+    float takePhotoX_LEFT, takePhotoY_LEFT, takePhotoZ_LEFT, takePhotoA_LEFT, takePhotoB_LEFT,
+        takePhotoC_LEFT;                                               // 眼在手上时的拍照位姿
+    float leftPoseA_LEFT, leftPoseB_LEFT, leftPoseC_LEFT;              // 左侧焊缝姿态
+    float rightPoseA_LEFT, rightPoseB_LEFT, rightPoseC_LEFT;           // 右侧焊缝姿态
+    float beamButtPoseA_LEFT, beamButtPoseB_LEFT, beamButtPoseC_LEFT;  // 背面横梁对接焊枪姿态
 
     // 机器人右侧
-    float zeroPointX_RIGHT, zeroPointY_RIGHT, zeroPointZ_RIGHT, zeroPointA_RIGHT, zeroPointB_RIGHT, zeroPointC_RIGHT;  // 焊枪过渡点位姿
-    float takePhotoX_RIGHT, takePhotoY_RIGHT, takePhotoZ_RIGHT, takePhotoA_RIGHT, takePhotoB_RIGHT, takePhotoC_RIGHT;  // 眼在手上时的拍照位姿
-    float leftPoseA_RIGHT, leftPoseB_RIGHT, leftPoseC_RIGHT;                                                           // 左侧焊缝姿态
-    float rightPoseA_RIGHT, rightPoseB_RIGHT, rightPoseC_RIGHT;                                                        // 右侧焊缝姿态
+    float zeroPointX_RIGHT, zeroPointY_RIGHT, zeroPointZ_RIGHT, zeroPointA_RIGHT, zeroPointB_RIGHT,
+        zeroPointC_RIGHT;  // 焊枪过渡点位姿
+    float takePhotoX_RIGHT, takePhotoY_RIGHT, takePhotoZ_RIGHT, takePhotoA_RIGHT, takePhotoB_RIGHT,
+        takePhotoC_RIGHT;                                                 // 眼在手上时的拍照位姿
+    float leftPoseA_RIGHT, leftPoseB_RIGHT, leftPoseC_RIGHT;              // 左侧焊缝姿态
+    float rightPoseA_RIGHT, rightPoseB_RIGHT, rightPoseC_RIGHT;           // 右侧焊缝姿态
     float beamButtPoseA_RIGHT, beamButtPoseB_RIGHT, beamButtPoseC_RIGHT;  // 背面横梁对接焊枪姿态
 
     friend class RailWeldingSystem;
     friend class WeldingMainWindow;
     friend class RobotTrajectoryPlanning;
+    friend class LargeWorkpieceTrajectoryPlanning;
     friend class cereal::access;
     template <class Archive>
     void serialize(Archive& ar) {
         ar(CEREAL_NVP(robotType), CEREAL_NVP(handEyeType), CEREAL_NVP(HandEyeMatrix), CEREAL_NVP(leftErrorCompensation),
            CEREAL_NVP(leftMiddleErrorCompensation), CEREAL_NVP(middleErrorCompensation), CEREAL_NVP(rightMiddleErrorCompensation),
-           CEREAL_NVP(rightErrorCompensation), CEREAL_NVP(beamButtLeftErrorCompensation), CEREAL_NVP(beamButtLeftMiddleErrorCompensation),
-           CEREAL_NVP(beamButtMiddleErrorCompensation), CEREAL_NVP(beamButtRightMiddleErrorCompensation), CEREAL_NVP(beamButtRightErrorCompensation),
-           CEREAL_NVP(beamLeftErrorCompensationF), CEREAL_NVP(beamLeftMiddleErrorCompensationF), CEREAL_NVP(beamMiddleErrorCompensationF),
-           CEREAL_NVP(beamRightMiddleErrorCompensationF), CEREAL_NVP(beamRightErrorCompensationF), CEREAL_NVP(leftWeldingPose),
-           CEREAL_NVP(rightWeldingPose), CEREAL_NVP(beamButtWeldingPose), CEREAL_NVP(startPointPositionPose), CEREAL_NVP(takePhotoPositionPose),
+           CEREAL_NVP(rightErrorCompensation), CEREAL_NVP(beamButtLeftErrorCompensation),
+           CEREAL_NVP(beamButtLeftMiddleErrorCompensation), CEREAL_NVP(beamButtMiddleErrorCompensation),
+           CEREAL_NVP(beamButtRightMiddleErrorCompensation), CEREAL_NVP(beamButtRightErrorCompensation),
+           CEREAL_NVP(beamLeftErrorCompensationF), CEREAL_NVP(beamLeftMiddleErrorCompensationF),
+           CEREAL_NVP(beamMiddleErrorCompensationF), CEREAL_NVP(beamRightMiddleErrorCompensationF),
+           CEREAL_NVP(beamRightErrorCompensationF), CEREAL_NVP(leftWeldingPose), CEREAL_NVP(rightWeldingPose),
+           CEREAL_NVP(beamButtWeldingPose), CEREAL_NVP(startPointPositionPose), CEREAL_NVP(takePhotoPositionPose),
            CEREAL_NVP(leftWeldingPose_LEFT), CEREAL_NVP(rightWeldingPose_LEFT), CEREAL_NVP(beamButtWeldingPose_LEFT),
            CEREAL_NVP(startPointPositionPose_LEFT), CEREAL_NVP(takePhotoPositionPose_LEFT), CEREAL_NVP(leftWeldingPose_RIGHT),
            CEREAL_NVP(rightWeldingPose_RIGHT), CEREAL_NVP(beamButtWeldingPose_RIGHT), CEREAL_NVP(startPointPositionPose_RIGHT),

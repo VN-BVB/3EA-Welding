@@ -34,7 +34,7 @@ signals:
 
 public slots:
     void whenDetSeamWithPointCloud(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);    // 求解焊缝
-    void whenDetSeamWithPointCloudSD(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);  // 求解焊缝
+    void whenDetSeamWithPointCloudLW(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);  // 求解焊缝
 private:
     std::shared_ptr<AbstractSeamDet> beamButtSeamsDet{nullptr};        // 横梁对接求解类
     std::shared_ptr<AbstractSeamDet> cornerButtSeamsDet{nullptr};      // 边角对接求解类

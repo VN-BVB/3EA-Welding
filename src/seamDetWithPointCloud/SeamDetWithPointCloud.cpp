@@ -196,7 +196,7 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloud(std::vector<std::shared_pt
     }
 }
 // 求解焊缝
-void SeamDetWithPointCloud::whenDetSeamWithPointCloudSD(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo) {
+void SeamDetWithPointCloud::whenDetSeamWithPointCloudLW(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo) {
     PLOGD << "点云方法焊缝检测开始";
 
     // 清空各类别信息容器

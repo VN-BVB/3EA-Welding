@@ -266,7 +266,12 @@ void WeldingMainWindow::on_btnRobotMoveL_clicked() {
 void WeldingMainWindow::on_combWorkpiece_currentTextChanged(const QString& arg1) {
     if (arg1 == u8"角钢") {
         this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::STEEL_ANGLE;
+        this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::STEEL_ANGLE);
+    } else if (arg1 == u8"大型工件") {
+        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::LARGE_WORKPIECE;
+        this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::LARGE_WORKPIECE);
     } else {
-        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::STEEL_DEFAULT;
+        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::LARGE_WORKPIECE;
+        this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::LARGE_WORKPIECE);
     }
 }

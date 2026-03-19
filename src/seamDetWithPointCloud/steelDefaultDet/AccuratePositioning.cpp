@@ -2614,16 +2614,26 @@ void AccuratePositioning::AccuratePositioning::computeCylinderPlaneIntersection(
     const pcl::ModelCoefficients& planeCoefficients, const pcl::ModelCoefficients& cylinderCoefficients,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr& planeInliers, pcl::PointCloud<pcl::PointXYZ>::Ptr& result,
     pcl::PointCloud<pcl::PointXYZ>::Ptr& projectedCloud) {
+    planeInliers->height = 1;
+    planeInliers->width = static_cast<uint32_t>(planeInliers->size());
+    // pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/planeInliers.pcd", *planeInliers);
     /* ================== 平面参数 ================== */
     Eigen::Vector3d planeN(planeCoefficients.values[0], planeCoefficients.values[1], planeCoefficients.values[2]);
     double planeD = planeCoefficients.values[3];
     planeN.normalize();
+    std::cout << "Plane parameters:" << std::endl;
+    std::cout << "Normal: [" << planeN.x() << ", " << planeN.y() << ", " << planeN.z() << "]" << std::endl;
+    std::cout << "d: " << planeD << std::endl;
 
     /* ================== 圆柱参数 ================== */
     Eigen::Vector3d p0(cylinderCoefficients.values[0], cylinderCoefficients.values[1], cylinderCoefficients.values[2]);
     Eigen::Vector3d axis(cylinderCoefficients.values[3], cylinderCoefficients.values[4], cylinderCoefficients.values[5]);
     double R = cylinderCoefficients.values[6];
     axis.normalize();
+    std::cout << "Cylinder parameters:" << std::endl;
+    std::cout << "Axis origin: [" << p0.x() << ", " << p0.y() << ", " << p0.z() << "]" << std::endl;
+    std::cout << "Axis direction: [" << axis.x() << ", " << axis.y() << ", " << axis.z() << "]" << std::endl;
+    std::cout << "Radius: " << R << std::endl;
 
     /* ================== 构建圆柱局部坐标系 ================== */
     Eigen::Vector3d ez = axis;
@@ -2724,6 +2734,9 @@ void AccuratePositioning::AccuratePositioning::computeCylinderPlaneIntersection(
     }
 
     if (filteredPlane->empty()) return;
+    filteredPlane->height = 1;
+    filteredPlane->width = static_cast<uint32_t>(filteredPlane->size());
+    // pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/filteredPlane.pcd", *filteredPlane);
 
     /* ================== KD-Tree：用于选择真实交线分支 ================== */
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
@@ -2784,6 +2797,10 @@ void AccuratePositioning::AccuratePositioning::computeCylinderPlaneIntersection(
         Eigen::Vector3d best = (d1 < d2n) ? p1 : p2;
         intersection->push_back(pcl::PointXYZ(best.x(), best.y(), best.z()));
     }
+    intersection->height = 1;
+    intersection->width = static_cast<uint32_t>(intersection->size());
+
+    pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/intersection.pcd", *intersection);
 
     *result = *intersection;
     *projectedCloud = *filteredPlane;

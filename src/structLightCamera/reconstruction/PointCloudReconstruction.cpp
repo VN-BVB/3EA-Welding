@@ -143,7 +143,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
     return weldAreaInfo;
 }
 // 焊缝区域点云重建
-std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaReconstructToSD() {
+std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaReconstructToLW() {
     PLOGD << "重建三轴工件点云";
 
     // 部分变量清空
@@ -159,7 +159,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
     if (primaryCameraCapturedImg->size() == set.projector_num) {
         reInitialize();             // 变量重新初始化
         imageDistribute();          // 0. 将采集到的图像放入相移和格雷码容器
-        makeMaskForSeamsDetToSD();  // 1.2 完成重建掩膜的生成 (包括背景和焊缝区域)
+        makeMaskForSeamsDetToLW();  // 1.2 完成重建掩膜的生成 (包括背景和焊缝区域)
         maskForReconstruct = maskForWorkbench.clone();
         solveWrapPhase();           // 2. 相移法求包裹相位
         decodeGrayCode();           // 3. 解码格雷码
@@ -287,7 +287,7 @@ void PointCloudReconstruction::makeMaskForSeamsDet() {
         }
     }
 }
-void PointCloudReconstruction::makeMaskForSeamsDetToSD() {
+void PointCloudReconstruction::makeMaskForSeamsDetToLW() {
     PLOGD << "计算背景以及焊缝区域的mask";
     cv::Mat beforDistortCorrect = (*primaryCameraCapturedImg)[19].clone();  // 获取空白图
     cv::imwrite("beforDistortCorrect.bmp", beforDistortCorrect);
@@ -302,8 +302,8 @@ void PointCloudReconstruction::makeMaskForSeamsDetToSD() {
     if (detRes->size() == 0) {
         PLOGW << "检测结果为空，使用默认ROI";
         // detRes->emplace_back(1, 1.0f, 0, 0, 1200, 1000);
-        detRes->emplace_back(1, 1.0f, 165, 351, 1124, 554);
-        detRes->emplace_back(1, 1.0f, 145, 616, 1122, 944);
+        detRes->emplace_back(1, 1.0f, 310, 330, 1300, 610);
+        // detRes->emplace_back(1, 1.0f, 145, 616, 1122, 944);
     }
     // 如果检测到大于4个, 按照置信度排序, 并取前4个
     if (detRes->size() > 4) {
@@ -769,7 +769,7 @@ void PointCloudReconstruction::reconstructPoint() {
     // 3. 点云后处理
     if (reconstructPointCloud->size() > 0) {
         pointCloudPostProcess(reconstructPointCloud);
-        // pcl::io::savePCDFile("./data/common/CommonPC.pcd", *reconstructPointCloud);
+        pcl::io::savePCDFile("./data/common/CommonPC.pcd", *reconstructPointCloud);
     }
 
     pointCloud = reconstructPointCloud;
