@@ -165,3 +165,80 @@ Eigen::Matrix4f MyToolFunc::createTransformationMatrixZYZ(MyVector p) {
 
     return transformation;
 }
+std::vector<double> MyToolFunc::extractEulerZYX(const Eigen::Matrix3f &R, const std::vector<double> &currentEulerDeg) {
+    auto norm = [](double a) {
+        while (a > 180) a -= 360;
+        while (a < -180) a += 360;
+        return a;
+    };
+
+    auto angleDiff = [](double a, double b) {
+        double d = a - b;
+        while (d > 180) d -= 360;
+        while (d < -180) d += 360;
+        return d;
+    };
+
+    // =========================
+    // 1. 手动解（基础解）
+    // =========================
+    double rz = std::atan2(R(1, 0), R(0, 0));
+    double ry = std::atan2(-R(2, 0), std::sqrt(R(2, 1) * R(2, 1) + R(2, 2) * R(2, 2)));
+    double rx = std::atan2(R(2, 1), R(2, 2));
+
+    rx = norm(rx * 180.0 / M_PI);
+    ry = norm(ry * 180.0 / M_PI);
+    rz = norm(rz * 180.0 / M_PI);
+
+    // =========================
+    // 2. 两组解
+    // =========================
+    std::vector<std::vector<double>> sols;
+
+    sols.push_back({rx, ry, rz});
+
+    sols.push_back({norm(rx + 180.0), norm(180.0 - ry), norm(rz + 180.0)});
+
+    // =========================
+    // 打印所有解
+    // =========================
+    std::cout << "All solutions:" << std::endl;
+    for (size_t i = 0; i < sols.size(); i++) {
+        std::cout << "  sol[" << i << "]: " << sols[i][0] << ", " << sols[i][1] << ", " << sols[i][2] << std::endl;
+    }
+
+    // =========================
+    //  当前姿态
+    // =========================
+    std::cout << "Current: " << currentEulerDeg[0] << ", " << currentEulerDeg[1] << ", " << currentEulerDeg[2] << std::endl;
+
+    // =========================
+    // 选最优解
+    // =========================
+    auto cost = [&](const std::vector<double> &euler) {
+        double c = 0;
+        for (int i = 0; i < 3; i++) {
+            double d = angleDiff(euler[i], currentEulerDeg[i]);
+            c += d * d;
+        }
+        return c;
+    };
+
+    int bestIdx = 0;
+    double bestCost = cost(sols[0]);
+
+    for (size_t i = 0; i < sols.size(); i++) {
+        double c = cost(sols[i]);
+        std::cout << "  cost[" << i << "] = " << c << std::endl;
+
+        if (c < bestCost) {
+            bestCost = c;
+            bestIdx = i;
+        }
+    }
+
+    std::cout << "Selected index: " << bestIdx << std::endl;
+    std::cout << "Selected Euler: " << sols[bestIdx][0] << ", " << sols[bestIdx][1] << ", " << sols[bestIdx][2] << std::endl;
+
+    return sols[bestIdx];
+}

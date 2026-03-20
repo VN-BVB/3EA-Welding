@@ -17,6 +17,7 @@
 #include <opencv2/opencv.hpp>
 #include <string>
 
+#include "robotFactory/AbstractRobot.h"
 enum WELD_TYPE {              // 焊缝类型
     BACK_CORNER_BUTT,         // 背面边角对接
     FRONT_CORNER_BUTT,        // 正面边角对接
@@ -97,6 +98,9 @@ public:
     cv::Mat segResultImg;                                              // 分割结果图像
     cv::Mat segMaskImg;                                                // 分割掩膜图像
     double width = 1.5;                                                // 焊缝宽度
+
+    // 机器人位姿
+    std::vector<robotPose> robotWeldPose;
 };
 
 #endif  // WELDSEAMINFO_H

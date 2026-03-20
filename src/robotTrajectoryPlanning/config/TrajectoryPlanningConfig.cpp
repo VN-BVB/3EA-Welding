@@ -99,4 +99,8 @@ void TrajectoryPlanningConfig::myDataStructure2LibDataStructure() {
     } else if (robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN)) {
         matrixEnd2Base = MyToolFunc::createTransformationMatrixZYZ(takePhotoPositionPose);
     }
+    if (takePhotoPositionPose._data.size() >= 6) {
+        const auto &d = takePhotoPositionPose._data;
+        currentRobotPose = robotPose(d[0], d[1], d[2], d[3], d[4], d[5]);
+    }
 }

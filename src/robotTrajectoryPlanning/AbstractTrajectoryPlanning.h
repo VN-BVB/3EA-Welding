@@ -29,6 +29,15 @@ protected:
         LEFT,                             // 左方
         RIGHT                             // 右方
     };
+    enum SWING_WELD_ACTION {
+        LINE_WELD = 0,                        // 直线焊接
+        FRONT_LEFT_VERTICAL_SWING_WELD = 1,   // 机器人前方左侧竖直焊缝摆焊
+        FRONT_RIGHT_VERTICAL_SWING_WELD = 2,  // 机器人前方右侧竖直焊缝摆焊
+        LEFT_LEFT_VERTICAL_SWING_WELD = 3,    // 机器人左方左侧竖直焊缝摆焊
+        LEFT_RIGHT_VERTICAL_SWING_WELD = 4,   // 机器人左方右侧竖直焊缝摆焊
+        RIGHT_LEFT_VERTICAL_SWING_WELD = 5,   // 机器人右方左侧竖直焊缝摆焊
+        RIGHT_RIGHT_VERTICAL_SWING_WELD = 6   // 机器人右方右侧竖直焊缝摆焊
+    };
     // 配置初始化方法（供派生类调用）
     void initConfig();
     void readConfig();
@@ -40,7 +49,7 @@ protected:
     SettingPara& settingPara;
 
 signals:
-    void sendDetSeamWithSeg(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo);
+    void sendPlannedSeams(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo);
     void sendTrajectoryPlanOver();
 
     friend class RailWeldingSystem;

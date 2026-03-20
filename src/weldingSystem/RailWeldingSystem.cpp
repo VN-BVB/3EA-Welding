@@ -89,7 +89,7 @@ void RailWeldingSystem::initTrajectoryPlanning() {
         // // 分割方法检测焊缝类计算出焊缝, 发送到轨迹规划线程. 同时发送到本类暂存, 以便未来保存错误数据以及显示.
         connect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
                 &AbstractTrajectoryPlanning::whenPlanningTrajectory);
-        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendDetSeamWithSeg, this,
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this,
                 &RailWeldingSystem::whenGetFinalSeams);
 
         // 轨迹规划完成后, 发送到本类以便自动模式直接开始焊接
@@ -106,7 +106,7 @@ void RailWeldingSystem::switchTrajectoryPlanning(WORKPIECE_TYPE workpieceType) {
         // 断开旧的信号连接
         disconnect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
                    &AbstractTrajectoryPlanning::whenPlanningTrajectory);
-        disconnect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendDetSeamWithSeg, this,
+        disconnect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this,
                    &RailWeldingSystem::whenGetFinalSeams);
         disconnect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this,
                    &RailWeldingSystem::whenTrajectoryPlanOver);
@@ -137,7 +137,7 @@ void RailWeldingSystem::switchTrajectoryPlanning(WORKPIECE_TYPE workpieceType) {
         // 重新建立信号连接
         connect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
                 &AbstractTrajectoryPlanning::whenPlanningTrajectory);
-        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendDetSeamWithSeg, this,
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this,
                 &RailWeldingSystem::whenGetFinalSeams);
         connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this,
                 &RailWeldingSystem::whenTrajectoryPlanOver);
@@ -238,7 +238,7 @@ void RailWeldingSystem::whenGetRobotMoveLData(robotPose p, double speed) {
 
 void RailWeldingSystem::whenGetRobotCurrentPose(robotPose p) {
     // PLOGD << "当前机器人位姿: " << p.x_ << " " << p.y_ << " " << p.z_ << " " << p.a_ << " " << p.b_ << " " << p.c_;
-
+    robotTrajectoryPlanning->trajectoryConfig.currentRobotPose = p;
     // 计算末端(工具)到基坐标系的转换矩阵
     robotTrajectoryPlanning->trajectoryConfig.matrixEnd2Base =
         MyToolFunc::createTransformationMatrixZYX(p.x_, p.y_, p.z_, p.a_, p.b_, p.c_);

@@ -65,6 +65,7 @@ void write2PositionPose(MyVector& data, float& x, float& y, float& z, float& a, 
 Eigen::Matrix4f createTransformationMatrixZYX(MyVector p);
 Eigen::Matrix4f createTransformationMatrixZYX(double x, double y, double z, double a, double b, double c);
 Eigen::Matrix4f createTransformationMatrixZYZ(MyVector p);
+std::vector<double> extractEulerZYX(const Eigen::Matrix3f& R_target, const std::vector<double>& currentEulerDeg);
 
 }  // namespace MyToolFunc
 

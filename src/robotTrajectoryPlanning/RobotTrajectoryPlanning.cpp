@@ -106,7 +106,7 @@ void RobotTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::shared_ptr
     }
 
     // 发出规划完成的焊缝
-    emit sendDetSeamWithSeg(weldSeamInfo);
+    emit sendPlannedSeams(weldSeamInfo);
 }
 
 // 焊缝写入文件

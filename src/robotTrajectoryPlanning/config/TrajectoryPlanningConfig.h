@@ -11,10 +11,10 @@
 #include <opencv2/opencv.hpp>
 #include <string>
 
+#include "robotFactory/AbstractRobot.h"
 #include "utils/common/CommonFunc.h"
 #include "utils/myMatrixVector/MyMatrixVector.h"
 #include "utils/pointCloud/PointCloudFunc.h"
-
 class TrajectoryPlanningConfig {
 public:
     // 获取单例的方法
@@ -121,6 +121,8 @@ private:
     float leftPoseA_RIGHT, leftPoseB_RIGHT, leftPoseC_RIGHT;              // 左侧焊缝姿态
     float rightPoseA_RIGHT, rightPoseB_RIGHT, rightPoseC_RIGHT;           // 右侧焊缝姿态
     float beamButtPoseA_RIGHT, beamButtPoseB_RIGHT, beamButtPoseC_RIGHT;  // 背面横梁对接焊枪姿态
+    // 机器人当前姿态
+    robotPose currentRobotPose;
 
     friend class RailWeldingSystem;
     friend class WeldingMainWindow;

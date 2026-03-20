@@ -302,7 +302,7 @@ void PointCloudReconstruction::makeMaskForSeamsDetToLW() {
     if (detRes->size() == 0) {
         PLOGW << "检测结果为空，使用默认ROI";
         // detRes->emplace_back(1, 1.0f, 0, 0, 1200, 1000);
-        detRes->emplace_back(1, 1.0f, 310, 330, 1300, 610);
+        detRes->emplace_back(1, 1.0f, 91, 237, 1500, 600);
         // detRes->emplace_back(1, 1.0f, 145, 616, 1122, 944);
     }
     // 如果检测到大于4个, 按照置信度排序, 并取前4个
