@@ -12,13 +12,13 @@ public:
     std::vector<std::shared_ptr<WeldSeamInfo>> solveSeamsEndPoints(std::vector<std::shared_ptr<WeldSeamInfo>> seamsInfo) override;
 
 private:
-    void SingleSeam_Reinitialize();
-    void Statistic_filter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
-    void Ransac_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
+    void singleSeamReinitialize();
+    void statisticFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
+    void ransacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
                       pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_noplane);
-    void Ransac_cylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud);
+    void ransacCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud);
     void removeCylinderPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
-    bool SolveBeamButtSeamEndPoints();
+    bool solveBeamButtSeamEndPoints();
 signals:
 
 private:

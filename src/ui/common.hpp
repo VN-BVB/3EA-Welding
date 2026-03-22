@@ -29,29 +29,30 @@ void handleWeldAreaInfo2Display(std::vector<std::shared_ptr<WeldSeamInfo>> weldA
         if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
             seamAreaPointCloudNum.insert(info->areaNum);
             std::string label_cloud = "label_cloud" + std::to_string(info->areaNum);
-            pclVisualizer->addPointCloud(info->weldAreaPointCloud, label_cloud);
-            pclVisualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR, Visual_RGBList[info->areaNum][0],
-                                                            Visual_RGBList[info->areaNum][1], Visual_RGBList[info->areaNum][2], label_cloud);
+            pclVisualizer->addPointCloud(info->weldAreaPointCloudInRobot, label_cloud);
+            pclVisualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR,
+                                                            Visual_RGBList[info->areaNum][0], Visual_RGBList[info->areaNum][1],
+                                                            Visual_RGBList[info->areaNum][2], label_cloud);
             pclVisualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_OPACITY, 0.7,
                                                             label_cloud);  // 不透明度
-            *visualCloud = *visualCloud + *(info->weldAreaPointCloud);
+            *visualCloud = *visualCloud + *(info->weldAreaPointCloudInRobot);
         }
     }
 
     // 焊缝可视化
     int seamsNum = 0;
     for (auto& info : weldAreaInfo) {
-        if (info->detectSuccFlag == true && info->weldEndPointsInCamera != nullptr && info->weldEndPointsInCamera->size() == 2) {
+        if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
             std::string lable_ButtSeam = "lable_Seam" + std::to_string(seamsNum++);
-            pclVisualizer->addLine(info->weldEndPointsInCamera->at(0), info->weldEndPointsInCamera->at(1), 1, 0, 0, lable_ButtSeam);
+            pclVisualizer->addLine(info->weldEndPointsInRobot->at(0), info->weldEndPointsInRobot->at(1), 1, 0, 0, lable_ButtSeam);
             pclVisualizer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 8, lable_ButtSeam);
 
             // 焊缝宽度显示
             if (info->weldType == WELD_TYPE::BACK_BEAM_BUTT || info->weldType == WELD_TYPE::BACK_CORNER_BUTT ||
                 info->weldType == WELD_TYPE::FRONT_BEAM_BUTT || info->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {
-                pcl::PointXYZ seamWidthStart((info->weldEndPointsInCamera->at(0).x + info->weldEndPointsInCamera->at(1).x) / 2,
-                                             (info->weldEndPointsInCamera->at(0).y + info->weldEndPointsInCamera->at(1).y) / 2,
-                                             (info->weldEndPointsInCamera->at(0).z + info->weldEndPointsInCamera->at(1).z) / 2);
+                pcl::PointXYZ seamWidthStart((info->weldEndPointsInRobot->at(0).x + info->weldEndPointsInRobot->at(1).x) / 2,
+                                             (info->weldEndPointsInRobot->at(0).y + info->weldEndPointsInRobot->at(1).y) / 2,
+                                             (info->weldEndPointsInRobot->at(0).z + info->weldEndPointsInRobot->at(1).z) / 2);
                 double seamWidth = info->width;
                 double orientation[3] = {175, -9, 0};
                 std::string width = "Width: " + std::to_string(seamWidth);
@@ -80,46 +81,51 @@ void handleWeldAreaInfo2Display(std::vector<std::shared_ptr<WeldSeamInfo>> weldA
                     }
                     if (currAreaSeams == true) {
                         if (info->weldAreaType == WELD_AREA_TYPE::BACK_CORNER) {
-                            cv::Scalar roi_color =
-                                cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][0] * 255, Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][1] * 255,
-                                           Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][2] * 255);
+                            cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][0] * 255,
+                                                              Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][1] * 255,
+                                                              Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][2] * 255);
                             cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
                             cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::BACK_CORNER),
-                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2, roi_color, 4);
+                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+                                        roi_color, 4);
                         } else if (info->weldAreaType == WELD_AREA_TYPE::BACK_BEAM) {
-                            cv::Scalar roi_color =
-                                cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][0] * 255, Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][1] * 255,
-                                           Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][2] * 255);
+                            cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][0] * 255,
+                                                              Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][1] * 255,
+                                                              Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][2] * 255);
                             cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
                             cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::BACK_BEAM),
-                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2, roi_color, 4);
+                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+                                        roi_color, 4);
                         } else if (info->weldAreaType == WELD_AREA_TYPE::FRONT_CORNER) {
                             cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::FRONT_CORNER][0] * 255,
                                                               Visual_RGBList[WELD_AREA_TYPE::FRONT_CORNER][1] * 255,
                                                               Visual_RGBList[WELD_AREA_TYPE::FRONT_CORNER][2] * 255);
                             cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
                             cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::FRONT_CORNER),
-                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2, roi_color, 4);
+                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+                                        roi_color, 4);
                         } else if (info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
                             cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::FRONT_UP_BEAM][0] * 255,
                                                               Visual_RGBList[WELD_AREA_TYPE::FRONT_UP_BEAM][1] * 255,
                                                               Visual_RGBList[WELD_AREA_TYPE::FRONT_UP_BEAM][2] * 255);
                             cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
                             cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::FRONT_UP_BEAM),
-                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2, roi_color, 4);
+                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+                                        roi_color, 4);
                         } else if (info->weldAreaType == WELD_AREA_TYPE::FRONT_DOWN_BEAM) {
                             cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::FRONT_DOWN_BEAM][0] * 255,
                                                               Visual_RGBList[WELD_AREA_TYPE::FRONT_DOWN_BEAM][1] * 255,
                                                               Visual_RGBList[WELD_AREA_TYPE::FRONT_DOWN_BEAM][2] * 255);
                             cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
                             cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::FRONT_DOWN_BEAM),
-                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2, roi_color, 4);
+                                        cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+                                        roi_color, 4);
                         }
                     } else {
                         cv::Scalar roi_color = cv::Scalar(0, 0, 0);
                         cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 10);
-                        cv::putText(ObjDetImg, "None", cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.5, roi_color,
-                                    6);
+                        cv::putText(ObjDetImg, "None", cv::Point(info->rectPtr->x, info->rectPtr->y - 10),
+                                    cv::FONT_HERSHEY_COMPLEX, 1.5, roi_color, 6);
                     }
                 }
             }
@@ -131,7 +137,7 @@ void handleWeldAreaInfo2Display(std::vector<std::shared_ptr<WeldSeamInfo>> weldA
     pcl::getMinMax3D(*visualCloud, minPt, maxPt);
     Eigen::Vector3f center((maxPt.x + minPt.x) / 2, (maxPt.y + minPt.y) / 2,
                            (maxPt.z + minPt.z) / 2);  // 计算点云中心位置和对角线长度
-    pclVisualizer->setCameraPosition(center(0), center(1), center(2) - 0.1, center(0), center(1), center(2), 0, -1, 0);
+    pclVisualizer->setCameraPosition(center(0), center(1), center(2) + 0.1, center(0), center(1), center(2), 1, 0, 0);
 
     // VTK界面点云显示
     // viewer_pcl->addCoordinateSystem(50);

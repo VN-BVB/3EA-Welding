@@ -17,14 +17,6 @@ void LargeWorkpieceTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::s
             PLOGD << info->weldEndPointsInCamera->at(0) << " " << info->weldEndPointsInCamera->at(1);
         }
     }
-    // // --------------------------- 对焊缝点进行误差补偿 ---------------------------
-    // this->seamsErrorCompensate(weldSeamInfo);
-    // PLOGD << "误差补偿后的焊缝点: ";  // 打印操作后的焊缝
-    // for (auto& info : weldSeamInfo) {
-    //     if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
-    //         PLOGD << info->weldEndPointsInRobot->at(0) << " " << info->weldEndPointsInRobot->at(1);
-    //     }
-    // }
     // --------------------------- 标准化表面方向（相机坐标系） ---------------------------
 
     this->normalizeSurfaceDirectionInCamera(weldSeamInfo);
@@ -58,8 +50,14 @@ void LargeWorkpieceTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::s
             PLOGD << info->weldEndPointsInRobot->at(0) << " " << info->weldEndPointsInRobot->at(1);
         }
     }
+    //---------------------------- 焊缝微调 ------------------------------
+
+    this->compensateSeams(weldSeamInfo);
+
     // --------------------------- 生成焊接轨迹 ---------------------------
+
     this->generateWeldPose(weldSeamInfo);
+
     // --------------------------- 打印焊接轨迹 ---------------------------
     PLOGD << "================ 焊接轨迹（robotWeldPose） ================";
 
@@ -108,6 +106,15 @@ void LargeWorkpieceTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::s
     //               << ", b=" << pose.b_ << ", c=" << pose.c_;
     //     }
     // }
+    for (auto& info : weldSeamInfo) {
+        if (!info) continue;
+
+        if (info->cloudFuture.isRunning()) {
+            info->cloudFuture.waitForFinished();
+        }
+
+        info->weldAreaPointCloudInRobot = info->cloudFuture.result();
+    }
     // 发出规划完成的焊缝
     emit sendPlannedSeams(weldSeamInfo);
 }
@@ -339,7 +346,6 @@ void LargeWorkpieceTrajectoryPlanning::transSeams2Base(std::vector<std::shared_p
     // ================= 2. 批量转换 =================
     for (auto& info : weldSeamInfo) {
         if (!info || !info->detectSuccFlag) continue;
-        pcl::PointCloud<pcl::PointXYZ>::Ptr weldAreaPointCloudBase;
         // ---------- 2.1 焊缝端点 ----------
         if (info->weldEndPointsInCamera && info->weldEndPointsInCamera->size() >= 2) {
             info->weldEndPointsInRobot = std::make_shared<std::vector<pcl::PointXYZ>>();
@@ -350,14 +356,13 @@ void LargeWorkpieceTrajectoryPlanning::transSeams2Base(std::vector<std::shared_p
                 info->weldEndPointsInRobot->emplace_back(MyToolFunc::transformSinglePoint(pt, T_cam2base));
             }
         }
-        // ---------- 2.2 （可选）焊缝区域点云 ----------
+        // ---------- 2.2 （异步）焊缝区域点云 ----------
 
-        if (info->weldAreaPointCloud && !info->weldAreaPointCloud->empty()) {
-            weldAreaPointCloudBase = MyToolFunc::transformPointCloud(info->weldAreaPointCloud, T_cam2base);
-            // weldAreaPointCloudBase->height = 1;
-            // weldAreaPointCloudBase->width = static_cast<uint32_t>(weldAreaPointCloudBase->size());
-            // pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/weldAreaPointCloudInBase.pcd",
-            //                      *weldAreaPointCloudBase);
+        if (info->weldAreaPointCloudInCamera && !info->weldAreaPointCloudInCamera->empty()) {
+            auto cloud_in = info->weldAreaPointCloudInCamera;
+
+            info->cloudFuture =
+                QtConcurrent::run([cloud_in, T_cam2base]() { return MyToolFunc::transformPointCloud(cloud_in, T_cam2base); });
         }
         // ---------- 2.2 转换焊缝母材系数 -----------
         pcl::ModelCoefficients::Ptr plane_base_trans;
@@ -442,8 +447,9 @@ void LargeWorkpieceTrajectoryPlanning::determineWorkpieceOri(std::vector<std::sh
 }
 void LargeWorkpieceTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     // ===== 参考点（机器人当前位置）=====
-    Eigen::Vector3f ref(trajectoryConfig.matrixEnd2Base(0, 3), trajectoryConfig.matrixEnd2Base(1, 3),
-                        trajectoryConfig.matrixEnd2Base(2, 3));
+    // Eigen::Vector3f ref(trajectoryConfig.matrixEnd2Base(0, 3), trajectoryConfig.matrixEnd2Base(1, 3),
+    //                     trajectoryConfig.matrixEnd2Base(2, 3));
+    Eigen::Vector3f ref(0.0f, 0.0f, 0.0f);  // 基座
 
     for (auto& info : weldSeamInfo) {
         if (!info || !info->detectSuccFlag) continue;
@@ -727,178 +733,72 @@ Eigen::Vector3d LargeWorkpieceTrajectoryPlanning::abcToDirection(double a, doubl
 
     return dir.normalized();
 }
-// // 焊缝误差补偿 (真实坐标系)
-// void LargeWorkpieceTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
-//     if (trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::AN_CHUAN)) {
-//         // 安川机器人
-//         /*
-//          *         YASKAWA (安川机器人)
-//          *
-//          *             ㊧ FRONT ㊨
-//          *                  ↑ X
-//          *                  |
-//          *                  |
-//          *   ㊨  Y          |             ㊧
-//          *  LEFT ←----------| 0         RIGHT
-//          *   ㊧                           ㊨
-//          *
-//          *               ☴ ☲ ☷
-//          *               ☳ ☯ ☱
-//          *               ☶ ☵ ☰
-//          *Region1 机器人工件的  ㊧
-//          *Region2 机器人工件的  ㊨
-//          */
-//         for (auto& info : weldSeamInfo) {
-//             if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr &&
-//                 info->weldEndPointsInRobot->size() == 2) {
-//                 for (auto& end : *(info->weldEndPointsInRobot)) {
-//                     end = MyToolFunc::transformSinglePoint(end, trajectoryConfig.leftErrorCompensationMatrix);
-//                     if (info->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {
-//                         if (end.x < 0) {
-//                             end.x += settingPara.Front_Region1_X_Shift;
-//                             end.y += settingPara.Front_Region1_Y_Shift;
-//                             end.z += settingPara.Front_Region1_Z_Shift;
-//                         } else {
-//                             end.x += settingPara.Front_Region2_X_Shift;
-//                             end.y += settingPara.Front_Region2_Y_Shift;
-//                             end.z += settingPara.Front_Region2_Z_Shift;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::BACK_CORNER_BUTT) {
-//                         if (end.x < 0) {
-//                             end.x += settingPara.Back_Region1_X_Shift;
-//                             end.y += settingPara.Back_Region1_Y_Shift;
-//                             end.z += settingPara.Back_Region1_Z_Shift;
-//                         } else {
-//                             end.x += settingPara.Back_Region2_X_Shift;
-//                             end.y += settingPara.Back_Region2_Y_Shift;
-//                             end.z += settingPara.Back_Region2_Z_Shift;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::FRONT_BEAM_BUTT &&
-//                                info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
-//                         if (end.x < 0) {
-//                             end.x += settingPara.Front_Beam_Region1_X_Shift;
-//                             end.y += settingPara.Front_Beam_Region1_Y_Shift;
-//                             end.z += settingPara.Front_Beam_Region1_Z_Shift;
-//                         } else {
-//                             end.x += settingPara.Front_Beam_Region2_X_Shift;
-//                             end.y += settingPara.Front_Beam_Region2_Y_Shift;
-//                             end.z += settingPara.Front_Beam_Region2_Z_Shift;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET &&
-//                                info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
-//                         if (end.x < 0) {
-//                             end.x += settingPara.Front_L_Beam_H_X_Shift;
-//                             end.y += settingPara.Front_L_Beam_H_Y_Shift;
-//                             end.z += settingPara.Front_L_Beam_H_Z_Shift;
-//                         } else {
-//                             end.x += settingPara.Front_R_Beam_H_X_Shift;
-//                             end.y += settingPara.Front_R_Beam_H_Y_Shift;
-//                             end.z += settingPara.Front_R_Beam_H_Z_Shift;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::FRONT_VERTICAL_FILLET &&
-//                                info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
-//                         if (end.x < 0) {
-//                             end.x += settingPara.Front_L_Beam_V_X_Shift;
-//                             end.y += settingPara.Front_L_Beam_V_Y_Shift;
-//                             end.z += settingPara.Front_L_Beam_V_Z_Shift;
-//                         } else {
-//                             end.x += settingPara.Front_R_Beam_V_X_Shift;
-//                             end.y += settingPara.Front_R_Beam_V_Y_Shift;
-//                             end.z += settingPara.Front_R_Beam_V_Z_Shift;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET &&
-//                                info->weldAreaType == WELD_AREA_TYPE::FRONT_DOWN_BEAM) {
-//                         if (end.x < 0) {
-//                             end.x += settingPara.Front_L_Beam_DH_X_Shift;
-//                             end.y += settingPara.Front_L_Beam_DH_Y_Shift;
-//                             end.z += settingPara.Front_L_Beam_DH_Z_Shift;
-//                         } else {
-//                             end.x += settingPara.Front_R_Beam_DH_X_Shift;
-//                             end.y += settingPara.Front_R_Beam_DH_Y_Shift;
-//                             end.z += settingPara.Front_R_Beam_DH_Z_Shift;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::FRONT_VERTICAL_FILLET &&
-//                                info->weldAreaType == WELD_AREA_TYPE::FRONT_DOWN_BEAM) {
-//                         if (end.x < 0) {
-//                             end.x += settingPara.Front_L_Beam_DV_X_Shift;
-//                             end.y += settingPara.Front_L_Beam_DV_Y_Shift;
-//                             end.z += settingPara.Front_L_Beam_DV_Z_Shift;
-//                         } else {
-//                             end.x += settingPara.Front_R_Beam_DV_X_Shift;
-//                             end.y += settingPara.Front_R_Beam_DV_Y_Shift;
-//                             end.z += settingPara.Front_R_Beam_DV_Z_Shift;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::BACK_BEAM_BUTT) {
-//                         if (end.x < 0) {
-//                             end.x += settingPara.Back_Beam_Region1_X_Shift;
-//                             end.y += settingPara.Back_Beam_Region1_Y_Shift;
-//                             end.z += settingPara.Back_Beam_Region1_Z_Shift;
-//                         } else {
-//                             end.x += settingPara.Back_Beam_Region2_X_Shift;
-//                             end.y += settingPara.Back_Beam_Region2_Y_Shift;
-//                             end.z += settingPara.Back_Beam_Region2_Z_Shift;
-//                         }
-//                     }
-//                     if (info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET) {
-//                         end.z -= 4;  // TODO 临时误差补偿
-//                     }
-//                 }
-//             }
-//         }
-//     } else if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::RIGHT) {
-//         for (auto& info : weldSeamInfo) {
-//             if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr &&
-//                 info->weldEndPointsInRobot->size() == 2) {
-//                 for (auto& end : *(info->weldEndPointsInRobot)) {
-//                     end = MyToolFunc::transformSinglePoint(end, trajectoryConfig.rightErrorCompensationMatrix);
-//                     if (info->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {
-//                         if (end.x > 0) {
-//                             end.x += settingPara.Front_Region1_X_Shift_R;
-//                             end.y += settingPara.Front_Region1_Y_Shift_R;
-//                             end.z += settingPara.Front_Region1_Z_Shift_R;
-//                         } else {
-//                             end.x += settingPara.Front_Region2_X_Shift_R;
-//                             end.y += settingPara.Front_Region2_Y_Shift_R;
-//                             end.z += settingPara.Front_Region2_Z_Shift_R;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::BACK_CORNER_BUTT) {
-//                         if (end.x > 0) {
-//                             end.x += settingPara.Back_Region1_X_Shift_R;
-//                             end.y += settingPara.Back_Region1_Y_Shift_R;
-//                             end.z += settingPara.Back_Region1_Z_Shift_R;
-//                         } else {
-//                             end.x += settingPara.Back_Region2_X_Shift_R;
-//                             end.y += settingPara.Back_Region2_Y_Shift_R;
-//                             end.z += settingPara.Back_Region2_Z_Shift_R;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::FRONT_BEAM_BUTT ||
-//                                info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET ||
-//                                info->weldType == WELD_TYPE::FRONT_VERTICAL_FILLET) {
-//                         if (end.x > 0) {
-//                             end.x += settingPara.Front_Beam_Region1_X_Shift_R;
-//                             end.y += settingPara.Front_Beam_Region1_Y_Shift_R;
-//                             end.z += settingPara.Front_Beam_Region1_Z_Shift_R;
-//                         } else {
-//                             end.x += settingPara.Front_Beam_Region2_X_Shift_R;
-//                             end.y += settingPara.Front_Beam_Region2_Y_Shift_R;
-//                             end.z += settingPara.Front_Beam_Region2_Z_Shift_R;
-//                         }
-//                     } else if (info->weldType == WELD_TYPE::BACK_BEAM_BUTT) {
-//                         if (end.x > 0) {
-//                             end.x += settingPara.Back_Beam_Region1_X_Shift_R;
-//                             end.y += settingPara.Back_Beam_Region1_Y_Shift_R;
-//                             end.z += settingPara.Back_Beam_Region1_Z_Shift_R;
-//                         } else {
-//                             end.x += settingPara.Back_Beam_Region2_X_Shift_R;
-//                             end.y += settingPara.Back_Beam_Region2_Y_Shift_R;
-//                             end.z += settingPara.Back_Beam_Region2_Z_Shift_R;
-//                         }
-//                     }
-//                     if (info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET) {
-//                         end.z -= 4;  // TODO 临时误差补偿
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
+void LargeWorkpieceTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+    for (auto& info : weldSeamInfo) {
+        if (!info || !info->detectSuccFlag) continue;
+        if (info->weldType = TubeSide_Plate_F_H) {
+            if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
+            if (!info->weldPlane || info->weldPlane->values.size() < 4) continue;
+
+            auto& pts = *(info->weldEndPointsInRobot);
+
+            Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
+            Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
+
+            if ((P1 - P0).norm() < 1e-6) continue;
+
+            /* ================= 坐标系构建 ================= */
+
+            Eigen::Vector3f xAxis = (P1 - P0).normalized();
+
+            Eigen::Vector3f zAxis(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            zAxis.normalize();
+
+            Eigen::Vector3f yAxis = zAxis.cross(xAxis).normalized();
+            zAxis = xAxis.cross(yAxis).normalized();
+
+            Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
+            T.block<3, 3>(0, 0).col(0) = xAxis;
+            T.block<3, 3>(0, 0).col(1) = yAxis;
+            T.block<3, 3>(0, 0).col(2) = zAxis;
+            T.block<3, 1>(0, 3) = P0;
+            Eigen::Matrix4f T_inv = T.inverse();
+            std::cout << "T_inv" << T_inv << std::endl;
+
+            /* ================= 转到工具系 ================= */
+
+            Eigen::Vector4f p0 = T_inv * Eigen::Vector4f(P0.x(), P0.y(), P0.z(), 1.0f);
+            Eigen::Vector4f p1 = T_inv * Eigen::Vector4f(P1.x(), P1.y(), P1.z(), 1.0f);
+            std::cout << "P0" << P0 << std::endl;
+
+            /* ================= 补偿策略 ================= */
+            // 这里你可以根据工艺改
+            float dx1 = 0.0f;  // 沿焊缝
+            float dy1 = 0.0f;  // 侧向（贴圆柱）
+            float dz1 = 0.0f;  // 压入深度
+            float dx2 = 0.0f;  // 沿焊缝
+            float dy2 = 0.0f;  // 侧向（贴
+            float dz2 = 0.0f;  // 压入深度
+
+            p0.x() += dx1;
+            p0.y() += dy1;
+            p0.z() += dz1;
+            p1.x() += dx2;
+            p1.y() += dy2;
+            p1.z() += dz2;
+
+            /* ================= 转回基座 ================= */
+
+            Eigen::Vector4f p0_new = T * p0;
+            Eigen::Vector4f p1_new = T * p1;
+
+            pts[0].x = p0_new.x();
+            pts[0].y = p0_new.y();
+            pts[0].z = p0_new.z();
+
+            pts[1].x = p1_new.x();
+            pts[1].y = p1_new.y();
+            pts[1].z = p1_new.z();
+        }
+    }
+}

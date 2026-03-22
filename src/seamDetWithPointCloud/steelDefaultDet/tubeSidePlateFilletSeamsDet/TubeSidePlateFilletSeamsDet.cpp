@@ -9,9 +9,9 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
     std::vector<std::shared_ptr<WeldSeamInfo>> seamsInfo) {
     tempWeldSeamsInfo = seamsInfo;
     for (size_t i = 0; i < tempWeldSeamsInfo.size(); i++) {
-        SingleSeam_Reinitialize();
+        singleSeamReinitialize();
 
-        cloudInWeldArea = tempWeldSeamsInfo[i]->weldAreaPointCloud;  // 获取焊缝区域点云
+        cloudInWeldArea = tempWeldSeamsInfo[i]->weldAreaPointCloudInCamera;  // 获取焊缝区域点云
         if (cloudInWeldArea->size() == 0) {
             PLOGE << "焊缝区域为0";
             detectSuccFlag = false;
@@ -25,7 +25,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
             pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/after_cluster.pcd", *cloudInWeldArea);
         }
 
-        Ransac_plane(cloudInWeldArea, cloudPlaneInWeldAreaWithSeam, cloudNoPlaneInWeldArea);
+        ransacPlane(cloudInWeldArea, cloudPlaneInWeldAreaWithSeam, cloudNoPlaneInWeldArea);
         if (!cloudPlaneInWeldAreaWithSeam || cloudPlaneInWeldAreaWithSeam->empty()) {
             PLOGE << "Ransac_plane: 平面点云为空";
             detectSuccFlag = false;
@@ -42,7 +42,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
                                  *cloudNoPlaneInWeldArea);
         }
 
-        Ransac_cylinder(cloudNoPlaneInWeldArea, cloudCylinderInWeldArea);
+        ransacCylinder(cloudNoPlaneInWeldArea, cloudCylinderInWeldArea);
         if (!cloudCylinderInWeldArea || cloudCylinderInWeldArea->empty()) {
             PLOGE << "Ransac_cylinder: 圆柱点云为空";
             detectSuccFlag = false;
@@ -62,7 +62,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
                                  *cloudPlaneInWeldAreaWithSeam);
         }
         // 统计滤波
-        Statistic_filter(cloudPlaneInWeldAreaWithSeam);
+        statisticFilter(cloudPlaneInWeldAreaWithSeam);
         if (saveFlag) {
             cloudPlaneInWeldAreaWithSeam->height = 1;
             cloudPlaneInWeldAreaWithSeam->width = static_cast<uint32_t>(cloudPlaneInWeldAreaWithSeam->size());
@@ -76,12 +76,13 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
             pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea4.pcd",
                                  *cloudPlaneInWeldAreaWithSeam);
         }
-        detectSuccFlag = SolveBeamButtSeamEndPoints();
+        detectSuccFlag = solveBeamButtSeamEndPoints();
         // 保存本次检测到的信息
         tempWeldSeamsInfo[i]->detectSuccFlag = detectSuccFlag;
         if (detectSuccFlag) {
             tempWeldSeamsInfo[i]->weldEndPointsInCamera.reset(
                 new std::vector<pcl::PointXYZ>(std::move(filletSeamsTSP)));  // 检测结果
+            tempWeldSeamsInfo[i]->weldEndPointsInRobot.reset(new std::vector<pcl::PointXYZ>());
             tempWeldSeamsInfo[i]->weldPlane = planeCoeffsWithWeldSeam;
             tempWeldSeamsInfo[i]->otherSurface.emplace_back(cylinderCoeffsInWeldArea);
             tempWeldSeamsInfo[i]->weldType = TubeSide_Plate_F_H;
@@ -91,7 +92,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
     return tempWeldSeamsInfo;
 }
 // 单条焊缝检测前，变量重新初始化
-void TubeSidePlateFilletSeamsDet::SingleSeam_Reinitialize() {
+void TubeSidePlateFilletSeamsDet::singleSeamReinitialize() {
     cloudInWeldArea.reset(new pcl::PointCloud<pcl::PointXYZ>);
     cloudPlaneInWeldAreaWithSeam.reset(new pcl::PointCloud<pcl::PointXYZ>);
     cloudNoPlaneInWeldArea.reset(new pcl::PointCloud<pcl::PointXYZ>);
@@ -108,7 +109,7 @@ void TubeSidePlateFilletSeamsDet::SingleSeam_Reinitialize() {
     // saveFlag = true;
     detectSuccFlag = false;
 }
-void TubeSidePlateFilletSeamsDet::Statistic_filter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud) {
+void TubeSidePlateFilletSeamsDet::statisticFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud) {
     pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
     sor.setInputCloud(input_cloud);       // 设置待滤波的点云
     sor.setMeanK(Statistic_NeighPoints);  // 设置在进行统计时考虑查询点邻近点数
@@ -116,9 +117,9 @@ void TubeSidePlateFilletSeamsDet::Statistic_filter(pcl::PointCloud<pcl::PointXYZ
     sor.filter(*input_cloud);  // 存储内点
 }
 // Ransac拟合平面，并输出平面的内点集合
-void TubeSidePlateFilletSeamsDet::Ransac_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
-                                               pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_plane,
-                                               pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_noplane) {
+void TubeSidePlateFilletSeamsDet::ransacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
+                                              pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_plane,
+                                              pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_noplane) {
     // 创建分割对象
     pcl::SACSegmentation<pcl::PointXYZ> seg;
     seg.setOptimizeCoefficients(true);              // 开启最小二乘系数优化
@@ -138,8 +139,8 @@ void TubeSidePlateFilletSeamsDet::Ransac_plane(pcl::PointCloud<pcl::PointXYZ>::P
     extract.filter(*output_cloud_noplane);
 }
 // Ransac拟合平面，并输出平面的内点集合
-void TubeSidePlateFilletSeamsDet::Ransac_cylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
-                                                  pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud) {
+void TubeSidePlateFilletSeamsDet::ransacCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
+                                                 pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud) {
     if (!input_cloud || input_cloud->empty() || !output_cloud) {
         PLOGE << "Ransac_cylinder: 输入参数无效";
         return;
@@ -366,7 +367,7 @@ void TubeSidePlateFilletSeamsDet::removeCylinderPoints(pcl::PointCloud<pcl::Poin
     cloud->swap(*result);
 }
 
-bool TubeSidePlateFilletSeamsDet::SolveBeamButtSeamEndPoints() {
+bool TubeSidePlateFilletSeamsDet::solveBeamButtSeamEndPoints() {
     if (!cloudPlaneInWeldAreaWithSeam || cloudPlaneInWeldAreaWithSeam->empty() || !cylinderCoeffsInWeldArea ||
         !planeCoeffsWithWeldSeam) {
         PLOGE << "SolveBeamButtSeamEndPoints: 输入参数无效";

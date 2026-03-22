@@ -2,6 +2,7 @@
 #define LARGEWORKPIECETRAJECTORYPLANNING_H
 
 #include <QObject>
+#include <QtConcurrent>
 #include <memory>
 #include <vector>
 
@@ -33,6 +34,7 @@ private:
                           const pcl::ModelCoefficients::Ptr &cylinder);
     Eigen::Vector3d abcToDirection(double a, double b, double c);
     void applyWeldGunWithdraw(robotPose &pose, double withdrawDistance);
+    void compensateSeams(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
 
 private:
     WORKPIECE_SIDE_OF_ROBOT workpieceSide = WORKPIECE_SIDE_OF_ROBOT::FRONT;  // 当前工件位于机器人基座的方向

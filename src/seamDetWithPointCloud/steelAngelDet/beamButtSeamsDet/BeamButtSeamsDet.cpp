@@ -25,7 +25,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> BeamButtSeamsDet::solveSeamsEndPoints
     // 焊缝求解
     for (int i = 0; i < tempWeldSeamsInfo.size(); i++) {
         SingleSeam_Reinitialize();                                          // 单条焊缝检测前，变量重新初始化
-        cloudInObjectDetectBox = tempWeldSeamsInfo[i]->weldAreaPointCloud;  // 获取焊缝区域点云
+        cloudInObjectDetectBox = tempWeldSeamsInfo[i]->weldAreaPointCloudInCamera;  // 获取焊缝区域点云
 
         if (cloudInObjectDetectBox->size() == 0) {
             tempWeldSeamsInfo[i]->detectSuccFlag = false;

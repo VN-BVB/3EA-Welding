@@ -77,12 +77,14 @@ public:
     std::shared_ptr<WeldSeamInfo> clone() const;                  // 深拷贝克隆函数
 
     // 焊缝区域信息
-    int areaNum = -1;                                        // 区域编号
-    cv::Mat originalImg;                                     // 原始图像
-    cv::Mat weldAreaImg;                                     // 焊缝区域图像
-    std::shared_ptr<cv::Rect_<float>> rectPtr;               // 焊缝区域矩形框
-    pcl::PointCloud<pcl::PointXYZ>::Ptr weldAreaPointCloud;  // 焊缝区域点云
-    WELD_AREA_TYPE weldAreaType;                             // 焊缝区域类型
+    int areaNum = -1;                                                // 区域编号
+    cv::Mat originalImg;                                             // 原始图像
+    cv::Mat weldAreaImg;                                             // 焊缝区域图像
+    std::shared_ptr<cv::Rect_<float>> rectPtr;                       // 焊缝区域矩形框
+    pcl::PointCloud<pcl::PointXYZ>::Ptr weldAreaPointCloudInCamera;  // 焊缝区域点云
+    pcl::PointCloud<pcl::PointXYZ>::Ptr weldAreaPointCloudInRobot;   // 焊缝区域点云--机器人
+    QFuture<pcl::PointCloud<pcl::PointXYZ>::Ptr> cloudFuture;        // 异步线程点云缓存区
+    WELD_AREA_TYPE weldAreaType;                                     // 焊缝区域类型
 
     // 焊缝信息
     bool detectSuccFlag = false;                                        // 焊缝检测成功标志

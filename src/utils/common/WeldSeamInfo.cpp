@@ -19,7 +19,8 @@ WeldSeamInfo& WeldSeamInfo::operator=(const WeldSeamInfo& other) noexcept {
         segMaskImg = other.segMaskImg;
 
         // PCL成员, 增加引用计数
-        weldAreaPointCloud = other.weldAreaPointCloud;
+        weldAreaPointCloudInCamera = other.weldAreaPointCloudInCamera;
+        weldAreaPointCloudInRobot = other.weldAreaPointCloudInRobot;
         weldPlane = other.weldPlane;
         seamsLineToVal = other.seamsLineToVal;
 
@@ -28,6 +29,9 @@ WeldSeamInfo& WeldSeamInfo::operator=(const WeldSeamInfo& other) noexcept {
         weldEndPointsInRobot = other.weldEndPointsInRobot;
         weldEndPointsFromSeg = other.weldEndPointsFromSeg;
         rectPtr = other.rectPtr;
+        // 新增成员变量
+        otherSurface = other.otherSurface;
+        robotWeldPose = other.robotWeldPose;
     }
     return *this;
 }
@@ -65,9 +69,14 @@ std::shared_ptr<WeldSeamInfo> WeldSeamInfo::clone() const {
         copy->weldEndPointsFromSeg = std::make_shared<std::vector<pcl::PointXYZ>>(*weldEndPointsFromSeg);
     }
 
-    if (weldAreaPointCloud) {  // 点云数据深拷贝
-        copy->weldAreaPointCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::copyPointCloud(*weldAreaPointCloud, *copy->weldAreaPointCloud);
+    if (weldAreaPointCloudInCamera) {  // 点云数据深拷贝
+        copy->weldAreaPointCloudInCamera = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::copyPointCloud(*weldAreaPointCloudInCamera, *copy->weldAreaPointCloudInCamera);
+    }
+
+    if (weldAreaPointCloudInRobot) {  // 焊缝区域点云机器人深拷贝
+        copy->weldAreaPointCloudInRobot = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::copyPointCloud(*weldAreaPointCloudInRobot, *copy->weldAreaPointCloudInRobot);
     }
 
     if (weldPlane) {  // 平面参数深拷贝
@@ -77,6 +86,17 @@ std::shared_ptr<WeldSeamInfo> WeldSeamInfo::clone() const {
     if (seamsLineToVal) {  // 验证直线深拷贝
         copy->seamsLineToVal = pcl::ModelCoefficients::Ptr(new pcl::ModelCoefficients(*seamsLineToVal));
     }
+
+    // 其他母材表面深拷贝
+    copy->otherSurface.clear();
+    for (const auto& surface : otherSurface) {
+        if (surface) {
+            copy->otherSurface.push_back(pcl::ModelCoefficients::Ptr(new pcl::ModelCoefficients(*surface)));
+        }
+    }
+
+    // 机器人位姿深拷贝
+    copy->robotWeldPose = robotWeldPose;
 
     return copy;
 }

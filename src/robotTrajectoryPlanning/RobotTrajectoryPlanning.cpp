@@ -104,6 +104,16 @@ void RobotTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::shared_ptr
             PLOGD << info->weldEndPointsInRobot->at(0) << " " << info->weldEndPointsInRobot->at(1);
         }
     }
+    for (auto& info : weldSeamInfo) {
+        if (!info) continue;
+
+        if (info->cloudFuture.isRunning()) {
+            info->cloudFuture.waitForFinished();
+        }
+        if (info->cloudFuture.isFinished()) {
+            info->weldAreaPointCloudInRobot = info->cloudFuture.result();
+        }
+    }
 
     // 发出规划完成的焊缝
     emit sendPlannedSeams(weldSeamInfo);
@@ -1270,36 +1280,27 @@ void RobotTrajectoryPlanning::determineWorkpieceOri(std::vector<std::shared_ptr<
 
 // 将焊缝点转到机器人基坐标系
 void RobotTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
-    for (auto& info : weldSeamInfo) {
-        // 转换焊缝点
-        if (info->detectSuccFlag == true && info->weldEndPointsInCamera != nullptr && info->weldEndPointsInCamera->size() == 2) {
-            info->weldEndPointsInRobot = std::make_shared<std::vector<pcl::PointXYZ>>();
-            info->weldEndPointsInRobot->push_back(
-                MyToolFunc::transformSinglePoint(info->weldEndPointsInCamera->at(0), trajectoryConfig.matrixEyeHand));
-            info->weldEndPointsInRobot->push_back(
-                MyToolFunc::transformSinglePoint(info->weldEndPointsInCamera->at(1), trajectoryConfig.matrixEyeHand));
-        }
-        // 转换区域点
-        // if (info->weldAreaPointCloud && info->weldAreaPointCloud->size() > 0) {
-        //     info->weldAreaPointCloud = MyToolFunc::transformPointCloud(info->weldAreaPointCloud,
-        //     trajectoryConfig.matrixEyeHand);
-        // }
-    }
+    Eigen::Matrix4f T = trajectoryConfig.matrixEyeHand;
     if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
-        for (auto& info : weldSeamInfo) {
-            // 转换焊缝点
-            if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr &&
-                info->weldEndPointsInRobot->size() == 2) {
-                info->weldEndPointsInRobot->at(0) =
-                    MyToolFunc::transformSinglePoint(info->weldEndPointsInRobot->at(0), trajectoryConfig.matrixEnd2Base);
-                info->weldEndPointsInRobot->at(1) =
-                    MyToolFunc::transformSinglePoint(info->weldEndPointsInRobot->at(1), trajectoryConfig.matrixEnd2Base);
-            }
-            // 转换区域点
-            // if (info->weldAreaPointCloud && info->weldAreaPointCloud->size() > 0) {
-            //     info->weldAreaPointCloud = MyToolFunc::transformPointCloud(info->weldAreaPointCloud,
-            //     trajectoryConfig.matrixEnd2Base);
-            // }
+        T = trajectoryConfig.matrixEnd2Base * trajectoryConfig.matrixEyeHand;
+    }
+    for (auto& info : weldSeamInfo) {
+        if (!info || !info->detectSuccFlag) continue;
+        /* ---------- 焊缝点（同步） ---------- */
+
+        if (info->weldEndPointsInCamera && info->weldEndPointsInCamera->size() == 2) {
+            info->weldEndPointsInRobot = std::make_shared<std::vector<pcl::PointXYZ>>();
+
+            info->weldEndPointsInRobot->push_back(MyToolFunc::transformSinglePoint(info->weldEndPointsInCamera->at(0), T));
+
+            info->weldEndPointsInRobot->push_back(MyToolFunc::transformSinglePoint(info->weldEndPointsInCamera->at(1), T));
+        }
+        /* ---------- 点云（异步） ---------- */
+
+        if (info->weldAreaPointCloudInCamera && !info->weldAreaPointCloudInCamera->empty()) {
+            auto cloud_in = info->weldAreaPointCloudInCamera;
+
+            info->cloudFuture = QtConcurrent::run([cloud_in, T]() { return MyToolFunc::transformPointCloud(cloud_in, T); });
         }
     }
 }

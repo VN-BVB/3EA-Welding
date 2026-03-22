@@ -206,7 +206,7 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloudLW(std::vector<std::shared_
 
     // 区域分类
     for (int i = 0; i < weldAreaInfo.size(); i++) {
-        if (weldAreaInfo[i]->weldAreaType == WELD_AREA_TYPE::TubeSide_Plate_F) {  // 背面横梁
+        if (weldAreaInfo[i]->weldAreaType == WELD_AREA_TYPE::TubeSide_Plate_F) {  //
             PLOGD << "管侧板角接焊缝";
             tubePlateButtInfo.push_back(weldAreaInfo[i]);
         }

@@ -135,7 +135,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
     }
     PLOGD << "点云放缩平移... ...";
     for (auto& info : weldAreaInfo) {
-        MyToolFunc::scalePointClouds(info->weldAreaPointCloud, set.scaleOfPointX, set.transOfPointX, set.scaleOfPointY,
+        MyToolFunc::scalePointClouds(info->weldAreaPointCloudInCamera, set.scaleOfPointX, set.transOfPointX, set.scaleOfPointY,
                                      set.transOfPointY);
     }
     PLOGD << "焊缝区域点云重建完成";
@@ -176,7 +176,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
     }
     PLOGD << "点云放缩平移... ...";
     for (auto& info : weldAreaInfo) {
-        MyToolFunc::scalePointClouds(info->weldAreaPointCloud, set.scaleOfPointX, set.transOfPointX, set.scaleOfPointY,
+        MyToolFunc::scalePointClouds(info->weldAreaPointCloudInCamera, set.scaleOfPointX, set.transOfPointX, set.scaleOfPointY,
                                      set.transOfPointY);
     }
     PLOGD << "焊缝区域点云重建完成";
@@ -734,7 +734,7 @@ void PointCloudReconstruction::reconstructForSeamArea() {
         }
         reconstructPointCloud->swap(*cloudRemovePlane);  // 用新点云替换原点云，swap 只是交换内部指针
 
-        areaInfo->weldAreaPointCloud = reconstructPointCloud;  // 保存焊缝区域点云到焊缝信息结构体
+        areaInfo->weldAreaPointCloudInCamera = reconstructPointCloud;  // 保存焊缝区域点云到焊缝信息结构体
 
         // 5. 保存点云到本地(若需)
         PLOGD << "bool_save_model: " << SettingPara::getInstance().bool_save_model;

@@ -16,7 +16,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> DownBeamFilletSeamsDet::solveSeamsEnd
     for (int i = 0; i < seamsInfo.size(); i++) {
         SingleSeam_Reinitialize();  // 单条焊缝检测前，变量重新初始化
 
-        cloud = seamsInfo[i]->weldAreaPointCloud;  // 获取焊缝区域点云
+        cloud = seamsInfo[i]->weldAreaPointCloudInCamera;  // 获取焊缝区域点云
 
         if (cloud->size() == 0) {
             tempWeldSeamsInfo[i]->detectSuccFlag = false;
@@ -55,7 +55,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> DownBeamFilletSeamsDet::solveSeamsEnd
         newWeldSeamInfo->originalImg = seamsInfo[i]->originalImg;                // 原始图像
         newWeldSeamInfo->weldAreaImg = seamsInfo[i]->weldAreaImg;                // 焊缝区域图像
         newWeldSeamInfo->rectPtr = seamsInfo[i]->rectPtr;                        // 焊缝区域矩形框
-        newWeldSeamInfo->weldAreaPointCloud = seamsInfo[i]->weldAreaPointCloud;  // 焊缝区域点云
+        newWeldSeamInfo->weldAreaPointCloudInCamera = seamsInfo[i]->weldAreaPointCloudInCamera;  // 焊缝区域点云
         newWeldSeamInfo->weldAreaType = seamsInfo[i]->weldAreaType;              // 焊缝区域类型
         newWeldSeamInfo->detectSuccFlag = bool_IdentifySeam;                     // 检测是否成功标志位
         if (bool_IdentifySeam == true) {

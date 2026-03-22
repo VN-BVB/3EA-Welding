@@ -16,7 +16,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> UpBeamFilletSeamsDet::solveSeamsEndPo
         SingleSeam_Reinitialize();  // 单条焊缝检测前，变量重新初始化
 
         if (seamsInfo[i]->detectSuccFlag == true) {    // 前面对接焊缝检测成功了
-            cloud = seamsInfo[i]->weldAreaPointCloud;  // 获取焊缝区域点云
+            cloud = seamsInfo[i]->weldAreaPointCloudInCamera;  // 获取焊缝区域点云
 
             if (cloud->size() == 0) {
                 tempWeldSeamsInfo[i]->detectSuccFlag = false;
@@ -52,7 +52,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> UpBeamFilletSeamsDet::solveSeamsEndPo
             newHorizonSeamInfo->originalImg = seamsInfo[i]->originalImg;                // 原始图像
             newHorizonSeamInfo->weldAreaImg = seamsInfo[i]->weldAreaImg;                // 焊缝区域图像
             newHorizonSeamInfo->rectPtr = seamsInfo[i]->rectPtr;                        // 焊缝区域矩形框
-            newHorizonSeamInfo->weldAreaPointCloud = seamsInfo[i]->weldAreaPointCloud;  // 焊缝区域点云
+            newHorizonSeamInfo->weldAreaPointCloudInCamera = seamsInfo[i]->weldAreaPointCloudInCamera;  // 焊缝区域点云
             newHorizonSeamInfo->weldAreaType = seamsInfo[i]->weldAreaType;              // 焊缝区域类型
             newHorizonSeamInfo->detectSuccFlag = bool_IdentifySeam;                     // 检测是否成功标志位
             if (bool_IdentifySeam == true) {
@@ -68,7 +68,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> UpBeamFilletSeamsDet::solveSeamsEndPo
             newVerticalSeamInfo->originalImg = seamsInfo[i]->originalImg;                // 原始图像
             newVerticalSeamInfo->weldAreaImg = seamsInfo[i]->weldAreaImg;                // 焊缝区域图像
             newVerticalSeamInfo->rectPtr = seamsInfo[i]->rectPtr;                        // 焊缝区域矩形框
-            newVerticalSeamInfo->weldAreaPointCloud = seamsInfo[i]->weldAreaPointCloud;  // 焊缝区域点云
+            newVerticalSeamInfo->weldAreaPointCloudInCamera = seamsInfo[i]->weldAreaPointCloudInCamera;  // 焊缝区域点云
             newVerticalSeamInfo->weldAreaType = seamsInfo[i]->weldAreaType;              // 焊缝区域类型
             newVerticalSeamInfo->detectSuccFlag = bool_IdentifySeam;                     // 检测是否成功标志位
             if (bool_IdentifySeam == true) {

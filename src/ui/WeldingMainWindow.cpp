@@ -168,21 +168,7 @@ void WeldingMainWindow::whenGetSeamInfo(std::vector<std::shared_ptr<WeldSeamInfo
     for (auto& info : weldAreaInfo) {
         if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
             seamAreaPointCloudNum.insert(info->areaNum);
-
-            // 转换区域点
-            if (info->weldAreaPointCloud && info->weldAreaPointCloud->size() > 0) {
-                info->weldAreaPointCloud = MyToolFunc::transformPointCloud(info->weldAreaPointCloud,
-                                                                           TrajectoryPlanningConfig::getInstance().matrixEyeHand);
-            }
-            if (TrajectoryPlanningConfig::getInstance().handEyeType ==
-                MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
-                if (info->weldAreaPointCloud && info->weldAreaPointCloud->size() > 0) {
-                    info->weldAreaPointCloud = MyToolFunc::transformPointCloud(
-                        info->weldAreaPointCloud, TrajectoryPlanningConfig::getInstance().matrixEnd2Base);
-                }
-            }
-
-            *visualCloud = *visualCloud + *(info->weldAreaPointCloud);
+            *visualCloud = *visualCloud + *(info->weldAreaPointCloudInRobot);
         }
 
         if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
