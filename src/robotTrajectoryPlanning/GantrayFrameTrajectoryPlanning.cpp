@@ -1,4 +1,4 @@
-﻿#include "robotTrajectoryPlanning/LargeWorkpieceTrajectoryPlanning.h"
+﻿#include "robotTrajectoryPlanning/GantrayFrameTrajectoryPlanning.h"
 
 #include "plog/Log.h"
 #include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
@@ -6,12 +6,12 @@
 #include "utils/common/CommonFunc.h"
 #include "utils/common/WeldSeamInfo.h"
 #include "utils/pointCloud/PointCloudFunc.h"
-LargeWorkpieceTrajectoryPlanning::LargeWorkpieceTrajectoryPlanning(QObject* parent) : AbstractTrajectoryPlanning(parent) {
-    PLOGD << "大型工件轨迹规划类初始化";
+GantrayFrameTrajectoryPlanning::GantrayFrameTrajectoryPlanning(QObject* parent) : AbstractTrajectoryPlanning(parent) {
+    PLOGD << "龙门支架轨迹规划类初始化";
 }
 
-void LargeWorkpieceTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
-    PLOGD << "大型工件轨迹规划类 收到焊缝数量: " << weldSeamInfo.size();
+void GantrayFrameTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+    PLOGD << "龙门支架轨迹规划类 收到焊缝数量: " << weldSeamInfo.size();
     for (auto& info : weldSeamInfo) {
         if (info->detectSuccFlag == true && info->weldEndPointsInCamera != nullptr && info->weldEndPointsInCamera->size() == 2) {
             PLOGD << info->weldEndPointsInCamera->at(0) << " " << info->weldEndPointsInCamera->at(1);
@@ -22,7 +22,7 @@ void LargeWorkpieceTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::s
     this->normalizeSurfaceDirectionInCamera(weldSeamInfo);
 
     // --------------------------- 转换坐标点到机器人基坐标系下 ---------------------------
-    // 实现大型工件的轨迹规划逻辑
+    // 实现龙门支架的轨迹规划逻辑
     // std::cout << "当前机器人位姿矩阵" << trajectoryConfig.matrixEnd2Base;
     this->transSeams2Base(weldSeamInfo);
     PLOGD << "转到机器人基坐标系下后的焊缝点: ";  // 打印操作后的焊缝
@@ -63,7 +63,7 @@ void LargeWorkpieceTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::s
 
     for (size_t i = 0; i < weldSeamInfo.size(); ++i) {
         auto& info = weldSeamInfo[i];
-        if (!info) continue;
+        if (!info || !info->detectSuccFlag) continue;
 
         PLOGD << "---- seam index: " << i;
 
@@ -79,49 +79,25 @@ void LargeWorkpieceTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::s
                   << ", b=" << pose.b_ << ", c=" << pose.c_;
         }
     }
-    // // --------------------------- 焊缝轨迹后撤(手动测试使用) ---------------------------
-    // for (auto& info : weldSeamInfo) {
-    //     if (!info) continue;
-
-    //     for (auto& pose : info->robotWeldPose) {
-    //         applyWeldGunWithdraw(pose, 3.0);
-    //     }
-    // }
-    // PLOGD << "================焊缝后撤 ================";
-    // for (size_t i = 0; i < weldSeamInfo.size(); ++i) {
-    //     auto& info = weldSeamInfo[i];
-    //     if (!info) continue;
-
-    //     PLOGD << "---- seam index: " << i;
-
-    //     if (info->robotWeldPose.empty()) {
-    //         PLOGD << "robotWeldPose is empty";
-    //         continue;
-    //     }
-
-    //     for (size_t j = 0; j < info->robotWeldPose.size(); ++j) {
-    //         const auto& pose = info->robotWeldPose[j];
-
-    //         PLOGD << "[pose " << j << "] " << "x=" << pose.x_ << ", y=" << pose.y_ << ", z=" << pose.z_ << ", a=" << pose.a_
-    //               << ", b=" << pose.b_ << ", c=" << pose.c_;
-    //     }
-    // }
+    // --------------------------- 焊缝轨迹后撤(转移到写入文件部分) ---------------------------
+    // --------------------------- 等待多线程点云缓存运行完成 ---------------------------
     for (auto& info : weldSeamInfo) {
-        if (!info) continue;
+        if (!info || !info->detectSuccFlag) continue;
+        // 检查异步任务是否已启动
 
         if (info->cloudFuture.isRunning()) {
             info->cloudFuture.waitForFinished();
         }
-
         info->weldAreaPointCloudInRobot = info->cloudFuture.result();
     }
+    PLOGD << "已发送";
     // 发出规划完成的焊缝
     emit sendPlannedSeams(weldSeamInfo);
 }
 
-void LargeWorkpieceTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo,
-                                                  int endOfLeftSeams) {
-    // 实现大型工件的文件写入逻辑
+void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo,
+                                                int endOfLeftSeams) {
+    // 实现龙门支架的文件写入逻辑
     outfile.open(outfile_name, std::ios::out);
     if (!outfile.is_open()) {
         PLOGE << "无法打开输出文件: " << outfile_name;
@@ -130,7 +106,7 @@ void LargeWorkpieceTrajectoryPlanning::write2File(const std::vector<std::shared_
     if (weldSeamInfo.size() == 0) {
         PLOGE << "没有焊缝信息";
         outfile.close();
-        // emit sendTrajectoryPlanOver();  // 但也发送轨迹规划完成
+        emit sendTrajectoryPlanOver();  // 但也发送轨迹规划完成
         return;
     } else {
         PLOGD << "开始写入焊缝数据数量: " << weldSeamInfo.size();
@@ -182,15 +158,14 @@ void LargeWorkpieceTrajectoryPlanning::write2File(const std::vector<std::shared_
 
             // ================= 焊接起点=================
             robotPose startWeld = startPose;
-            applyWeldGunWithdraw(startWeld, 3.0);
-
+            applyWeldGunWithdraw(startWeld, settingPara.TubeSidePlatFilletWithdrawDistance);
             outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_
                     << " " << startWeld.c_ << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent
                     << " " << weldingVoltage << std::endl;
 
             // ================= 焊接终点=================
             robotPose endWeld = endPose;
-            applyWeldGunWithdraw(endWeld, 3.0);
+            applyWeldGunWithdraw(endWeld, settingPara.TubeSidePlatFilletWithdrawDistance);
 
             outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " "
                     << endWeld.c_ << " " << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
@@ -233,12 +208,11 @@ void LargeWorkpieceTrajectoryPlanning::write2File(const std::vector<std::shared_
     outfile.close();
     emit sendTrajectoryPlanOver();
 }
-void LargeWorkpieceTrajectoryPlanning::normalizeSurfaceDirectionInCamera(
-    std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void GantrayFrameTrajectoryPlanning::normalizeSurfaceDirectionInCamera(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     const float EPS = 1e-6f;
 
     for (auto& info : weldSeamInfo) {
-        if (!info) continue;
+        if (!info || !info->detectSuccFlag) continue;
 
         // ================= weldPlane =================
         if (info->weldPlane) {
@@ -332,7 +306,7 @@ void LargeWorkpieceTrajectoryPlanning::normalizeSurfaceDirectionInCamera(
     }
 }
 // 将焊缝信息转到机器人基坐标系
-void LargeWorkpieceTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void GantrayFrameTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     // ================= 1. 构建统一变换 =================
     const Eigen::Matrix4f& EyH = trajectoryConfig.matrixEyeHand;
     const Eigen::Matrix4f& EnB = trajectoryConfig.matrixEnd2Base;
@@ -394,7 +368,7 @@ void LargeWorkpieceTrajectoryPlanning::transSeams2Base(std::vector<std::shared_p
     }
 }
 // 判断工件位于机器人的方位
-void LargeWorkpieceTrajectoryPlanning::determineWorkpieceOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void GantrayFrameTrajectoryPlanning::determineWorkpieceOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     bool xAllMoreThan500 = true;
     bool xAllLessThanMinus500 = true;
     bool yAllMoreThan500 = true;
@@ -445,7 +419,7 @@ void LargeWorkpieceTrajectoryPlanning::determineWorkpieceOri(std::vector<std::sh
         }
     }
 }
-void LargeWorkpieceTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void GantrayFrameTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     // ===== 参考点（机器人当前位置）=====
     // Eigen::Vector3f ref(trajectoryConfig.matrixEnd2Base(0, 3), trajectoryConfig.matrixEnd2Base(1, 3),
     //                     trajectoryConfig.matrixEnd2Base(2, 3));
@@ -470,7 +444,7 @@ void LargeWorkpieceTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr
         }
     }
 }
-void LargeWorkpieceTrajectoryPlanning::generateWeldPose(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
         if (!info || !info->detectSuccFlag) continue;
 
@@ -598,11 +572,11 @@ void LargeWorkpieceTrajectoryPlanning::generateWeldPose(std::vector<std::shared_
         // saveToMatlabFull(file, P0, P1, mid, X, Y, Z, info->weldPlane, cylinder);
     }
 }
-void LargeWorkpieceTrajectoryPlanning::saveToMatlabFull(const std::string& filename, const Eigen::Vector3f& P0,
-                                                        const Eigen::Vector3f& P1, const Eigen::Vector3f& mid,
-                                                        const Eigen::Vector3f& X, const Eigen::Vector3f& Y,
-                                                        const Eigen::Vector3f& Z, const pcl::ModelCoefficients::Ptr& plane,
-                                                        const pcl::ModelCoefficients::Ptr& cylinder) {
+void GantrayFrameTrajectoryPlanning::saveToMatlabFull(const std::string& filename, const Eigen::Vector3f& P0,
+                                                      const Eigen::Vector3f& P1, const Eigen::Vector3f& mid,
+                                                      const Eigen::Vector3f& X, const Eigen::Vector3f& Y,
+                                                      const Eigen::Vector3f& Z, const pcl::ModelCoefficients::Ptr& plane,
+                                                      const pcl::ModelCoefficients::Ptr& cylinder) {
     std::ofstream ofs(filename);
     if (!ofs.is_open()) return;
 
@@ -698,7 +672,7 @@ void LargeWorkpieceTrajectoryPlanning::saveToMatlabFull(const std::string& filen
     ofs.close();
 }
 // 对所有焊缝进行后撤
-void LargeWorkpieceTrajectoryPlanning::applyWeldGunWithdraw(robotPose& pose, double withdrawDistance) {
+void GantrayFrameTrajectoryPlanning::applyWeldGunWithdraw(robotPose& pose, double withdrawDistance) {
     // 1. 计算方向
     Eigen::Vector3d dir = abcToDirection(pose.a_, pose.b_, pose.c_);
 
@@ -713,7 +687,7 @@ void LargeWorkpieceTrajectoryPlanning::applyWeldGunWithdraw(robotPose& pose, dou
     // PLOGD << "x=" << pose.x_ << ", y=" << pose.y_ << ", z=" << pose.z_ << ", a=" << pose.a_ << ", b=" << pose.b_
     //       << ", c=" << pose.c_;
 }
-Eigen::Vector3d LargeWorkpieceTrajectoryPlanning::abcToDirection(double a, double b, double c) {
+Eigen::Vector3d GantrayFrameTrajectoryPlanning::abcToDirection(double a, double b, double c) {
     // 角度转弧度
     double ra = a * M_PI / 180.0;
     double rb = b * M_PI / 180.0;
@@ -733,7 +707,7 @@ Eigen::Vector3d LargeWorkpieceTrajectoryPlanning::abcToDirection(double a, doubl
 
     return dir.normalized();
 }
-void LargeWorkpieceTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
         if (!info || !info->detectSuccFlag) continue;
         if (info->weldType = TubeSide_Plate_F_H) {
@@ -763,29 +737,19 @@ void LargeWorkpieceTrajectoryPlanning::compensateSeams(std::vector<std::shared_p
             T.block<3, 3>(0, 0).col(2) = zAxis;
             T.block<3, 1>(0, 3) = P0;
             Eigen::Matrix4f T_inv = T.inverse();
-            std::cout << "T_inv" << T_inv << std::endl;
 
             /* ================= 转到工具系 ================= */
 
             Eigen::Vector4f p0 = T_inv * Eigen::Vector4f(P0.x(), P0.y(), P0.z(), 1.0f);
             Eigen::Vector4f p1 = T_inv * Eigen::Vector4f(P1.x(), P1.y(), P1.z(), 1.0f);
-            std::cout << "P0" << P0 << std::endl;
 
             /* ================= 补偿策略 ================= */
-            // 这里你可以根据工艺改
-            float dx1 = 0.0f;  // 沿焊缝
-            float dy1 = 0.0f;  // 侧向（贴圆柱）
-            float dz1 = 0.0f;  // 压入深度
-            float dx2 = 0.0f;  // 沿焊缝
-            float dy2 = 0.0f;  // 侧向（贴
-            float dz2 = 0.0f;  // 压入深度
-
-            p0.x() += dx1;
-            p0.y() += dy1;
-            p0.z() += dz1;
-            p1.x() += dx2;
-            p1.y() += dy2;
-            p1.z() += dz2;
+            p0.x() += settingPara.TubeSidePlatFilletStart_X;
+            p0.y() += settingPara.TubeSidePlatFilletStart_Y;
+            p0.z() += settingPara.TubeSidePlatFilletStart_Z;
+            p1.x() += settingPara.TubeSidePlatFilletEnd_X;
+            p1.y() += settingPara.TubeSidePlatFilletEnd_Y;
+            p1.z() += settingPara.TubeSidePlatFilletEnd_Z;
 
             /* ================= 转回基座 ================= */
 

@@ -30,6 +30,8 @@ SettingWidget::SettingWidget(QWidget *parent)
     ui->comboBoxWeldingVerticalWeld->addItem(QStringLiteral("是"));
     ui->comboBoxWeldingVerticalWeld->setCurrentIndex(0);  // 默认选择
 
+    ui->tabWidget->tabBar()->setExpanding(true);
+
     renewSetting();  // 更新显示参数
 }
 
@@ -64,7 +66,14 @@ void SettingWidget::renewSetting() {
     // ui->lineEdit_passthrough_Max->setText(QString::number(settingPara->passthrough_Max));
     // ui->lineEdit_StatisticalFilter_Pts->setText(QString::number(settingPara->statistical_Pts));
     // ui->lineEdit_StatisticalFilter_Std->setText(QString::number(settingPara->statistical_Std));
-
+    // 龙门支架
+    ui->lineEdit_TSPFHStart_X_Shift->setText(QString::number(settingPara->TubeSidePlatFilletStart_X));
+    ui->lineEdit_TSPFHStart_Y_Shift->setText(QString::number(settingPara->TubeSidePlatFilletStart_Y));
+    ui->lineEdit_TSPFHStart_Z_Shift->setText(QString::number(settingPara->TubeSidePlatFilletStart_Z));
+    ui->lineEdit_TSPFHEnd_X_Shift->setText(QString::number(settingPara->TubeSidePlatFilletEnd_X));
+    ui->lineEdit_TSPFHEnd_Y_Shift->setText(QString::number(settingPara->TubeSidePlatFilletEnd_Y));
+    ui->lineEdit_TSPFHEnd_Z_Shift->setText(QString::number(settingPara->TubeSidePlatFilletEnd_Z));
+    ui->lineEdit_TSPFHWeld_WithdrawDistance->setText(QString::number(settingPara->TubeSidePlatFilletWithdrawDistance));
     // 工件正面, 焊缝延长
     ui->lineEdit_FrontLeft_ExtendStart->setText(QString::number(settingPara->FrontLeft_ExtendStart));
     ui->lineEdit_FrontLeft_ExtendEnd->setText(QString::number(settingPara->FrontLeft_ExtendEnd));
@@ -1102,4 +1111,47 @@ void SettingWidget::on_lineEdit_FrontVBeamRight_ExtendEnd_editingFinished() {
     settingPara->FrontVBeamRight_ExtendEnd = ui->lineEdit_FrontVBeamRight_ExtendEnd->text().toDouble();
     settingPara->qSetting->setValue("SeamPosition/FrontVBeamRight_ExtendEnd", settingPara->FrontVBeamRight_ExtendEnd);
     PLOGD << "FrontVBeamRight_ExtendEnd: " << settingPara->FrontVBeamRight_ExtendEnd;
+}
+
+void SettingWidget::on_lineEdit_TSPFHStart_X_Shift_editingFinished() {
+    settingPara->TubeSidePlatFilletStart_X = ui->lineEdit_TSPFHStart_X_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletStart_X", settingPara->TubeSidePlatFilletStart_X);
+    PLOGD << "TubeSidePlatFilletStart_X: " << settingPara->TubeSidePlatFilletStart_X;
+}
+
+void SettingWidget::on_lineEdit_TSPFHStart_Y_Shift_editingFinished() {
+    settingPara->TubeSidePlatFilletStart_Y = ui->lineEdit_TSPFHStart_Y_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletStart_Y", settingPara->TubeSidePlatFilletStart_Y);
+    PLOGD << "TubeSidePlatFilletStart_Y: " << settingPara->TubeSidePlatFilletStart_Y;
+}
+
+void SettingWidget::on_lineEdit_TSPFHStart_Z_Shift_editingFinished() {
+    settingPara->TubeSidePlatFilletStart_Z = ui->lineEdit_TSPFHStart_Z_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletStart_Z", settingPara->TubeSidePlatFilletStart_Z);
+    PLOGD << "TubeSidePlatFilletStart_Z: " << settingPara->TubeSidePlatFilletStart_Z;
+}
+
+void SettingWidget::on_lineEdit_TSPFHEnd_X_Shift_editingFinished() {
+    settingPara->TubeSidePlatFilletEnd_X = ui->lineEdit_TSPFHEnd_X_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletEnd_X", settingPara->TubeSidePlatFilletEnd_X);
+    PLOGD << "TubeSidePlatFilletEnd_X: " << settingPara->TubeSidePlatFilletEnd_X;
+}
+
+void SettingWidget::on_lineEdit_TSPFHEnd_Y_Shift_editingFinished() {
+    settingPara->TubeSidePlatFilletEnd_Y = ui->lineEdit_TSPFHEnd_Y_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletEnd_Y", settingPara->TubeSidePlatFilletEnd_Y);
+    PLOGD << "TubeSidePlatFilletEnd_Y: " << settingPara->TubeSidePlatFilletEnd_Y;
+}
+
+void SettingWidget::on_lineEdit_TSPFHEnd_Z_Shift_editingFinished() {
+    settingPara->TubeSidePlatFilletEnd_Z = ui->lineEdit_TSPFHEnd_Z_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletEnd_Z", settingPara->TubeSidePlatFilletEnd_Z);
+    PLOGD << "TubeSidePlatFilletEnd_Z: " << settingPara->TubeSidePlatFilletEnd_Z;
+}
+
+void SettingWidget::on_lineEdit_TSPFHWeld_WithdrawDistance_editingFinished() {
+    settingPara->TubeSidePlatFilletWithdrawDistance = ui->lineEdit_TSPFHWeld_WithdrawDistance->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletWithdrawDistance",
+                                    settingPara->TubeSidePlatFilletWithdrawDistance);
+    PLOGD << "TubeSidePlatFilletWithdrawDistance: " << settingPara->TubeSidePlatFilletWithdrawDistance;
 }

@@ -6,8 +6,8 @@
 #include "rail/RailWidget.h"
 #include "robotFactory/an_chaun/AnChuanRobotFactory.h"
 #include "robotFactory/bao_yuan/BaoYuanRobotFactory.h"
-#include "robotTrajectoryPlanning/RobotTrajectoryPlanning.h"
-#include "robotTrajectoryPlanning/LargeWorkpieceTrajectoryPlanning.h"
+#include "robotTrajectoryPlanning/SteelAngleTrajectoryPlanning.h"
+#include "robotTrajectoryPlanning/GantrayFrameTrajectoryPlanning.h"
 #include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
 #include "seamDetWithPointCloud/SeamDetWithPointCloud.h"
 #include "seamDetWithSeg/SeamDetWithSeg.h"
@@ -55,8 +55,8 @@ void RailWeldingSystem::initSeamDetWithPointCloud() {
         // 相机重建出最初的焊缝区域点云, 发送到点云方法检测焊缝线程
         connect(structLightCamera.get(), &StructLightCamera::sendWeldAreaInfo, seamDetWithPointCloud.get(),
                 &SeamDetWithPointCloud::whenDetSeamWithPointCloud);
-        connect(structLightCamera.get(), &StructLightCamera::sendWeldAreaInfoLW, seamDetWithPointCloud.get(),
-                &SeamDetWithPointCloud::whenDetSeamWithPointCloudLW);
+        connect(structLightCamera.get(), &StructLightCamera::sendWeldAreaInfoGF, seamDetWithPointCloud.get(),
+                &SeamDetWithPointCloud::whenDetSeamWithPointCloudGF);
 
         PLOGD << "点云方法焊缝检测类初始化成功";
     } else {
@@ -81,7 +81,7 @@ void RailWeldingSystem::initSeamDetWithSeg() {
 }
 // 初始化轨迹规划类
 void RailWeldingSystem::initTrajectoryPlanning() {
-    robotTrajectoryPlanning = std::make_shared<LargeWorkpieceTrajectoryPlanning>(nullptr);
+    robotTrajectoryPlanning = std::make_shared<GantrayFrameTrajectoryPlanning>(nullptr);
 
     if (robotTrajectoryPlanning) {
         robotTrajectoryPlanning->moveToThread(robotTrajectoryPlanningThread);
@@ -116,11 +116,11 @@ void RailWeldingSystem::switchTrajectoryPlanning(WORKPIECE_TYPE workpieceType) {
     }
 
     // 根据工件类型创建新的轨迹规划对象
-    if (workpieceType == WORKPIECE_TYPE::LARGE_WORKPIECE) {
-        robotTrajectoryPlanning = std::make_shared<LargeWorkpieceTrajectoryPlanning>(nullptr);
-        PLOGD << "创建大型工件轨迹规划类";
+    if (workpieceType == WORKPIECE_TYPE::GANTRAY_FRAME) {
+        robotTrajectoryPlanning = std::make_shared<GantrayFrameTrajectoryPlanning>(nullptr);
+        PLOGD << "创建龙门支架轨迹规划类";
     } else {
-        robotTrajectoryPlanning = std::make_shared<RobotTrajectoryPlanning>(nullptr);
+        robotTrajectoryPlanning = std::make_shared<SteelAngleTrajectoryPlanning>(nullptr);
         PLOGD << "创建小型工件轨迹规划类";
     }
 

@@ -1,5 +1,5 @@
-﻿#ifndef LARGEWORKPIECETRAJECTORYPLANNING_H
-#define LARGEWORKPIECETRAJECTORYPLANNING_H
+﻿#ifndef GANTRAYFRAMETRAJECTORYPLANNING_H
+#define GANTRAYFRAMETRAJECTORYPLANNING_H
 
 #include <QObject>
 #include <QtConcurrent>
@@ -9,11 +9,11 @@
 #include "AbstractTrajectoryPlanning.h"
 #include "utils/common/WeldSeamInfo.h"
 
-class LargeWorkpieceTrajectoryPlanning : public AbstractTrajectoryPlanning {
+class GantrayFrameTrajectoryPlanning : public AbstractTrajectoryPlanning {
     Q_OBJECT
 public:
-    explicit LargeWorkpieceTrajectoryPlanning(QObject *parent = nullptr);
-    ~LargeWorkpieceTrajectoryPlanning() override = default;
+    explicit GantrayFrameTrajectoryPlanning(QObject *parent = nullptr);
+    ~GantrayFrameTrajectoryPlanning() override = default;
 
     // 实现抽象基类的纯虚函数
 
@@ -54,4 +54,4 @@ private:
     double weldingVoltage_Vertical = 18;   // 焊接电压(竖直焊缝用这个电压)
 };
 
-#endif  // LARGEWORKPIECETRAJECTORYPLANNING_H
+#endif  // GANTRAYFRAMETRAJECTORYPLANNING_H

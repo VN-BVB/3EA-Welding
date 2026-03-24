@@ -10,7 +10,7 @@ class AbstractProjectorFactory;
 class WeldingMainWindow;
 class SeamDetWithPointCloud;
 class SeamDetWithSeg;
-class RobotTrajectoryPlanning;
+class SteelAngleTrajectoryPlanning;
 class WeldSeamInfo;
 class ErrorSave;
 class AbstractRobot;

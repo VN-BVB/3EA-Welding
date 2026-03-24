@@ -179,6 +179,20 @@ private slots:
     void on_lineEdit_Value_WeldingCurrent_Vertical_editingFinished();
     void on_lineEdit_Value_WeldingVoltage_Vertical_editingFinished();
 
+    void on_lineEdit_TSPFHStart_X_Shift_editingFinished();
+
+    void on_lineEdit_TSPFHStart_Y_Shift_editingFinished();
+
+    void on_lineEdit_TSPFHStart_Z_Shift_editingFinished();
+
+    void on_lineEdit_TSPFHEnd_X_Shift_editingFinished();
+
+    void on_lineEdit_TSPFHEnd_Y_Shift_editingFinished();
+
+    void on_lineEdit_TSPFHEnd_Z_Shift_editingFinished();
+
+    void on_lineEdit_TSPFHWeld_WithdrawDistance_editingFinished();
+
 private:
     Ui::SettingWidget *ui;
 

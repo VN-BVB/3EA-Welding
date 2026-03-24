@@ -31,7 +31,7 @@ public:
     // 点云重建函数
     pcl::PointCloud<pcl::PointXYZ>::Ptr localReconstruct(int minU, int maxU, int minV, int maxV);  // 局部点云重建
     std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToSA();  // 焊缝区域点云重建(加拟合背景平面)
-    std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToLW();  // 焊缝区域点云重建(加拟合背景平面)
+    std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaReconstructToGF();  // 焊缝区域点云重建(加拟合背景平面)
 
     void initDistortionMap();
 
@@ -57,17 +57,16 @@ private:
     cv::Mat cameraMapY;                         // 畸变表y
 
     // 初始化函数
-    void initPara();  // 初始化需要用到的参数
-#ifdef SMART_CAMERA
+    void initPara();          // 初始化需要用到的参数
     void initObjectDetect();  // 初始化目标检测类
-#endif
+    void initWorkspaceContext();
     void reInitialize();  //  变量重新初始化
 
     // 点云重建的具体计算步骤函数
     void imageDistribute();  // 0. 将采集到的图像放入相移和格雷码容器
     void makeMaskForReconstruct(int minU, int maxU, int minV, int maxV);  // 1.1 更新全点云重建的mask
     void makeMaskForSeamsDet();                                           // 1.2 更新焊缝区域目标框的mask
-    void makeMaskForSeamsDetToLW();                                       // 1.2 更新焊缝区域目标框的mask
+    void makeMaskForSeamsDetToGF();                                       // 1.2 更新焊缝区域目标框的mask
     void solveWrapPhase();                                                // 2. 相移法求包裹相位
     void decodeGrayCode();                                                // 3. 解码格雷码
     void phaseUnwrap();                                                   // 4. 相位展开, 求绝对相位
@@ -110,7 +109,7 @@ private:
     // 计算结果
     pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud;  // 重建点云
 #ifdef SMART_CAMERA
-    Eigen::VectorXf workbenchCoeff = Eigen::VectorXf::Ones(4);  // 工作台的背景平面参数
+    Eigen::VectorXf workbenchCoeff = Eigen::VectorXf::Zero(4);  // 工作台的背景平面参数
     pcl::PointCloud<pcl::PointXYZ>::Ptr workbenchPointCloud;    // 工作台点云
     pcl::PointCloud<pcl::PointXYZ>::Ptr nonPlanePointCloud;     // 工件点云
     std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo;    // 焊缝区域信息
@@ -160,6 +159,9 @@ private:
     double iouThreshold = 0.25;
     double labelNum = 5;
     int imgSize = 1024;
+
+    int pclRectExtend = 20;  // 在龙门支架中使用的是实例分割，这里对点云重建区域继续扩充。
+    bool skipWorkbenchFilter = false;
     // 计算过程需要用到的工具类
     std::shared_ptr<AbstractObjectDetect> weldsCoarsePosition{nullptr};  // 目标检测算法类
     std::shared_ptr<std::vector<DetResult>> detRes{nullptr};             // 目标检测结果

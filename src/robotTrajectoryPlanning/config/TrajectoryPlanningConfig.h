@@ -126,8 +126,8 @@ private:
 
     friend class RailWeldingSystem;
     friend class WeldingMainWindow;
-    friend class RobotTrajectoryPlanning;
-    friend class LargeWorkpieceTrajectoryPlanning;
+    friend class SteelAngleTrajectoryPlanning;
+    friend class GantrayFrameTrajectoryPlanning;
     friend class cereal::access;
     template <class Archive>
     void serialize(Archive& ar) {

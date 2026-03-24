@@ -1,6 +1,10 @@
 ﻿#include "WeldSeamInfo.h"
 
-WeldSeamInfo::WeldSeamInfo() {}
+WeldSeamInfo::WeldSeamInfo() {
+    weldAreaPointCloudInCamera.reset();
+    weldAreaPointCloudInRobot.reset();
+    cloudFuture = QFuture<pcl::PointCloud<pcl::PointXYZ>::Ptr>();
+}
 
 // 浅拷贝赋值重载
 WeldSeamInfo& WeldSeamInfo::operator=(const WeldSeamInfo& other) noexcept {

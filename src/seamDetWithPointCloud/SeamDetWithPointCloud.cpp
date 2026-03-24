@@ -1,11 +1,11 @@
 ﻿#include "SeamDetWithPointCloud.h"
 
 #include "seamDetWithPointCloud/AbstractSeamDet.h"
+#include "seamDetWithPointCloud/gantrayFrameDet/tubeSidePlateFilletSeamsDet/TubeSidePlateFilletSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/beamButtSeamsDet/BeamButtSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/cornerButtSeamsDet/CornerButtSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/downBeamFilletSeamsDet/DownBeamFilletSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/upBeamFilletSeamsDet/UpBeamFilletSeamsDet.h"
-#include "seamDetWithPointCloud/steelDefaultDet/tubeSidePlateFilletSeamsDet/TubeSidePlateFilletSeamsDet.h"
 #include "utils/common/WeldSeamInfo.h"
 
 SeamDetWithPointCloud::SeamDetWithPointCloud(QObject* parent)
@@ -17,9 +17,24 @@ SeamDetWithPointCloud::SeamDetWithPointCloud(QObject* parent)
       beamButtSeamsDetSec(std::make_shared<BeamButtSeamsDet>(nullptr)),
       cornerButtSeamsDetSec(std::make_shared<CornerButtSeamsDet>(nullptr)),
       upBeamFilletSeamsDetSec(std::make_shared<UpBeamFilletSeamsDet>(nullptr)),
-      downBeamFilletSeamsDetSec(std::make_shared<DownBeamFilletSeamsDet>(nullptr)),
-      tubePlateButtSeamsDet(std::make_shared<TubeSidePlateFilletSeamsDet>(nullptr)) {}
+      downBeamFilletSeamsDetSec(std::make_shared<DownBeamFilletSeamsDet>(nullptr)) {
+    // gantrayFrameSeamsDet[WELD_AREA_TYPE::Plate_Plate_F] = []() { return std::make_shared<PlatePlateFilletSeamsDet>(nullptr); };
+    gantrayFrameSeamsDet[WELD_AREA_TYPE::TubeSide_Plate_F] = []() {
+        return std::make_shared<TubeSidePlateFilletSeamsDet>(nullptr);
+    };
 
+    // gantrayFrameSeamsDet[WELD_AREA_TYPE::Tube_Plate_F] = []() { return std::make_shared<TubePlateFilletSeamsDet>(nullptr); };
+
+    // gantrayFrameSeamsDet[WELD_AREA_TYPE::Tube_Tube_F] = []() { return std::make_shared<TubeTubeFilletSeamsDet>(nullptr); };
+}
+std::shared_ptr<AbstractSeamDet> SeamDetWithPointCloud::createSeamDet(WELD_AREA_TYPE type) {
+    auto it = gantrayFrameSeamsDet.find(type);
+    if (it == gantrayFrameSeamsDet.end()) {
+        PLOGE << "未找到对应焊缝类型: " << static_cast<int>(type);
+        return nullptr;
+    }
+    return it->second();
+}
 // 求解焊缝
 void SeamDetWithPointCloud::whenDetSeamWithPointCloud(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo) {
     PLOGD << "点云方法焊缝检测开始";
@@ -171,7 +186,6 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloud(std::vector<std::shared_pt
             }
         }
     }
-
     // 发出求解出的焊缝结果
     emit sendDetSeamWithPointCloud(tempWeldSeamsInfo);
 
@@ -196,30 +210,29 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloud(std::vector<std::shared_pt
     }
 }
 // 求解焊缝
-void SeamDetWithPointCloud::whenDetSeamWithPointCloudLW(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo) {
-    PLOGD << "点云方法焊缝检测开始";
-
+void SeamDetWithPointCloud::whenDetSeamWithPointCloudGF(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo) {
     // 清空各类别信息容器
-    tubePlateButtInfo.clear();
-    tubePlateButtFuture.clear();
+    tubeSidePlateButtInfo.clear();
+    tubeSidePlateButtFuture.clear();
     tempWeldSeamsInfo.clear();
 
     // 区域分类
     for (int i = 0; i < weldAreaInfo.size(); i++) {
         if (weldAreaInfo[i]->weldAreaType == WELD_AREA_TYPE::TubeSide_Plate_F) {  //
             PLOGD << "管侧板角接焊缝";
-            tubePlateButtInfo.push_back(weldAreaInfo[i]);
+            tubeSidePlateButtInfo.push_back(weldAreaInfo[i]);
         }
     }
 
-    if (!tubePlateButtInfo.empty()) {
-        for (size_t i = 0; i < tubePlateButtInfo.size(); ++i) {
-            auto info = tubePlateButtInfo[i];
+    if (!tubeSidePlateButtInfo.empty()) {
+        for (size_t i = 0; i < tubeSidePlateButtInfo.size(); ++i) {
+            auto info = tubeSidePlateButtInfo[i];
 
-            tubePlateButtFuture.push_back(threadPool->addTask([this, info]() {
+            tubeSidePlateButtFuture.push_back(threadPool->addTask([this, info]() {
+                auto det = createSeamDet(info->weldAreaType);
                 std::vector<std::shared_ptr<WeldSeamInfo>> tmp;
                 tmp.push_back(info);
-                return tubePlateButtSeamsDet->solveSeamsEndPoints(tmp);
+                return det->solveSeamsEndPoints(tmp);
             }));
         }
     }
@@ -228,7 +241,7 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloudLW(std::vector<std::shared_
     threadPool->waitAll();
 
     // 取出线程池的计算结果
-    for (auto& future : tubePlateButtFuture) {
+    for (auto& future : tubeSidePlateButtFuture) {
         if (future.valid()) {
             std::vector<std::shared_ptr<WeldSeamInfo>> res = future.get();
             for (auto& seam : res) {
@@ -236,6 +249,7 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloudLW(std::vector<std::shared_
             }
         }
     }
+    PLOGD << "发出焊缝数量" << tempWeldSeamsInfo.size();
     // 发出求解出的焊缝结果
     emit sendDetSeamWithPointCloud(tempWeldSeamsInfo);
 

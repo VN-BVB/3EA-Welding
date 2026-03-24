@@ -166,13 +166,16 @@ void WeldingMainWindow::whenGetSeamInfo(std::vector<std::shared_ptr<WeldSeamInfo
     pcl::PointCloud<pcl::PointXYZ>::Ptr visualCloud(new pcl::PointCloud<pcl::PointXYZ>);  // 用于显示的点云
     std::set<int> seamAreaPointCloudNum;
     for (auto& info : weldAreaInfo) {
-        if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
-            seamAreaPointCloudNum.insert(info->areaNum);
-            *visualCloud = *visualCloud + *(info->weldAreaPointCloudInRobot);
-        }
+        if (info->detectSuccFlag == true && info->weldAreaPointCloudInRobot && !info->weldAreaPointCloudInRobot->empty()) {
+            if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
+                seamAreaPointCloudNum.insert(info->areaNum);
+                *visualCloud = *visualCloud + *(info->weldAreaPointCloudInRobot);
+            }
 
-        if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
-            ui->systemMirrorWidget->displayLines(info->weldEndPointsInRobot, {1.0, 0.0, 0.0});  // 在系统镜像中显示焊缝
+            if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr &&
+                info->weldEndPointsInRobot->size() == 2) {
+                ui->systemMirrorWidget->displayLines(info->weldEndPointsInRobot, {1.0, 0.0, 0.0});  // 在系统镜像中显示焊缝
+            }
         }
     }
 
@@ -253,11 +256,11 @@ void WeldingMainWindow::on_combWorkpiece_currentTextChanged(const QString& arg1)
     if (arg1 == u8"角钢") {
         this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::STEEL_ANGLE;
         this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::STEEL_ANGLE);
-    } else if (arg1 == u8"大型工件") {
-        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::LARGE_WORKPIECE;
-        this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::LARGE_WORKPIECE);
+    } else if (arg1 == u8"龙门支架") {
+        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::GANTRAY_FRAME;
+        this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::GANTRAY_FRAME);
     } else {
-        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::LARGE_WORKPIECE;
-        this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::LARGE_WORKPIECE);
+        this->railWeldingSystem->structLightCamera->workpieceType = WORKPIECE_TYPE::GANTRAY_FRAME;
+        this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::GANTRAY_FRAME);
     }
 }

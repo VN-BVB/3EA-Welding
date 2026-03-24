@@ -1,5 +1,5 @@
-﻿#ifndef ROBOTTRAJECTORYPLANNING_H
-#define ROBOTTRAJECTORYPLANNING_H
+﻿#ifndef STEELANGLETRAJECTORYPLANNING_H
+#define STEELANGLETRAJECTORYPLANNING_H
 
 #include <direct.h>
 #include <pcl/point_cloud.h>
@@ -22,10 +22,10 @@ class WeldSeamInfo;
 class TrajectoryPlanningConfig;
 class SettingPara;
 
-class RobotTrajectoryPlanning : public AbstractTrajectoryPlanning {
+class SteelAngleTrajectoryPlanning : public AbstractTrajectoryPlanning {
     Q_OBJECT
 public:
-    explicit RobotTrajectoryPlanning(QObject* parent = nullptr);
+    explicit SteelAngleTrajectoryPlanning(QObject* parent = nullptr);
 
     // void initConfig();   // 初始化配置信息
     // void writeConfig();  // 写配置文件
@@ -73,7 +73,6 @@ signals:
 
 public slots:
     void whenPlanningTrajectory(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) override;  // 规划焊缝轨迹
-
 private:
     // TrajectoryPlanningConfig& trajectoryConfig;
     // SettingPara& settingPara;
@@ -109,4 +108,4 @@ private:
     std::string outfile_name = "./data/SeamCoordinate.txt";
 };
 
-#endif  // ROBOTTRAJECTORYPLANNING_H
+#endif  // STEELANGLETRAJECTORYPLANNING_H

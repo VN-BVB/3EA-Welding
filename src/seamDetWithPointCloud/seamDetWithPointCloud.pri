@@ -14,5 +14,5 @@ HEADERS += \
 FORMS += \
     $$PWD/SeamWidget.ui
 
-include( ./steelDefaultDet/steelDefaultDet.pri)
+include( ./gantrayFrameDet/gantrayFrameDet.pri)
 include( ./steelAngelDet/steelAngelDet.pri )

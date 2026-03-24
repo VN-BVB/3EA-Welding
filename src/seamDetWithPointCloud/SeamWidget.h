@@ -10,7 +10,7 @@ VTK_MODULE_INIT(vtkRenderingFreeType)
 class AccuratePositioning;
 struct PositioningResult;
 
-#include "steelDefaultDet//AccuratePositioning.h"
+#include "gantrayFrameDet//AccuratePositioning.h"
 
 namespace Ui {
 class SeamWidget;

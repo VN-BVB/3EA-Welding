@@ -1,4 +1,4 @@
-﻿#include "RobotTrajectoryPlanning.h"
+﻿#include "SteelAngleTrajectoryPlanning.h"
 
 #include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
 #include "settingPara/SettingPara.h"
@@ -6,12 +6,12 @@
 #include "utils/common/WeldSeamInfo.h"
 #include "utils/pointCloud/PointCloudFunc.h"
 
-RobotTrajectoryPlanning::RobotTrajectoryPlanning(QObject* parent) : AbstractTrajectoryPlanning(parent) {
+SteelAngleTrajectoryPlanning::SteelAngleTrajectoryPlanning(QObject* parent) : AbstractTrajectoryPlanning(parent) {
     // this->initConfig();
 }
 
 // 初始化参数
-void RobotTrajectoryPlanning::initPara() {
+void SteelAngleTrajectoryPlanning::initPara() {
     if (trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN)) {
         moveSpeed = settingPara.Value_MoveSpeed * 60;               // 过渡运动速度
         weldingSpeedDefault = settingPara.Value_WeldingSpeed * 60;  // 焊接速度 (默认速度，宽度检测失败时用这个速度)
@@ -24,7 +24,7 @@ void RobotTrajectoryPlanning::initPara() {
 }
 
 // 规划焊缝轨迹
-void RobotTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     PLOGD << "角钢轨迹规划类 收到焊缝数量: " << weldSeamInfo.size();
     // ########################### 按照焊缝的左右对焊缝进行排序 ###########################
     this->sortSeamsWithX(weldSeamInfo);
@@ -120,7 +120,7 @@ void RobotTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::shared_ptr
 }
 
 // 焊缝写入文件
-void RobotTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo, int endOfLeftSeams) {
+void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo, int endOfLeftSeams) {
     outfile.open(outfile_name, std::ios::out);
     if (!outfile.is_open()) {
         PLOGE << "无法打开输出文件: " << outfile_name;
@@ -890,7 +890,7 @@ void RobotTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<WeldS
 }
 
 // 延长焊缝
-void RobotTrajectoryPlanning::extendSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo, int endOfLeftSeams) {
+void SteelAngleTrajectoryPlanning::extendSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo, int endOfLeftSeams) {
     for (int i = 0; i < weldSeamInfo.size(); ++i) {
         if (weldSeamInfo[i]->detectSuccFlag == true && weldSeamInfo[i]->weldEndPointsInRobot != nullptr &&
             weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
@@ -1006,7 +1006,7 @@ void RobotTrajectoryPlanning::extendSeams(std::vector<std::shared_ptr<WeldSeamIn
 }
 
 // 修改焊缝方向 (在虚拟坐标系中操作)
-void RobotTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo, int endOfLeftSeams) {
+void SteelAngleTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo, int endOfLeftSeams) {
     for (int i = 0; i < weldSeamInfo.size(); ++i) {
         if (weldSeamInfo[i]->detectSuccFlag == true && weldSeamInfo[i]->weldEndPointsInRobot != nullptr &&
             weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
@@ -1037,7 +1037,7 @@ void RobotTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<WeldSeam
 }
 
 // 焊缝误差补偿 (真实坐标系)
-void RobotTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     if (trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN)) {  // 宝元机器人
         // 与宝元版本代码分离
     } else if (trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::AN_CHUAN)) {  // 安川机器人
@@ -1226,7 +1226,7 @@ void RobotTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_ptr<W
 }
 
 // 判断工件位于机器人的方位
-void RobotTrajectoryPlanning::determineWorkpieceOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::determineWorkpieceOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     bool xAllMoreThan500 = true;
     bool xAllLessThanMinus500 = true;
     bool yAllMoreThan500 = true;
@@ -1279,7 +1279,7 @@ void RobotTrajectoryPlanning::determineWorkpieceOri(std::vector<std::shared_ptr<
 }
 
 // 将焊缝点转到机器人基坐标系
-void RobotTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     Eigen::Matrix4f T = trajectoryConfig.matrixEyeHand;
     if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
         T = trajectoryConfig.matrixEnd2Base * trajectoryConfig.matrixEyeHand;
@@ -1306,7 +1306,7 @@ void RobotTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr<WeldSe
 }
 
 // 找到左右焊缝的分界线
-int RobotTrajectoryPlanning::findEndOfLeftSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+int SteelAngleTrajectoryPlanning::findEndOfLeftSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     int endOfLeftSeamSerial = 0;
 
     // ########################### 使用绝对位置判断左右 ###########################
@@ -1326,7 +1326,7 @@ int RobotTrajectoryPlanning::findEndOfLeftSeams(std::vector<std::shared_ptr<Weld
 }
 
 // 将焊缝信息按照X值进行排序
-void RobotTrajectoryPlanning::sortSeamsWithX(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::sortSeamsWithX(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     std::sort(weldSeamInfo.begin(), weldSeamInfo.end(),
               [](const std::shared_ptr<WeldSeamInfo>& a, const std::shared_ptr<WeldSeamInfo>& b) {
                   // 优先级1: detectSuccFlag 为 true 的排前面
@@ -1353,7 +1353,7 @@ void RobotTrajectoryPlanning::sortSeamsWithX(std::vector<std::shared_ptr<WeldSea
 }
 
 // 真实坐标系转虚拟坐标系
-void RobotTrajectoryPlanning::real2Virtual(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::real2Virtual(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     if (trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN)) {  // 宝元机器人
         if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
             // 无需操作
@@ -1374,7 +1374,7 @@ void RobotTrajectoryPlanning::real2Virtual(std::vector<std::shared_ptr<WeldSeamI
 }
 
 // 虚拟坐标系转真实坐标系
-void RobotTrajectoryPlanning::virtual2Real(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::virtual2Real(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     if (trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN)) {  // 宝元机器人
         if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
             // 无需操作
@@ -1395,7 +1395,7 @@ void RobotTrajectoryPlanning::virtual2Real(std::vector<std::shared_ptr<WeldSeamI
 }
 
 // 前方X左方Y(真实坐标系) 转为 右方X前方Y(虚拟坐标系)
-void RobotTrajectoryPlanning::frontXleftY2rightXfrontY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::frontXleftY2rightXfrontY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
         if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
             std::vector<pcl::PointXYZ> tempPoints = *(info->weldEndPointsInRobot);
@@ -1406,7 +1406,7 @@ void RobotTrajectoryPlanning::frontXleftY2rightXfrontY(std::vector<std::shared_p
 }
 
 // 左方X后方Y(真实坐标系) 转为 右方X前方Y(虚拟坐标系)
-void RobotTrajectoryPlanning::leftXbackY2rightXfrontY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::leftXbackY2rightXfrontY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
         if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
             std::vector<pcl::PointXYZ> tempPoints = *(info->weldEndPointsInRobot);
@@ -1417,7 +1417,7 @@ void RobotTrajectoryPlanning::leftXbackY2rightXfrontY(std::vector<std::shared_pt
 }
 
 // 后方X右方Y(真实坐标系) 转为 右方X前方Y(虚拟坐标系)
-void RobotTrajectoryPlanning::backXrightY2rightXfrontY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::backXrightY2rightXfrontY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
         if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
             std::vector<pcl::PointXYZ> tempPoints = *(info->weldEndPointsInRobot);
@@ -1428,7 +1428,7 @@ void RobotTrajectoryPlanning::backXrightY2rightXfrontY(std::vector<std::shared_p
 }
 
 // 右方X前方Y(虚拟坐标系) 转为 前方X左方Y(真实坐标系)
-void RobotTrajectoryPlanning::rightXfrontY2frontXleftY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::rightXfrontY2frontXleftY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
         if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
             std::vector<pcl::PointXYZ> tempPoints = *(info->weldEndPointsInRobot);
@@ -1439,7 +1439,7 @@ void RobotTrajectoryPlanning::rightXfrontY2frontXleftY(std::vector<std::shared_p
 }
 
 // 右方X前方Y(虚拟坐标系) 转为 左方X后方Y(真实坐标系)
-void RobotTrajectoryPlanning::rightXfrontY2leftXbackY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::rightXfrontY2leftXbackY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
         if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
             std::vector<pcl::PointXYZ> tempPoints = *(info->weldEndPointsInRobot);
@@ -1450,7 +1450,7 @@ void RobotTrajectoryPlanning::rightXfrontY2leftXbackY(std::vector<std::shared_pt
 }
 
 // 右方X前方Y(虚拟坐标系) 转为 后方X右方Y(真实坐标系)
-void RobotTrajectoryPlanning::rightXfrontY2backXrightY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
+void SteelAngleTrajectoryPlanning::rightXfrontY2backXrightY(std::vector<std::shared_ptr<WeldSeamInfo>> weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
         if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
             std::vector<pcl::PointXYZ> tempPoints = *(info->weldEndPointsInRobot);
@@ -1461,31 +1461,31 @@ void RobotTrajectoryPlanning::rightXfrontY2backXrightY(std::vector<std::shared_p
 }
 
 // 角度转换为弧度
-constexpr double RobotTrajectoryPlanning::deg2rad(double degrees) { return degrees * M_PI / 180.0; }
+constexpr double SteelAngleTrajectoryPlanning::deg2rad(double degrees) { return degrees * M_PI / 180.0; }
 
 // 生成绕 x 轴的旋转矩阵 (Roll)
-std::array<std::array<double, 3>, 3> RobotTrajectoryPlanning::getRollMatrix(double rollRad) {
+std::array<std::array<double, 3>, 3> SteelAngleTrajectoryPlanning::getRollMatrix(double rollRad) {
     return {
         {{1.0, 0.0, 0.0}, {0.0, std::cos(rollRad), -std::sin(rollRad)}, {0.0, std::sin(rollRad), std::cos(rollRad)}}
     };
 }
 
 // 生成绕 y 轴的旋转矩阵 (Pitch)
-std::array<std::array<double, 3>, 3> RobotTrajectoryPlanning::getPitchMatrix(double pitchRad) {
+std::array<std::array<double, 3>, 3> SteelAngleTrajectoryPlanning::getPitchMatrix(double pitchRad) {
     return {
         {{std::cos(pitchRad), 0.0, std::sin(pitchRad)}, {0.0, 1.0, 0.0}, {-std::sin(pitchRad), 0.0, std::cos(pitchRad)}}
     };
 }
 
 // 生成绕 z 轴的旋转矩阵 (Yaw)
-std::array<std::array<double, 3>, 3> RobotTrajectoryPlanning::getYawMatrix(double yawRad) {
+std::array<std::array<double, 3>, 3> SteelAngleTrajectoryPlanning::getYawMatrix(double yawRad) {
     return {
         {{std::cos(yawRad), -std::sin(yawRad), 0.0}, {std::sin(yawRad), std::cos(yawRad), 0.0}, {0.0, 0.0, 1.0}}
     };
 }
 
 // 旋转向量
-std::array<double, 3> RobotTrajectoryPlanning::rotateVector(const std::array<std::array<double, 3>, 3>& mat,
+std::array<double, 3> SteelAngleTrajectoryPlanning::rotateVector(const std::array<std::array<double, 3>, 3>& mat,
                                                             const std::array<double, 3>& vec) {
     std::array<double, 3> result = {0.0, 0.0, 0.0};
 
@@ -1499,7 +1499,7 @@ std::array<double, 3> RobotTrajectoryPlanning::rotateVector(const std::array<std
 }
 
 // 将A、B、C应用到向量 (0, 0, 1)
-std::array<double, 3> RobotTrajectoryPlanning::abcToVector(double A, double B, double C) {
+std::array<double, 3> SteelAngleTrajectoryPlanning::abcToVector(double A, double B, double C) {
     if (trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::AN_CHUAN)) {
         double rollRad = deg2rad(A);  // 将角度转换为弧度
         double pitchRad = deg2rad(B);
@@ -1536,7 +1536,7 @@ std::array<double, 3> RobotTrajectoryPlanning::abcToVector(double A, double B, d
     }
 }
 // // 初始化配置信息
-// void RobotTrajectoryPlanning::initConfig() {
+// void SteelAngleTrajectoryPlanning::initConfig() {
 //     // this->writeConfig();  // 写配置文件
 //     this->readConfig();  // 读配置文件
 //     // this->printConfig();  // 打印配置文件
@@ -1545,7 +1545,7 @@ std::array<double, 3> RobotTrajectoryPlanning::abcToVector(double A, double B, d
 // }
 
 // // 写配置文件
-// void RobotTrajectoryPlanning::writeConfig() {
+// void SteelAngleTrajectoryPlanning::writeConfig() {
 //     {  // 写
 //         std::ofstream os("./data/config/Trajectory_Planning_config.json");
 //         cereal::JSONOutputArchive jsonOutputArchive(os);
@@ -1554,7 +1554,7 @@ std::array<double, 3> RobotTrajectoryPlanning::abcToVector(double A, double B, d
 // }
 
 // // 读配置文件
-// void RobotTrajectoryPlanning::readConfig() {
+// void SteelAngleTrajectoryPlanning::readConfig() {
 //     {  // 读
 //         std::ifstream is("./data/config/Trajectory_Planning_config.json");
 //         cereal::JSONInputArchive inputArchive(is);
@@ -1564,7 +1564,7 @@ std::array<double, 3> RobotTrajectoryPlanning::abcToVector(double A, double B, d
 // }
 
 // // 打印配置文件
-// void RobotTrajectoryPlanning::printConfig() {
+// void SteelAngleTrajectoryPlanning::printConfig() {
 //     {  // 打印
 //         cereal::JSONOutputArchive jsonOutputArchive(std::cout);
 //         jsonOutputArchive(cereal::make_nvp("config about Trajectory Planning", TrajectoryPlanningConfig::getInstance()));

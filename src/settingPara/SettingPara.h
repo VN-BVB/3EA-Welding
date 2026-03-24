@@ -29,7 +29,15 @@ public:
     double modulation_threshold = 2;  // 调制度
     bool bool_save_model = 0;         // 是否保存重建的点云模型
     bool bool_save_picture = 0;       // 是否保存拍摄的图片
-
+    /*------------------------------龙门支架------------------------------*/
+    double TubeSidePlatFilletStart_X = 0;
+    double TubeSidePlatFilletStart_Y = 0;
+    double TubeSidePlatFilletStart_Z = 0;
+    double TubeSidePlatFilletEnd_X = 0;
+    double TubeSidePlatFilletEnd_Y = 0;
+    double TubeSidePlatFilletEnd_Z = 0;
+    double TubeSidePlatFilletWithdrawDistance = 0;
+    /*------------------------------角钢------------------------------*/
     // 工件正面的焊缝起点和终点延长
     double FrontLeft_ExtendStart = -5;   // 正面左焊缝起点(内点)
     double FrontLeft_ExtendEnd = -5;     // 正面左焊缝终点(外点)
@@ -67,7 +75,6 @@ public:
 
     // 边界端点到交点的距离阈值, 用于判断焊缝拍摄是否完整
     double MinDth_IntersectionToStartPoint = 3.5;
-
     // 南工作台 (机器人左侧)
     // 工件正面『边角』偏移设置
     double Front_Region1_X_Shift = 0, Front_Region1_Y_Shift = 0, Front_Region1_Z_Shift = 0;
@@ -103,7 +110,7 @@ public:
     // 工件反面『横梁』偏移设置
     double Back_Beam_Region1_X_Shift_R = 0, Back_Beam_Region1_Y_Shift_R = 0, Back_Beam_Region1_Z_Shift_R = 0;
     double Back_Beam_Region2_X_Shift_R = 0, Back_Beam_Region2_Y_Shift_R = 0, Back_Beam_Region2_Z_Shift_R = 0;
-
+    /*---------------------------------------------------------------*/
     // 焊接机器人相关
     double Value_MoveSpeed = 170;                // 过渡运动速度
     double Value_WeldingSpeed = 5;               // 焊接速度(默认焊接速度, 焊缝宽度检测失败用这个速度)

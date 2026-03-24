@@ -26,16 +26,19 @@ void handleWeldAreaInfo2Display(std::vector<std::shared_ptr<WeldSeamInfo>> weldA
     std::set<int> seamAreaPointCloudNum;                                                  // 已显示的焊缝区域点云序号
     pcl::PointCloud<pcl::PointXYZ>::Ptr visualCloud(new pcl::PointCloud<pcl::PointXYZ>);  // 用于显示的点云
     for (auto& info : weldAreaInfo) {
-        if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
-            seamAreaPointCloudNum.insert(info->areaNum);
-            std::string label_cloud = "label_cloud" + std::to_string(info->areaNum);
-            pclVisualizer->addPointCloud(info->weldAreaPointCloudInRobot, label_cloud);
-            pclVisualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR,
-                                                            Visual_RGBList[info->areaNum][0], Visual_RGBList[info->areaNum][1],
-                                                            Visual_RGBList[info->areaNum][2], label_cloud);
-            pclVisualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_OPACITY, 0.7,
-                                                            label_cloud);  // 不透明度
-            *visualCloud = *visualCloud + *(info->weldAreaPointCloudInRobot);
+        auto cloud = info->weldAreaPointCloudInRobot;
+        if (info->detectSuccFlag == true && cloud && !cloud->empty()) {
+            if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
+                seamAreaPointCloudNum.insert(info->areaNum);
+                std::string label_cloud = "label_cloud" + std::to_string(info->areaNum);
+                pclVisualizer->addPointCloud(cloud, label_cloud);
+                pclVisualizer->setPointCloudRenderingProperties(
+                    pcl::visualization::PCL_VISUALIZER_COLOR, Visual_RGBList[info->areaNum][0], Visual_RGBList[info->areaNum][1],
+                    Visual_RGBList[info->areaNum][2], label_cloud);
+                pclVisualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_OPACITY, 0.7,
+                                                                label_cloud);  // 不透明度
+                *visualCloud = *visualCloud + *(cloud);
+            }
         }
     }
 
@@ -62,24 +65,104 @@ void handleWeldAreaInfo2Display(std::vector<std::shared_ptr<WeldSeamInfo>> weldA
         }
     }
 
+    // // 目标检测结果可视化
+    // std::set<int> objDetRectNum;
+    // if (!weldAreaInfo.empty()) {
+    //     ObjDetImg = weldAreaInfo[0]->originalImg.clone();
+    //     for (auto& info : weldAreaInfo) {
+    //         if (objDetRectNum.find(info->areaNum) == objDetRectNum.end()) {  // 当前区域目标框还未显示
+    //             objDetRectNum.insert(info->areaNum);
+    //             if (info->rectPtr != nullptr) {
+    //                 bool currAreaSeams = false;
+    //                 for (auto& i : weldAreaInfo) {
+    //                     if (i->areaNum == info->areaNum) {
+    //                         if (i->detectSuccFlag == true) {  // 当前区域只要有一条焊缝检测成功, 就标记为检测成功
+    //                             currAreaSeams = true;
+    //                             break;
+    //                         }
+    //                     }
+    //                 }
+    //                 if (currAreaSeams == true) {
+    //                     if (info->weldAreaType == WELD_AREA_TYPE::BACK_CORNER) {
+    //                         cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][0] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][1] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][2] * 255);
+    //                         cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
+    //                         cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::BACK_CORNER),
+    //                                     cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+    //                                     roi_color, 4);
+    //                     } else if (info->weldAreaType == WELD_AREA_TYPE::BACK_BEAM) {
+    //                         cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][0] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][1] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::BACK_BEAM][2] * 255);
+    //                         cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
+    //                         cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::BACK_BEAM),
+    //                                     cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+    //                                     roi_color, 4);
+    //                     } else if (info->weldAreaType == WELD_AREA_TYPE::FRONT_CORNER) {
+    //                         cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::FRONT_CORNER][0] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::FRONT_CORNER][1] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::FRONT_CORNER][2] * 255);
+    //                         cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
+    //                         cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::FRONT_CORNER),
+    //                                     cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+    //                                     roi_color, 4);
+    //                     } else if (info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
+    //                         cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::FRONT_UP_BEAM][0] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::FRONT_UP_BEAM][1] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::FRONT_UP_BEAM][2] * 255);
+    //                         cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
+    //                         cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::FRONT_UP_BEAM),
+    //                                     cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+    //                                     roi_color, 4);
+    //                     } else if (info->weldAreaType == WELD_AREA_TYPE::FRONT_DOWN_BEAM) {
+    //                         cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::FRONT_DOWN_BEAM][0] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::FRONT_DOWN_BEAM][1] * 255,
+    //                                                           Visual_RGBList[WELD_AREA_TYPE::FRONT_DOWN_BEAM][2] * 255);
+    //                         cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 8);
+    //                         cv::putText(ObjDetImg, MyToolFunc::getWeldAreaTypeString(WELD_AREA_TYPE::FRONT_DOWN_BEAM),
+    //                                     cv::Point(info->rectPtr->x, info->rectPtr->y - 10), cv::FONT_HERSHEY_COMPLEX, 1.2,
+    //                                     roi_color, 4);
+    //                     }
+    //                 } else {
+    //                     cv::Scalar roi_color = cv::Scalar(0, 0, 0);
+    //                     cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 10);
+    //                     cv::putText(ObjDetImg, "None", cv::Point(info->rectPtr->x, info->rectPtr->y - 10),
+    //                                 cv::FONT_HERSHEY_COMPLEX, 1.5, roi_color, 6);
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
     // 目标检测结果可视化
     std::set<int> objDetRectNum;
     if (!weldAreaInfo.empty()) {
         ObjDetImg = weldAreaInfo[0]->originalImg.clone();
+        PLOGD << "【调试】开始画框，weldAreaInfo.size()=" << weldAreaInfo.size();
+
         for (auto& info : weldAreaInfo) {
             if (objDetRectNum.find(info->areaNum) == objDetRectNum.end()) {  // 当前区域目标框还未显示
                 objDetRectNum.insert(info->areaNum);
+                PLOGD << "【调试】处理区域 areaNum=" << info->areaNum << ", rectPtr=" << (info->rectPtr ? "有效" : "无效");
+
                 if (info->rectPtr != nullptr) {
                     bool currAreaSeams = false;
+                    PLOGD << "【调试】检查该区域是否有检测成功的焊缝...";
                     for (auto& i : weldAreaInfo) {
                         if (i->areaNum == info->areaNum) {
+                            PLOGD << "  检查焊缝: detectSuccFlag=" << i->detectSuccFlag;
                             if (i->detectSuccFlag == true) {  // 当前区域只要有一条焊缝检测成功, 就标记为检测成功
                                 currAreaSeams = true;
+                                PLOGD << "  找到检测成功的焊缝，currAreaSeams=true";
                                 break;
                             }
                         }
                     }
+
+                    PLOGD << "【调试】currAreaSeams=" << currAreaSeams;
+
                     if (currAreaSeams == true) {
+                        PLOGD << "【调试】画成功框，weldAreaType=" << static_cast<int>(info->weldAreaType);
                         if (info->weldAreaType == WELD_AREA_TYPE::BACK_CORNER) {
                             cv::Scalar roi_color = cv::Scalar(Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][0] * 255,
                                                               Visual_RGBList[WELD_AREA_TYPE::BACK_CORNER][1] * 255,
@@ -122,16 +205,21 @@ void handleWeldAreaInfo2Display(std::vector<std::shared_ptr<WeldSeamInfo>> weldA
                                         roi_color, 4);
                         }
                     } else {
+                        PLOGD << "【调试】画None框，区域 areaNum=" << info->areaNum;
                         cv::Scalar roi_color = cv::Scalar(0, 0, 0);
                         cv::rectangle(ObjDetImg, *(info->rectPtr), roi_color, 10);
                         cv::putText(ObjDetImg, "None", cv::Point(info->rectPtr->x, info->rectPtr->y - 10),
                                     cv::FONT_HERSHEY_COMPLEX, 1.5, roi_color, 6);
                     }
+                } else {
+                    PLOGW << "【调试】rectPtr为空，无法画框，区域 areaNum=" << info->areaNum;
                 }
             }
         }
+        PLOGD << "【调试】画框完成";
+    } else {
+        PLOGW << "【调试】weldAreaInfo为空，无法画框";
     }
-
     // 获取点云边界框大小
     pcl::PointXYZ minPt, maxPt;
     pcl::getMinMax3D(*visualCloud, minPt, maxPt);

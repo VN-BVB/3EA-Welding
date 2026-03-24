@@ -105,14 +105,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudReconstruction::localReconstruct(i
 
 std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaReconstructToSA() {
     PLOGD << "重建角钢工作台平面以及焊缝区域点云";
-
     // 部分变量清空
-    maskForWorkpiece = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 用于工件焊缝区域重建的掩模
-    maskForWorkbench = maskForGlobal.clone();                               // 用于工作台重建的掩模
-    workbenchPointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);          // 重置工作台点云
-    phaseShiftImages.clear();                                               // 相移图集合
-    grayCodeImages.clear();                                                 // 格雷码图集合
-    weldAreaInfo.clear();                                                   // 清空焊缝区域信息
+    initWorkspaceContext();
 
     SettingPara& set = SettingPara::getInstance();
     if (primaryCameraCapturedImg->size() == set.projector_num) {
@@ -143,28 +137,22 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
     return weldAreaInfo;
 }
 // 焊缝区域点云重建
-std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaReconstructToLW() {
+std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaReconstructToGF() {
     PLOGD << "重建三轴工件点云";
-
     // 部分变量清空
-    maskForWorkpiece = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 用于工件焊缝区域重建的掩模
-    maskForWorkbench = maskForGlobal.clone();                               // 用于工作台重建的掩模
-    workbenchPointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);          // 重置工作台点云
-    nonPlanePointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);           // 重置工作台点云
-    phaseShiftImages.clear();                                               // 相移图集合
-    grayCodeImages.clear();                                                 // 格雷码图集合
-    weldAreaInfo.clear();                                                   // 清空焊缝区域信息
-
+    initWorkspaceContext();
     SettingPara& set = SettingPara::getInstance();
     if (primaryCameraCapturedImg->size() == set.projector_num) {
         reInitialize();             // 变量重新初始化
         imageDistribute();          // 0. 将采集到的图像放入相移和格雷码容器
-        makeMaskForSeamsDetToLW();  // 1.2 完成重建掩膜的生成 (包括背景和焊缝区域)
-        maskForReconstruct = maskForWorkbench.clone();
-        solveWrapPhase();           // 2. 相移法求包裹相位
-        decodeGrayCode();           // 3. 解码格雷码
-        phaseUnwrap();              // 4. 相位展开, 求绝对相位
-        reconstructForWorkbench();  // 5.1 背景平面的三维重建, 拟合背景平面参数
+        makeMaskForSeamsDetToGF();  // 1.2 完成重建掩膜的生成 (包括背景和焊缝区域)
+        if (!skipWorkbenchFilter) {
+            maskForReconstruct = maskForWorkbench.clone();
+            solveWrapPhase();           // 2. 相移法求包裹相位
+            decodeGrayCode();           // 3. 解码格雷码
+            phaseUnwrap();              // 4. 相位展开, 求绝对相位
+            reconstructForWorkbench();  // 5.1 背景平面的三维重建, 拟合背景平面参数
+        }
 
         reInitialize();     // 变量重新初始化
         imageDistribute();  // 0. 将采集到的图像放入相移和格雷码容器
@@ -183,7 +171,19 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
 
     return weldAreaInfo;
 }
-//  变量重新初始化
+void PointCloudReconstruction::initWorkspaceContext() {
+    maskForWorkpiece = cv::Mat::zeros(cameraHeight, cameraWidth, CV_8UC1);  // 用于工件焊缝区域重建的掩模
+    maskForWorkbench = maskForGlobal.clone();                               // 用于工作台重建的掩模
+    workbenchPointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);          // 重置工作台点云
+    nonPlanePointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);           // 重置工作台点云
+    phaseShiftImages.clear();                                               // 相移图集合
+    grayCodeImages.clear();                                                 // 格雷码图集合
+    weldAreaInfo.clear();                                                   // 清空焊缝区域信息
+    workbenchCoeff = Eigen::VectorXf::Zero(4);                              // 工作台平面系数
+    skipWorkbenchFilter = false;                                            // 跳过筛选工作台
+}
+
+//  点云重建变量重新初始化
 void PointCloudReconstruction::reInitialize() {
     pointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);  // 重置点云
 #ifdef SMART_CAMERA
@@ -264,7 +264,7 @@ void PointCloudReconstruction::makeMaskForSeamsDet() {
     PLOGD << "detRes->size()" << detRes->size();
     // 遍历每个结果
     for (int i = 0; i < detRes->size(); ++i) {
-        PLOGD << "焊缝粗定位结果: " << (*detRes.get())[i].classId << ", " << (*detRes.get())[i].score << ", "
+        PLOGD << "焊缝粗定位" << i << "结果: " << (*detRes.get())[i].classId << ", " << (*detRes.get())[i].score << ", "
               << (*detRes.get())[i].topLeftX << ", " << (*detRes.get())[i].topLeftY << ", " << (*detRes.get())[i].bottomRightX
               << ", " << (*detRes.get())[i].bottomRightY;
 
@@ -287,7 +287,7 @@ void PointCloudReconstruction::makeMaskForSeamsDet() {
         }
     }
 }
-void PointCloudReconstruction::makeMaskForSeamsDetToLW() {
+void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
     PLOGD << "计算背景以及焊缝区域的mask";
     cv::Mat beforDistortCorrect = (*primaryCameraCapturedImg)[19].clone();  // 获取空白图
     cv::imwrite("beforDistortCorrect.bmp", beforDistortCorrect);
@@ -301,9 +301,10 @@ void PointCloudReconstruction::makeMaskForSeamsDetToLW() {
 
     if (detRes->size() == 0) {
         PLOGW << "检测结果为空，使用默认ROI";
-        // detRes->emplace_back(1, 1.0f, 0, 0, 1200, 1000);
-        detRes->emplace_back(1, 1.0f, 91, 237, 1500, 600);
-        // detRes->emplace_back(1, 1.0f, 145, 616, 1122, 944);
+        // detRes->emplace_back(1, 1.0f, 91, 237, 1500, 600);//管侧与三角肘板
+        detRes->emplace_back(1, 1.0f, 414, 343, 498, 438);
+        detRes->emplace_back(1, 1.0f, 596, 419, 1090, 469);
+        detRes->emplace_back(1, 1.0f, 1170, 285, 1207, 391);
     }
     // 如果检测到大于4个, 按照置信度排序, 并取前4个
     if (detRes->size() > 4) {
@@ -313,7 +314,21 @@ void PointCloudReconstruction::makeMaskForSeamsDetToLW() {
     PLOGD << "detRes->size()" << detRes->size();
     // 遍历每个结果
     for (int i = 0; i < detRes->size(); ++i) {
-        PLOGD << "焊缝粗定位结果: " << (*detRes.get())[i].classId << ", " << (*detRes.get())[i].score << ", "
+        /* ===== ROI扩张 + 边界限制 ===== */
+
+        auto& det = (*detRes)[i];
+
+        int x1 = std::max(0, static_cast<int>(det.topLeftX - pclRectExtend));
+        int y1 = std::max(0, static_cast<int>(det.topLeftY - pclRectExtend));
+        int x2 = std::min(cameraWidth - 1, static_cast<int>(det.bottomRightX + pclRectExtend));
+        int y2 = std::min(cameraHeight - 1, static_cast<int>(det.bottomRightY + pclRectExtend));
+
+        det.topLeftX = x1;
+        det.topLeftY = y1;
+        det.bottomRightX = x2;
+        det.bottomRightY = y2;
+
+        PLOGD << "焊缝粗定位" << i << "结果: " << (*detRes.get())[i].classId << ", " << (*detRes.get())[i].score << ", "
               << (*detRes.get())[i].topLeftX << ", " << (*detRes.get())[i].topLeftY << ", " << (*detRes.get())[i].bottomRightX
               << ", " << (*detRes.get())[i].bottomRightY;
 
@@ -334,6 +349,13 @@ void PointCloudReconstruction::makeMaskForSeamsDetToLW() {
             maskForWorkpiece(*(seamInfo->rectPtr)).setTo(i + 1);
             maskForWorkbench(*(seamInfo->rectPtr)).setTo(0);
         }
+    }
+    if (weldAreaInfo.empty()) {
+        return;
+    } else {
+        skipWorkbenchFilter =
+            std::all_of(weldAreaInfo.begin(), weldAreaInfo.end(),
+                        [](const std::shared_ptr<WeldSeamInfo>& info) { return info && info->weldAreaType == Plate_Plate_F; });
     }
 }
 #endif
@@ -670,10 +692,11 @@ void PointCloudReconstruction::reconstructForWorkbench() {
 
     // 5. 保存点云到本地(若需)
     PLOGD << "bool_save_model: " << SettingPara::getInstance().bool_save_model;
+    reconstructPointCloud->width = reconstructPointCloud->points.size();
+    reconstructPointCloud->height = 1;
     if (SettingPara::getInstance().bool_save_model) {
         pcl::io::savePCDFile("./data/common/pointCloud.pcd", *reconstructPointCloud);
     }
-
     // 背景平面赋值
     pcl::copyPointCloud(*reconstructPointCloud, inliers, *workbenchPointCloud);
     // 获取工件点云
@@ -700,6 +723,7 @@ void PointCloudReconstruction::reconstructForWorkbench() {
     if (SettingPara::getInstance().bool_save_model) {
         pcl::io::savePCDFile("./data/common/nonPlanePointCloud.pcd", *nonPlanePointCloud);
     }
+    PLOGD << "重建完成";
 }
 #endif
 
@@ -726,18 +750,21 @@ void PointCloudReconstruction::reconstructForSeamArea() {
         pointCloudPostProcess(reconstructPointCloud);
 
         // 4. 根据工作台平面参数，从原始点云中剔除背景点
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloudRemovePlane(new pcl::PointCloud<pcl::PointXYZ>);
-        for (int i = 0; i < reconstructPointCloud->size(); i++) {
-            if (pcl::pointToPlaneDistance(reconstructPointCloud->points[i], workbenchCoeff) > workPlaneRemoveThreshold) {
-                cloudRemovePlane->push_back(reconstructPointCloud->points[i]);
+        if (workbenchCoeff.head<3>().norm() > 1e-6) {
+            pcl::PointCloud<pcl::PointXYZ>::Ptr cloudRemovePlane(new pcl::PointCloud<pcl::PointXYZ>);
+            cloudRemovePlane->reserve(reconstructPointCloud->size());
+            for (int i = 0; i < reconstructPointCloud->size(); i++) {
+                if (pcl::pointToPlaneDistance(reconstructPointCloud->points[i], workbenchCoeff) > workPlaneRemoveThreshold) {
+                    cloudRemovePlane->push_back(reconstructPointCloud->points[i]);
+                }
             }
+            reconstructPointCloud->swap(*cloudRemovePlane);  // 用新点云替换原点云，swap 只是交换内部指针
         }
-        reconstructPointCloud->swap(*cloudRemovePlane);  // 用新点云替换原点云，swap 只是交换内部指针
 
         areaInfo->weldAreaPointCloudInCamera = reconstructPointCloud;  // 保存焊缝区域点云到焊缝信息结构体
 
         // 5. 保存点云到本地(若需)
-        PLOGD << "bool_save_model: " << SettingPara::getInstance().bool_save_model;
+        // PLOGD << "bool_save_model: " << SettingPara::getInstance().bool_save_model;
         PLOGD << "reconstructPointCloud->size(): " << reconstructPointCloud->size();
         if (SettingPara::getInstance().bool_save_model) {
             pcl::io::savePCDFile("./data/common/pointCloud" + std::to_string(areaInfo->areaNum) + ".pcd", *reconstructPointCloud);
