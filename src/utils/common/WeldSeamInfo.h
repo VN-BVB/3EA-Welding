@@ -26,13 +26,14 @@ enum WELD_TYPE {              // 焊缝类型
     FRONT_HORIZONTAL_FILLET,  // 正面水平角接
     FRONT_VERTICAL_FILLET,    // 正面垂直角接
     // 龙门支架
-    Plate_Plate_Fillet = 100,
-    TubeSide_Plate_F_H = 101,  // 管侧与板角接水平焊缝
-    Tube_Plate_Fillet = 102,
-    Tube_Tube_Fillet = 103
+    Plate_Plate_Fillet_V = 100,
+    Plate_Plate_Fillet_H = 101,
+    TubeSide_Plate_F_H = 102,  // 管侧与板角接水平焊缝
+    Tube_Plate_Fillet = 103,
+    Tube_Tube_Fillet = 104
 };
 enum WORKPIECE_TYPE {
-    STEEL_ANGLE,     // 角钢
+    STEEL_ANGLE,   // 角钢
     GANTRAY_FRAME  // 龙门支架
 };
 enum WELD_AREA_TYPE {     // 焊缝区域类型

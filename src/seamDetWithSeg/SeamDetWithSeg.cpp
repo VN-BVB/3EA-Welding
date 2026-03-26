@@ -137,18 +137,16 @@ void SeamDetWithSeg::whenDetSeamWithSeg(std::vector<std::shared_ptr<WeldSeamInfo
             Ymd << std::put_time(&now_tm, "%Y%m%d");
             std::string Ymd_str = Ymd.str();  // 获取格式化的时间字符串
             if (!info->segResultImg.empty()) {
-                cv::imwrite("./data/seamDetWithSeg/" + Ymd_str + "/" + time_str + " segResult" + std::to_string(imgNum) + ".bmp",
-                            info->segResultImg);
+                cv::imwrite("./data/seamDetWithSeg/" + Ymd_str + "/" + time_str + " segResult" + std::to_string(imgNum) + ".bmp", info->segResultImg);
             }
             if (!info->segMaskImg.empty()) {
-                cv::imwrite("./data/seamDetWithSeg/" + Ymd_str + "/" + time_str + " segMask" + std::to_string(imgNum++) + ".bmp",
-                            info->segMaskImg);
+                cv::imwrite("./data/seamDetWithSeg/" + Ymd_str + "/" + time_str + " segMask" + std::to_string(imgNum++) + ".bmp", info->segMaskImg);
             }
 
             // 将当前焊缝的分割计算放入线程池
             threadPool->addTask([this, info]() { return this->detectSignalSeamWithSeg(info); });
-        } else if (info->weldType == TubeSide_Plate_F_H) {
-            PLOGD << "TubeSide_Plate_Fillet目前未使用分割算法";
+        } else if (info->weldType == TubeSide_Plate_F_H || info->weldType == Plate_Plate_Fillet_V || info->weldType == Plate_Plate_Fillet_H) {
+            PLOGD << "龙门支架目前未使用分割算法";
         }
     }
 
@@ -161,10 +159,9 @@ void SeamDetWithSeg::whenDetSeamWithSeg(std::vector<std::shared_ptr<WeldSeamInfo
             info->weldType == WELD_TYPE::FRONT_BEAM_BUTT || info->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {
             PLOGD << "区域编号: " << info->areaNum << ", 焊缝类型: " << MyToolFunc::getWeldTypeString(info->weldType);
             if (info->weldEndPointsFromSeg && info->weldEndPointsFromSeg->size() == 2) {
-                PLOGD << "   分割得到的焊缝端点坐标: (" << info->weldEndPointsFromSeg->at(0).x << " "
-                      << info->weldEndPointsFromSeg->at(0).y << " " << info->weldEndPointsFromSeg->at(0).z << ") ("
-                      << info->weldEndPointsFromSeg->at(1).x << " " << info->weldEndPointsFromSeg->at(1).y << " "
-                      << info->weldEndPointsFromSeg->at(1).z << ")";
+                PLOGD << "   分割得到的焊缝端点坐标: (" << info->weldEndPointsFromSeg->at(0).x << " " << info->weldEndPointsFromSeg->at(0).y << " "
+                      << info->weldEndPointsFromSeg->at(0).z << ") (" << info->weldEndPointsFromSeg->at(1).x << " "
+                      << info->weldEndPointsFromSeg->at(1).y << " " << info->weldEndPointsFromSeg->at(1).z << ")";
                 PLOGD << "   焊缝宽度: " << info->width;
             }
         }
@@ -187,8 +184,7 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
                 info->width = std::min(info->width, 5.0);    // 焊缝宽度规范化
                 info->width = std::max(info->width, 0.1);
                 if (info->detectSuccFlag == true) {  // 点云方法也检测成功了
-                    PLOGD << "点云检测得到的焊缝: " << info->weldEndPointsInCamera->at(0) << " "
-                          << info->weldEndPointsInCamera->at(1);
+                    PLOGD << "点云检测得到的焊缝: " << info->weldEndPointsInCamera->at(0) << " " << info->weldEndPointsInCamera->at(1);
                     PLOGD << "分割得到的焊缝: " << info->weldEndPointsFromSeg->at(0) << " " << info->weldEndPointsFromSeg->at(1);
 
                     if (info->seamsLineToVal != nullptr && info->seamsLineToVal->values.size() == 6) {
@@ -199,14 +195,10 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
                         if (d1 < 3 && d2 < 3) {  // 点云结果通过验证, 用点云结果验证分割结果
                             PLOGD << "点云焊缝点通过验证, 焊缝点到验证直线之间的距离d1: " << d1 << " d2: " << d2;
                             double startDistance = 0, endDistance = 0;  // 起终点距离
-                            double num0AndNum0Dis =
-                                pcl::euclideanDistance(info->weldEndPointsFromSeg->at(0), info->weldEndPointsInCamera->at(0));
-                            double num0AndNum1Dis =
-                                pcl::euclideanDistance(info->weldEndPointsFromSeg->at(0), info->weldEndPointsInCamera->at(1));
-                            double num1AndNum0Dis =
-                                pcl::euclideanDistance(info->weldEndPointsFromSeg->at(1), info->weldEndPointsInCamera->at(0));
-                            double num1AndNum1Dis =
-                                pcl::euclideanDistance(info->weldEndPointsFromSeg->at(1), info->weldEndPointsInCamera->at(1));
+                            double num0AndNum0Dis = pcl::euclideanDistance(info->weldEndPointsFromSeg->at(0), info->weldEndPointsInCamera->at(0));
+                            double num0AndNum1Dis = pcl::euclideanDistance(info->weldEndPointsFromSeg->at(0), info->weldEndPointsInCamera->at(1));
+                            double num1AndNum0Dis = pcl::euclideanDistance(info->weldEndPointsFromSeg->at(1), info->weldEndPointsInCamera->at(0));
+                            double num1AndNum1Dis = pcl::euclideanDistance(info->weldEndPointsFromSeg->at(1), info->weldEndPointsInCamera->at(1));
                             if (num0AndNum0Dis < num0AndNum1Dis) {
                                 startDistance = num0AndNum0Dis;
                                 endDistance = num1AndNum1Dis;
@@ -216,10 +208,9 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
                             }
                             if (startDistance < 4 && endDistance < 4) {  // 分割焊缝在点云焊缝附近，认为分割结果也可取
                                 pcl::ModelCoefficients::Ptr lineCoeff(new pcl::ModelCoefficients());  // 构造分割结果直线
-                                Eigen::Vector3d lineVector(
-                                    info->weldEndPointsFromSeg->at(0).x - info->weldEndPointsFromSeg->at(1).x,
-                                    info->weldEndPointsFromSeg->at(0).y - info->weldEndPointsFromSeg->at(1).y,
-                                    info->weldEndPointsFromSeg->at(0).z - info->weldEndPointsFromSeg->at(1).z);
+                                Eigen::Vector3d lineVector(info->weldEndPointsFromSeg->at(0).x - info->weldEndPointsFromSeg->at(1).x,
+                                                           info->weldEndPointsFromSeg->at(0).y - info->weldEndPointsFromSeg->at(1).y,
+                                                           info->weldEndPointsFromSeg->at(0).z - info->weldEndPointsFromSeg->at(1).z);
                                 lineVector /= lineVector.norm();
                                 lineCoeff->values.resize(6);
                                 lineCoeff->values[0] = info->weldEndPointsFromSeg->at(0).x;
@@ -237,8 +228,7 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
 
                                 PLOGD << "采纳分割得到的焊缝, 验证距离: " << startDistance << " " << endDistance;
                             } else {
-                                PLOGD << "不采纳分割得到的焊缝, 继续使用点云结果, 验证距离: " << startDistance << " "
-                                      << endDistance;
+                                PLOGD << "不采纳分割得到的焊缝, 继续使用点云结果, 验证距离: " << startDistance << " " << endDistance;
                             }
                         } else {  // 点云结果未通过验证, 继续验证分割结果
                             PLOGW << "点云焊缝点未通过验证, 焊缝点到验证直线之间的距离d1: " << d1 << " d2: " << d2;
@@ -247,12 +237,10 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
                             if (d1 < 3 && d2 < 3) {  // 分割方法焊缝通过验证, 取代点云方法焊缝点
                                 info->weldEndPointsInCamera->at(0) = info->weldEndPointsFromSeg->at(0);
                                 info->weldEndPointsInCamera->at(1) = info->weldEndPointsFromSeg->at(1);
-                                PLOGD << "分割焊缝点通过验证, 取代点云得到的焊缝, 焊缝点到验证直线之间的距离d1: " << d1
-                                      << " d2: " << d2;
+                                PLOGD << "分割焊缝点通过验证, 取代点云得到的焊缝, 焊缝点到验证直线之间的距离d1: " << d1 << " d2: " << d2;
                             } else {
                                 info->detectSuccFlag = false;
-                                PLOGW << "分割焊缝点也未通过验证, 标志位置为false, 焊缝点到验证直线之间的距离d1: " << d1
-                                      << " d2: " << d2;
+                                PLOGW << "分割焊缝点也未通过验证, 标志位置为false, 焊缝点到验证直线之间的距离d1: " << d1 << " d2: " << d2;
                             }
                         }
                     }
@@ -265,12 +253,10 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
                             info->detectSuccFlag = true;
                             info->weldEndPointsInCamera->at(0) = info->weldEndPointsFromSeg->at(0);
                             info->weldEndPointsInCamera->at(1) = info->weldEndPointsFromSeg->at(1);
-                            PLOGD << "分割焊缝点通过验证, 采纳分割得到的焊缝, 焊缝点到验证直线之间的距离d1: " << d1
-                                  << " d2: " << d2;
+                            PLOGD << "分割焊缝点通过验证, 采纳分割得到的焊缝, 焊缝点到验证直线之间的距离d1: " << d1 << " d2: " << d2;
                         } else {
                             info->detectSuccFlag = false;
-                            PLOGW << "分割焊缝点未通过验证, 不采纳分割得到的焊缝, 焊缝点到验证直线之间的距离d1: " << d1
-                                  << " d2: " << d2;
+                            PLOGW << "分割焊缝点未通过验证, 不采纳分割得到的焊缝, 焊缝点到验证直线之间的距离d1: " << d1 << " d2: " << d2;
                         }
                     } else {
                         // 暂时认为只有分割的结果不可信, 无需操作
@@ -293,8 +279,8 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
                     }
                 }
             }
-        } else if (info->weldType == TubeSide_Plate_F_H) {
-            PLOGD << "TubeSide_Plate_Fillet目前不需要融合";
+        } else if (info->weldType == TubeSide_Plate_F_H || info->weldType == Plate_Plate_Fillet_V || info->weldType == Plate_Plate_Fillet_H) {
+            PLOGD << "龙门支架目前不需要融合";
         }
     }
 }
@@ -320,7 +306,7 @@ void SeamDetWithSeg::detectSignalSeamWithSeg(std::shared_ptr<WeldSeamInfo> seamI
     for (int y = 0; y < objectDetectImgMask.rows; ++y) {
         for (int x = 0; x < objectDetectImgMask.cols; ++x) {
             if (!objectDetectImgMask.empty()) {
-                if (objectDetectImgMask.at<uchar>(y, x) >= 250) {  // 判断像素值是否为白色
+                if (objectDetectImgMask.at<uchar>(y, x) >= 250) {                                          // 判断像素值是否为白色
                     whitePixels.push_back(cv::Point(x + seamInfo->rectPtr->x, y + seamInfo->rectPtr->y));  // 保存坐标
                 }
             }
@@ -381,9 +367,8 @@ void SeamDetWithSeg::detectSignalSeamWithSeg(std::shared_ptr<WeldSeamInfo> seamI
     Ymd << std::put_time(&now_tm, "%Y%m%d");
     std::string Ymd_str = Ymd.str();  // 获取格式化的时间字符串
     if (weldSeamPointClouds->size() > 0) {
-        pcl::io::savePCDFile(
-            "./data/seamDetWithSeg/" + Ymd_str + "/" + time_str + " seamPointCloud" + std::to_string(pointCloudNum++) + ".pcd",
-            *weldSeamPointClouds);
+        pcl::io::savePCDFile("./data/seamDetWithSeg/" + Ymd_str + "/" + time_str + " seamPointCloud" + std::to_string(pointCloudNum++) + ".pcd",
+                             *weldSeamPointClouds);
     }
 
     // ****************** 拟合焊缝三维点为直线 ******************
@@ -400,13 +385,13 @@ void SeamDetWithSeg::detectSignalSeamWithSeg(std::shared_ptr<WeldSeamInfo> seamI
         seg.setModelType(pcl::SACMODEL_LINE);                     // 设置拟合模型为直线模型
         seg.setMethodType(pcl::SAC_RANSAC);                       // 设置拟合方法为RANSAC
         seg.setMaxIterations(300);                                // 设置最大迭代次数
-        seg.setDistanceThreshold(6);             // 判断是否为模型内点的距离阀值/设置误差容忍范围
-        seg.setInputCloud(weldSeamPointClouds);  // 输入点云
-        seg.segment(*inliers, *lineCoeff);       // 内点的索引，模型系数
+        seg.setDistanceThreshold(6);                              // 判断是否为模型内点的距离阀值/设置误差容忍范围
+        seg.setInputCloud(weldSeamPointClouds);                   // 输入点云
+        seg.segment(*inliers, *lineCoeff);                        // 内点的索引，模型系数
 
-        PLOGD << "分割方法检测焊缝拟合的焊缝直线: x:" << lineCoeff->values[0] << " y:" << lineCoeff->values[1]
-              << " z:" << lineCoeff->values[2] << " a:" << lineCoeff->values[3] << " b:" << lineCoeff->values[4]
-              << " c:" << lineCoeff->values[5] << "  内点数量:" << inliers->indices.size();
+        PLOGD << "分割方法检测焊缝拟合的焊缝直线: x:" << lineCoeff->values[0] << " y:" << lineCoeff->values[1] << " z:" << lineCoeff->values[2]
+              << " a:" << lineCoeff->values[3] << " b:" << lineCoeff->values[4] << " c:" << lineCoeff->values[5]
+              << "  内点数量:" << inliers->indices.size();
     }
 
     // ****************** 将焊缝点投影到直线得到端点即为焊缝端点 ******************
@@ -414,8 +399,7 @@ void SeamDetWithSeg::detectSignalSeamWithSeg(std::shared_ptr<WeldSeamInfo> seamI
         std::vector<pcl::PointXYZ> endOfOneSeam;
         endOfOneSeam = MyToolFunc::lineCloudEndPoints(weldSeamPointClouds, lineCoeff);
         seamInfo->weldEndPointsFromSeg.reset(new std::vector<pcl::PointXYZ>(std::move(endOfOneSeam)));
-        PLOGD << "分割方法求解焊缝端点结果: " << seamInfo->weldEndPointsFromSeg->at(0) << " "
-              << seamInfo->weldEndPointsFromSeg->at(1);
+        PLOGD << "分割方法求解焊缝端点结果: " << seamInfo->weldEndPointsFromSeg->at(0) << " " << seamInfo->weldEndPointsFromSeg->at(1);
     } else {
         pcl::PointXYZ p;
         std::vector<pcl::PointXYZ> endOfOneSeam;
@@ -423,8 +407,7 @@ void SeamDetWithSeg::detectSignalSeamWithSeg(std::shared_ptr<WeldSeamInfo> seamI
         endOfOneSeam.push_back(p);
         endOfOneSeam.push_back(p);
         seamInfo->weldEndPointsFromSeg.reset(new std::vector<pcl::PointXYZ>(std::move(endOfOneSeam)));
-        PLOGW << "分割方法求解焊缝端点失败, 存入: " << seamInfo->weldEndPointsFromSeg->at(0) << " "
-              << seamInfo->weldEndPointsFromSeg->at(1);
+        PLOGW << "分割方法求解焊缝端点失败, 存入: " << seamInfo->weldEndPointsFromSeg->at(0) << " " << seamInfo->weldEndPointsFromSeg->at(1);
     }
 
     // ****************** 计算焊缝宽度 ******************

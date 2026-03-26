@@ -1,5 +1,5 @@
-﻿#ifndef TUBEPLATEBUTTSEAM_H
-#define TUBEPLATEBUTTSEAM_H
+﻿#ifndef TUBESIDEPLATEFILLETSEAMSDET_H
+#define TUBESIDEPLATEFILLETSEAMSDET_H
 
 #include <QObject>
 
@@ -15,10 +15,10 @@ private:
     void singleSeamReinitialize();
     void statisticFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
     void ransacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
-                      pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_noplane);
+                     pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_noplane);
     void ransacCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud);
     void removeCylinderPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
-    bool solveBeamButtSeamEndPoints();
+    bool solveSeamEndPoints();
 signals:
 
 private:
@@ -48,4 +48,4 @@ private:
     pcl::ModelCoefficients::Ptr lineCoeffsWithWeldSeam2Val;  // 焊缝所在直线系数 (用于验证)
 };
 
-#endif  // TUBEPLATEBUTTSEAM_H
+#endif  // TUBESIDEPLATEFILLETSEAMSDET_H

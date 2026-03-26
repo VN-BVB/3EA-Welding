@@ -75,8 +75,8 @@ void GantrayFrameTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::sha
         for (size_t j = 0; j < info->robotWeldPose.size(); ++j) {
             const auto& pose = info->robotWeldPose[j];
 
-            PLOGD << "[pose " << j << "] " << "x=" << pose.x_ << ", y=" << pose.y_ << ", z=" << pose.z_ << ", a=" << pose.a_
-                  << ", b=" << pose.b_ << ", c=" << pose.c_;
+            PLOGD << "[pose " << j << "] " << "x=" << pose.x_ << ", y=" << pose.y_ << ", z=" << pose.z_ << ", a=" << pose.a_ << ", b=" << pose.b_
+                  << ", c=" << pose.c_;
         }
     }
     // --------------------------- 焊缝轨迹后撤(转移到写入文件部分) ---------------------------
@@ -95,8 +95,7 @@ void GantrayFrameTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::sha
     emit sendPlannedSeams(weldSeamInfo);
 }
 
-void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo,
-                                                int endOfLeftSeams) {
+void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo, int endOfLeftSeams) {
     // 实现龙门支架的文件写入逻辑
     outfile.open(outfile_name, std::ios::out);
     if (!outfile.is_open()) {
@@ -121,24 +120,22 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
     float X0 = trajectoryConfig.zeroPointX, Y0 = trajectoryConfig.zeroPointY, Z0 = trajectoryConfig.zeroPointZ;
     float A0 = trajectoryConfig.zeroPointA, B0 = trajectoryConfig.zeroPointB, C0 = trajectoryConfig.zeroPointC;
 
-    float takePhotoX0 = trajectoryConfig.takePhotoX, takePhotoY0 = trajectoryConfig.takePhotoY,
-          takePhotoZ0 = trajectoryConfig.takePhotoZ;
-    float takePhotoA0 = trajectoryConfig.takePhotoA, takePhotoB0 = trajectoryConfig.takePhotoB,
-          takePhotoC0 = trajectoryConfig.takePhotoC;
+    float takePhotoX0 = trajectoryConfig.takePhotoX, takePhotoY0 = trajectoryConfig.takePhotoY, takePhotoZ0 = trajectoryConfig.takePhotoZ;
+    float takePhotoA0 = trajectoryConfig.takePhotoA, takePhotoB0 = trajectoryConfig.takePhotoB, takePhotoC0 = trajectoryConfig.takePhotoC;
     // ########################### 眼在手上写入拍照点, 眼在手外写入零过渡点 ###########################
     if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
         if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
             outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-            outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " "
-                    << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
+                    << weldingCurrent << " " << weldingVoltage << std::endl;
         }
         outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
+                << weldingVoltage << std::endl;
     } else if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_TO_HAND)) {
         outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
+                << weldingVoltage << std::endl;
     } else {
         PLOGE << "机器人手眼关系错误";
     }
@@ -152,49 +149,47 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             robotPose startTransition = startPose;
             applyWeldGunWithdraw(startTransition, 10.0);
 
-            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 10.0 << " "
-                    << startTransition.a_ << " " << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed << " "
-                    << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 10.0 << " " << startTransition.a_ << " "
+                    << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
+                    << weldingCurrent << " " << weldingVoltage << std::endl;
 
             // ================= 焊接起点=================
             robotPose startWeld = startPose;
             applyWeldGunWithdraw(startWeld, settingPara.TubeSidePlatFilletWithdrawDistance);
-            outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_
-                    << " " << startWeld.c_ << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent
-                    << " " << weldingVoltage << std::endl;
+            outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_ << " " << startWeld.c_
+                    << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
 
             // ================= 焊接终点=================
             robotPose endWeld = endPose;
             applyWeldGunWithdraw(endWeld, settingPara.TubeSidePlatFilletWithdrawDistance);
 
-            outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " "
-                    << endWeld.c_ << " " << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
-                    << " " << weldingVoltage << std::endl;
+            outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " " << endWeld.c_ << " "
+                    << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
 
             // ================= 终点过渡=================
             robotPose endTransition = endPose;
             applyWeldGunWithdraw(endTransition, 10.0);
 
-            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 10.0 << " " << endTransition.a_
-                    << " " << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " "
-                    << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 10.0 << " " << endTransition.a_ << " "
+                    << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
+                    << " " << weldingVoltage << std::endl;
         }
     }
     // ########################### 眼在手上写入拍照点, 眼在手外写入零过渡点 ###########################
     if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
         outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
+        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
+                << weldingVoltage << std::endl;
+        outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
+        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
                 << weldingCurrent << " " << weldingVoltage << std::endl;
         outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " "
-                << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
-        outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " "
-                << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
+                << weldingCurrent << " " << weldingVoltage << std::endl;
     } else if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_TO_HAND)) {
         outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
+                << weldingVoltage << std::endl;
     } else {
         PLOGE << "机器人手眼关系错误";
     }
@@ -335,8 +330,7 @@ void GantrayFrameTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr
         if (info->weldAreaPointCloudInCamera && !info->weldAreaPointCloudInCamera->empty()) {
             auto cloud_in = info->weldAreaPointCloudInCamera;
 
-            info->cloudFuture =
-                QtConcurrent::run([cloud_in, T_cam2base]() { return MyToolFunc::transformPointCloud(cloud_in, T_cam2base); });
+            info->cloudFuture = QtConcurrent::run([cloud_in, T_cam2base]() { return MyToolFunc::transformPointCloud(cloud_in, T_cam2base); });
         }
         // ---------- 2.2 转换焊缝母材系数 -----------
         pcl::ModelCoefficients::Ptr plane_base_trans;
@@ -455,11 +449,9 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
         if (info->otherSurface.empty()) continue;
 
         // ================= 1. 取起点终点 =================
-        Eigen::Vector3f P0(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y,
-                           info->weldEndPointsInRobot->at(0).z);
+        Eigen::Vector3f P0(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
 
-        Eigen::Vector3f P1(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y,
-                           info->weldEndPointsInRobot->at(1).z);
+        Eigen::Vector3f P1(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
 
         Eigen::Vector3f mid = 0.5f * (P0 + P1);
 
@@ -572,9 +564,8 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
         // saveToMatlabFull(file, P0, P1, mid, X, Y, Z, info->weldPlane, cylinder);
     }
 }
-void GantrayFrameTrajectoryPlanning::saveToMatlabFull(const std::string& filename, const Eigen::Vector3f& P0,
-                                                      const Eigen::Vector3f& P1, const Eigen::Vector3f& mid,
-                                                      const Eigen::Vector3f& X, const Eigen::Vector3f& Y,
+void GantrayFrameTrajectoryPlanning::saveToMatlabFull(const std::string& filename, const Eigen::Vector3f& P0, const Eigen::Vector3f& P1,
+                                                      const Eigen::Vector3f& mid, const Eigen::Vector3f& X, const Eigen::Vector3f& Y,
                                                       const Eigen::Vector3f& Z, const pcl::ModelCoefficients::Ptr& plane,
                                                       const pcl::ModelCoefficients::Ptr& cylinder) {
     std::ofstream ofs(filename);

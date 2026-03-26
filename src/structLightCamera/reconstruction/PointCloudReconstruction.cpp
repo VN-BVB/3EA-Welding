@@ -37,12 +37,10 @@ void PointCloudReconstruction::initPara() {
     }
 
     // 畸变系数集合  Opencv：k1, k2, p1, p2, k3
-    cameraDistortion =
-        (cv::Mat_<double>(5, 1) << structLightConfig.camera_distortion[0], structLightConfig.camera_distortion[1],
-         structLightConfig.camera_distortion[3], structLightConfig.camera_distortion[4], structLightConfig.camera_distortion[2]);
-    projectorDistortion = (cv::Mat_<double>(5, 1) << structLightConfig.project_distortion[0],
-                           structLightConfig.project_distortion[1], structLightConfig.project_distortion[3],
-                           structLightConfig.project_distortion[4], structLightConfig.project_distortion[2]);
+    cameraDistortion = (cv::Mat_<double>(5, 1) << structLightConfig.camera_distortion[0], structLightConfig.camera_distortion[1],
+                        structLightConfig.camera_distortion[3], structLightConfig.camera_distortion[4], structLightConfig.camera_distortion[2]);
+    projectorDistortion = (cv::Mat_<double>(5, 1) << structLightConfig.project_distortion[0], structLightConfig.project_distortion[1],
+                           structLightConfig.project_distortion[3], structLightConfig.project_distortion[4], structLightConfig.project_distortion[2]);
     // 初始化畸变表
     QtConcurrent::run([this]() { initDistortionMap(); });
 }
@@ -129,8 +127,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
     }
     PLOGD << "点云放缩平移... ...";
     for (auto& info : weldAreaInfo) {
-        MyToolFunc::scalePointClouds(info->weldAreaPointCloudInCamera, set.scaleOfPointX, set.transOfPointX, set.scaleOfPointY,
-                                     set.transOfPointY);
+        MyToolFunc::scalePointClouds(info->weldAreaPointCloudInCamera, set.scaleOfPointX, set.transOfPointX, set.scaleOfPointY, set.transOfPointY);
     }
     PLOGD << "焊缝区域点云重建完成";
 
@@ -164,8 +161,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
     }
     PLOGD << "点云放缩平移... ...";
     for (auto& info : weldAreaInfo) {
-        MyToolFunc::scalePointClouds(info->weldAreaPointCloudInCamera, set.scaleOfPointX, set.transOfPointX, set.scaleOfPointY,
-                                     set.transOfPointY);
+        MyToolFunc::scalePointClouds(info->weldAreaPointCloudInCamera, set.scaleOfPointX, set.transOfPointX, set.scaleOfPointY, set.transOfPointY);
     }
     PLOGD << "焊缝区域点云重建完成";
 
@@ -265,20 +261,19 @@ void PointCloudReconstruction::makeMaskForSeamsDet() {
     // 遍历每个结果
     for (int i = 0; i < detRes->size(); ++i) {
         PLOGD << "焊缝粗定位" << i << "结果: " << (*detRes.get())[i].classId << ", " << (*detRes.get())[i].score << ", "
-              << (*detRes.get())[i].topLeftX << ", " << (*detRes.get())[i].topLeftY << ", " << (*detRes.get())[i].bottomRightX
-              << ", " << (*detRes.get())[i].bottomRightY;
+              << (*detRes.get())[i].topLeftX << ", " << (*detRes.get())[i].topLeftY << ", " << (*detRes.get())[i].bottomRightX << ", "
+              << (*detRes.get())[i].bottomRightY;
 
         // 创建焊缝区域信息对象
         std::shared_ptr<WeldSeamInfo> seamInfo = std::make_shared<WeldSeamInfo>();
         seamInfo->areaNum = i;
         seamInfo->originalImg = afterDistortCorrect;  // 保存原始图像
-        seamInfo->rectPtr =
-            std::make_shared<cv::Rect_<float>>((*detRes.get())[i].topLeftX, (*detRes.get())[i].topLeftY,
-                                               (*detRes.get())[i].bottomRightX - (*detRes.get())[i].topLeftX,
-                                               (*detRes.get())[i].bottomRightY - (*detRes.get())[i].topLeftY);  // 保存目标框
+        seamInfo->rectPtr = std::make_shared<cv::Rect_<float>>((*detRes.get())[i].topLeftX, (*detRes.get())[i].topLeftY,
+                                                               (*detRes.get())[i].bottomRightX - (*detRes.get())[i].topLeftX,
+                                                               (*detRes.get())[i].bottomRightY - (*detRes.get())[i].topLeftY);  // 保存目标框
         seamInfo->weldAreaImg = afterDistortCorrect(*(seamInfo->rectPtr)).clone();         // 保存目标框内的图像
         seamInfo->weldAreaType = MyToolFunc::getWeldAreaType((*detRes.get())[i].classId);  // 保存焊缝类型
-        weldAreaInfo.push_back(seamInfo);  // 将焊缝区域信息添加到列表中
+        weldAreaInfo.push_back(seamInfo);                                                  // 将焊缝区域信息添加到列表中
 
         // 更新mask
         if (seamInfo->rectPtr.get()->area() > 0) {
@@ -302,9 +297,9 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
     if (detRes->size() == 0) {
         PLOGW << "检测结果为空，使用默认ROI";
         // detRes->emplace_back(1, 1.0f, 91, 237, 1500, 600);//管侧与三角肘板
-        detRes->emplace_back(1, 1.0f, 414, 343, 498, 438);
-        detRes->emplace_back(1, 1.0f, 596, 419, 1090, 469);
-        detRes->emplace_back(1, 1.0f, 1170, 285, 1207, 391);
+        detRes->emplace_back(0, 1.0f, 414, 343, 498, 438);
+        detRes->emplace_back(0, 1.0f, 596, 419, 1090, 469);
+        detRes->emplace_back(0, 1.0f, 1170, 285, 1207, 391);
     }
     // 如果检测到大于4个, 按照置信度排序, 并取前4个
     if (detRes->size() > 4) {
@@ -329,20 +324,19 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
         det.bottomRightY = y2;
 
         PLOGD << "焊缝粗定位" << i << "结果: " << (*detRes.get())[i].classId << ", " << (*detRes.get())[i].score << ", "
-              << (*detRes.get())[i].topLeftX << ", " << (*detRes.get())[i].topLeftY << ", " << (*detRes.get())[i].bottomRightX
-              << ", " << (*detRes.get())[i].bottomRightY;
+              << (*detRes.get())[i].topLeftX << ", " << (*detRes.get())[i].topLeftY << ", " << (*detRes.get())[i].bottomRightX << ", "
+              << (*detRes.get())[i].bottomRightY;
 
         // 创建焊缝区域信息对象
         std::shared_ptr<WeldSeamInfo> seamInfo = std::make_shared<WeldSeamInfo>();
         seamInfo->areaNum = i;
         seamInfo->originalImg = afterDistortCorrect;  // 保存原始图像
-        seamInfo->rectPtr =
-            std::make_shared<cv::Rect_<float>>((*detRes.get())[i].topLeftX, (*detRes.get())[i].topLeftY,
-                                               (*detRes.get())[i].bottomRightX - (*detRes.get())[i].topLeftX,
-                                               (*detRes.get())[i].bottomRightY - (*detRes.get())[i].topLeftY);  // 保存目标框
+        seamInfo->rectPtr = std::make_shared<cv::Rect_<float>>((*detRes.get())[i].topLeftX, (*detRes.get())[i].topLeftY,
+                                                               (*detRes.get())[i].bottomRightX - (*detRes.get())[i].topLeftX,
+                                                               (*detRes.get())[i].bottomRightY - (*detRes.get())[i].topLeftY);  // 保存目标框
         seamInfo->weldAreaImg = afterDistortCorrect(*(seamInfo->rectPtr)).clone();               // 保存目标框内的图像
         seamInfo->weldAreaType = MyToolFunc::getWeldAreaType((*detRes.get())[i].classId + 100);  // 保存焊缝类型
-        weldAreaInfo.push_back(seamInfo);  // 将焊缝区域信息添加到列表中
+        weldAreaInfo.push_back(seamInfo);                                                        // 将焊缝区域信息添加到列表中
 
         // 更新mask
         if (seamInfo->rectPtr.get()->area() > 0) {
@@ -353,9 +347,8 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
     if (weldAreaInfo.empty()) {
         return;
     } else {
-        skipWorkbenchFilter =
-            std::all_of(weldAreaInfo.begin(), weldAreaInfo.end(),
-                        [](const std::shared_ptr<WeldSeamInfo>& info) { return info && info->weldAreaType == Plate_Plate_F; });
+        skipWorkbenchFilter = std::all_of(weldAreaInfo.begin(), weldAreaInfo.end(),
+                                          [](const std::shared_ptr<WeldSeamInfo>& info) { return info && info->weldAreaType == Plate_Plate_F; });
     }
 }
 #endif
@@ -402,10 +395,10 @@ void PointCloudReconstruction::decodeGrayCode() {
     for (int i = 0; i < cameraHeight; i++) {                                                         // 高
         double* pixelModulation = (double*)modulation.data + i * cameraWidth;                        // 逐像素调制度
         double* pixelBinarizationThreshold = (double*)binarizationThreshold.data + i * cameraWidth;  // 逐像素黑白阈值
-        double* pixelProjectBlack = (double*)grayCodeImages[6].data + i * cameraWidth;  // 逐像素投影全黑时的像素值
-        double* pixelProjectWhite = (double*)grayCodeImages[7].data + i * cameraWidth;  // 逐像素投影全白时的像素值
-        uchar* pixelK1 = (uchar*)K1.data + i * cameraWidth;                             // 逐像素对应的传统格雷码编码
-        uchar* pixelK2 = (uchar*)K2.data + i * cameraWidth;                             // 逐像素对应的互补格雷码编码
+        double* pixelProjectBlack = (double*)grayCodeImages[6].data + i * cameraWidth;               // 逐像素投影全黑时的像素值
+        double* pixelProjectWhite = (double*)grayCodeImages[7].data + i * cameraWidth;               // 逐像素投影全白时的像素值
+        uchar* pixelK1 = (uchar*)K1.data + i * cameraWidth;                                          // 逐像素对应的传统格雷码编码
+        uchar* pixelK2 = (uchar*)K2.data + i * cameraWidth;                                          // 逐像素对应的互补格雷码编码
 
         for (int j = 0; j < cameraWidth; j++) {  // 宽
             if (maskForReconstruct.at<uchar>(i, j) != 0) {
@@ -453,7 +446,7 @@ void PointCloudReconstruction::phaseUnwrap() {
         double* pixelWrapPhase = (double*)wrapPhase.data + i * cameraWidth;          // 逐像素包裹相位
         double* pixelAbsolutePhase = (double*)absolutePhase.data + i * cameraWidth;  // 逐像素绝对相位
         uchar* pixelK1 = (uchar*)K1.data + i * cameraWidth;                          // 逐像素对应的传统格雷码编码
-        uchar* pixelK2 = (uchar*)K2.data + i * cameraWidth;  // 逐像素对应的传统加互补格雷码编码
+        uchar* pixelK2 = (uchar*)K2.data + i * cameraWidth;                          // 逐像素对应的传统加互补格雷码编码
 
         for (int j = 0; j < cameraWidth; j++) {  // 宽
             if (maskForReconstruct.at<uchar>(i, j) != 0) {
@@ -485,8 +478,8 @@ void PointCloudReconstruction::phaseUnwrap() {
 }
 
 // 5.0.1 相机和投影仪匹配对应点
-void PointCloudReconstruction::cameraProjectMatch(std::vector<cv::Point2d>& cameraCoord, std::vector<double>& projectCoord,
-                                                  int minU, int maxU, int minV, int maxV) {
+void PointCloudReconstruction::cameraProjectMatch(std::vector<cv::Point2d>& cameraCoord, std::vector<double>& projectCoord, int minU, int maxU,
+                                                  int minV, int maxV) {
 #pragma omp parallel num_threads(12)
     {
         std::vector<cv::Point2d> cameraCoordinatePrivate;  // 相机匹配点(u,v)
@@ -520,8 +513,8 @@ void PointCloudReconstruction::cameraProjectMatch(std::vector<cv::Point2d>& came
 }
 
 // 5.0.2 计算点云
-void PointCloudReconstruction::calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud,
-                                              std::vector<cv::Point2d>& cameraCoord, std::vector<double>& projectCoord) {
+void PointCloudReconstruction::calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud, std::vector<cv::Point2d>& cameraCoord,
+                                              std::vector<double>& projectCoord) {
     std::cout << projectCoord.size() << std::endl;
     const cv::Mat& Ac = structLightConfig.Ac;
     const cv::Mat& Ap = structLightConfig.Ap;
@@ -673,12 +666,10 @@ void PointCloudReconstruction::reconstructForWorkbench() {
     // 3. 点云后处理
     pointCloudPostProcess(reconstructPointCloud);
     auto t4 = std::chrono::steady_clock::now();
-    PLOGD << "step3 pointCloudPostProcess time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count()
-          << " ms";
+    PLOGD << "step3 pointCloudPostProcess time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count() << " ms";
 
     // 4. 拟合工作台平面
-    pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr modelPlane(
-        new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(reconstructPointCloud));
+    pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr modelPlane(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(reconstructPointCloud));
     pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(modelPlane);  // 定义RANSAC算法模型
     ransac.setDistanceThreshold(ransacPlaneThreshold);             // 设定距离阈值
     ransac.setMaxIterations(500);                                  // 设置最大迭代次数
@@ -808,6 +799,5 @@ void PointCloudReconstruction::reconstructPoint() {
 
     std::cout << "postProcess time: " << std::chrono::duration<double, std::milli>(t4 - t3).count() << " ms" << std::endl;
 
-    std::cout << "total reconstructPoint time: " << std::chrono::duration<double, std::milli>(t4 - t0).count() << " ms"
-              << std::endl;
+    std::cout << "total reconstructPoint time: " << std::chrono::duration<double, std::milli>(t4 - t0).count() << " ms" << std::endl;
 }

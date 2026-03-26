@@ -1,8 +1,8 @@
 ﻿#include "PointCloudFunc.h"
 
 // 直通滤波
-void MyToolFunc::passthroughFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                                   pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, double limit_min, double limit_max) {
+void MyToolFunc::passthroughFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, double limit_min,
+                                   double limit_max) {
     std::vector<int> index;
     for (int i = 0; i < cloud->points.size(); ++i) {
         if (cloud->points[i].z >= limit_min && cloud->points[i].z <= limit_max) index.push_back(i);
@@ -19,8 +19,8 @@ void MyToolFunc::passthroughFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
 }
 
 // 统计滤波
-void MyToolFunc::statisticalFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                                   pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, int nr_k, float std_mul) {
+void MyToolFunc::statisticalFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, int nr_k,
+                                   float std_mul) {
     pcl::KdTreeFLANN<pcl::PointXYZ> tree;
     tree.setInputCloud(cloud);
 
@@ -131,8 +131,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr MyToolFunc::transformPointCloud(const pcl::P
 }
 
 // 点云放缩与平移
-void MyToolFunc::scalePointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud, double scaleX, double transX, double scaleY,
-                                  double transY) {
+void MyToolFunc::scalePointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud, double scaleX, double transX, double scaleY, double transY) {
     // std::cout << "X * " << scaleX << " + " << transX << std::endl;
     // std::cout << "Y * " << scaleY << " + " << transY << std::endl;
 
@@ -221,19 +220,15 @@ void MyToolFunc::lineCloudEndPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, E
         pcl::PointXYZ B;                     // 离A最远的点B
         double dis = 0;
         for (int i = 0; i < cloud->points.size(); ++i) {  // 遍历直线点集合的点，找到离A最远的点B
-            if (sqrt(pow((cloud->points[i].x - A.x), 2) + pow((cloud->points[i].y - A.y), 2) +
-                     pow((cloud->points[i].z - A.z), 2)) >= dis) {
-                dis = sqrt(pow((cloud->points[i].x - A.x), 2) + pow((cloud->points[i].y - A.y), 2) +
-                           pow((cloud->points[i].z - A.z), 2));
+            if (sqrt(pow((cloud->points[i].x - A.x), 2) + pow((cloud->points[i].y - A.y), 2) + pow((cloud->points[i].z - A.z), 2)) >= dis) {
+                dis = sqrt(pow((cloud->points[i].x - A.x), 2) + pow((cloud->points[i].y - A.y), 2) + pow((cloud->points[i].z - A.z), 2));
                 B = cloud->points[i];
             }
         }
         pcl::PointXYZ C;                                  // 离B最远的点C
         for (int i = 0; i < cloud->points.size(); ++i) {  // 遍历直线点集合的点，找到离B最远的点C
-            if (sqrt(pow((cloud->points[i].x - B.x), 2) + pow((cloud->points[i].y - B.y), 2) +
-                     pow((cloud->points[i].z - B.z), 2)) >= dis) {
-                dis = sqrt(pow((cloud->points[i].x - B.x), 2) + pow((cloud->points[i].y - B.y), 2) +
-                           pow((cloud->points[i].z - B.z), 2));
+            if (sqrt(pow((cloud->points[i].x - B.x), 2) + pow((cloud->points[i].y - B.y), 2) + pow((cloud->points[i].z - B.z), 2)) >= dis) {
+                dis = sqrt(pow((cloud->points[i].x - B.x), 2) + pow((cloud->points[i].y - B.y), 2) + pow((cloud->points[i].z - B.z), 2));
                 C = cloud->points[i];
             }
         }
@@ -261,8 +256,7 @@ void MyToolFunc::lineCloudEndPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, E
     }
 }
 // 计算点到直线垂线
-void MyToolFunc::Solve_ProjectVerticalLine(Eigen::Vector4f& point, pcl::ModelCoefficients::Ptr& line_coff,
-                                           Eigen::Vector4f& VerticalLine_vector) {
+void MyToolFunc::Solve_ProjectVerticalLine(Eigen::Vector4f& point, pcl::ModelCoefficients::Ptr& line_coff, Eigen::Vector4f& VerticalLine_vector) {
     Eigen::Vector4f line_pt(line_coff->values[0], line_coff->values[1], line_coff->values[2], 0);
     Eigen::Vector4f line_dir(line_coff->values[3], line_coff->values[4], line_coff->values[5], 0);
 
@@ -273,8 +267,7 @@ void MyToolFunc::Solve_ProjectVerticalLine(Eigen::Vector4f& point, pcl::ModelCoe
 }
 
 // 点投影到平面
-void MyToolFunc::projPoint2Plane(const pcl::PointXYZ& point, const pcl::ModelCoefficients& coefficients,
-                                 pcl::PointXYZ& projection) {
+void MyToolFunc::projPoint2Plane(const pcl::PointXYZ& point, const pcl::ModelCoefficients& coefficients, pcl::PointXYZ& projection) {
     // 从ModelCoefficients中提取平面的参数
     float a = coefficients.values[0];
     float b = coefficients.values[1];
@@ -417,9 +410,8 @@ void MyToolFunc::myFastMaxCluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, dou
 }
 
 // 计算高曲率点
-void MyToolFunc::highCurvaturePointsDetect(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_detect,
-                                           pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double K_Radius, double sm_ratio,
-                                           pcl::PointCloud<pcl::PointXYZ>::Ptr high_curvature_scatter_points) {
+void MyToolFunc::highCurvaturePointsDetect(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_detect, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+                                           double K_Radius, double sm_ratio, pcl::PointCloud<pcl::PointXYZ>::Ptr high_curvature_scatter_points) {
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;  // 建立kdtree对象
     kdtree.setInputCloud(cloud);             // 设置需要建立kdtree的点云指针
     pcl::PointXYZ searchPoint;
@@ -463,14 +455,13 @@ void MyToolFunc::highCurvaturePointsDetect(pcl::PointCloud<pcl::PointXYZ>::Ptr c
 }
 
 // 计算直线内点端点
-std::vector<pcl::PointXYZ> MyToolFunc::lineCloudEndPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr lineCloud,
-                                                          pcl::ModelCoefficients::Ptr coefficients) {
+std::vector<pcl::PointXYZ> MyToolFunc::lineCloudEndPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr lineCloud, pcl::ModelCoefficients::Ptr coefficients) {
     // 1.排序
     std::vector<std::pair<int, double>> idxSorted(lineCloud->size());
     for (int j = 0; j < lineCloud->size(); j++) {
         idxSorted[j].first = j;
-        idxSorted[j].second = lineCloud->points[j].getVector3fMap().dot(
-            Eigen::Map<Eigen::Vector3f>(const_cast<float*>(coefficients->values.data() + 3), 3));
+        idxSorted[j].second =
+            lineCloud->points[j].getVector3fMap().dot(Eigen::Map<Eigen::Vector3f>(const_cast<float*>(coefficients->values.data() + 3), 3));
     }
     std::sort(idxSorted.begin(), idxSorted.end(),
               [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) { return lhs.second < rhs.second; });
@@ -509,8 +500,8 @@ void MyToolFunc::pointcloudUniformDownsampling(const pcl::PointCloud<pcl::PointX
     }
 }
 // 点云投影至指定平面
-void MyToolFunc::projectCloudToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
-                                     pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud, pcl::ModelCoefficients::Ptr planeCoeffs) {
+void MyToolFunc::projectCloudToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
+                                     pcl::ModelCoefficients::Ptr planeCoeffs) {
     if (!input_cloud || !output_cloud || input_cloud->empty()) {
         PLOGE << "projectCloudToPlane: 输入参数无效";
         return;
@@ -519,14 +510,18 @@ void MyToolFunc::projectCloudToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_c
         PLOGE << "projectCloudToPlane: 平面系数无效";
         return;
     }
+    pcl::PointCloud<pcl::PointXYZ>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZ>);
+
     pcl::ProjectInliers<pcl::PointXYZ> proj;
     proj.setModelType(pcl::SACMODEL_PLANE);
     proj.setInputCloud(input_cloud);
     proj.setModelCoefficients(planeCoeffs);
-    proj.filter(*output_cloud);
+    proj.filter(*tmp);
+
+    output_cloud->swap(*tmp);
 }
 
-// 构造圆柱点云
+// 构造圆柱点云（理论点云）
 pcl::PointCloud<pcl::PointXYZ>::Ptr MyToolFunc::generateCylinderCloud(pcl::ModelCoefficients::Ptr cylinder) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 

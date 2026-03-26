@@ -5,8 +5,7 @@
 #include "utils/pointCloud/PointCloudFunc.h"
 TubeSidePlateFilletSeamsDet::TubeSidePlateFilletSeamsDet(QObject* parent) : AbstractSeamDet{parent} {}
 
-std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSeamsEndPoints(
-    std::vector<std::shared_ptr<WeldSeamInfo>> seamsInfo) {
+std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSeamsEndPoints(std::vector<std::shared_ptr<WeldSeamInfo>> seamsInfo) {
     tempWeldSeamsInfo = seamsInfo;
     for (size_t i = 0; i < tempWeldSeamsInfo.size(); i++) {
         singleSeamReinitialize();
@@ -34,12 +33,10 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
         cloudPlaneInWeldAreaWithSeam->height = 1;
         cloudPlaneInWeldAreaWithSeam->width = static_cast<uint32_t>(cloudPlaneInWeldAreaWithSeam->size());
         if (saveFlag) {
-            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea.pcd",
-                                 *cloudPlaneInWeldAreaWithSeam);
+            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea.pcd", *cloudPlaneInWeldAreaWithSeam);
             cloudNoPlaneInWeldArea->height = 1;
             cloudNoPlaneInWeldArea->width = static_cast<uint32_t>(cloudNoPlaneInWeldArea->size());
-            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudNoPlaneInWeldArea.pcd",
-                                 *cloudNoPlaneInWeldArea);
+            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudNoPlaneInWeldArea.pcd", *cloudNoPlaneInWeldArea);
         }
 
         ransacCylinder(cloudNoPlaneInWeldArea, cloudCylinderInWeldArea);
@@ -51,37 +48,32 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
         if (saveFlag) {
             cloudCylinderInWeldArea->height = 1;
             cloudCylinderInWeldArea->width = static_cast<uint32_t>(cloudCylinderInWeldArea->size());
-            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudCylinderInWeldArea.pcd",
-                                 *cloudCylinderInWeldArea);
+            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudCylinderInWeldArea.pcd", *cloudCylinderInWeldArea);
         }
         removeCylinderPoints(cloudPlaneInWeldAreaWithSeam);
         if (saveFlag) {
             cloudPlaneInWeldAreaWithSeam->height = 1;
             cloudPlaneInWeldAreaWithSeam->width = static_cast<uint32_t>(cloudPlaneInWeldAreaWithSeam->size());
-            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea2.pcd",
-                                 *cloudPlaneInWeldAreaWithSeam);
+            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea2.pcd", *cloudPlaneInWeldAreaWithSeam);
         }
         // 统计滤波
         statisticFilter(cloudPlaneInWeldAreaWithSeam);
         if (saveFlag) {
             cloudPlaneInWeldAreaWithSeam->height = 1;
             cloudPlaneInWeldAreaWithSeam->width = static_cast<uint32_t>(cloudPlaneInWeldAreaWithSeam->size());
-            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea3.pcd",
-                                 *cloudPlaneInWeldAreaWithSeam);
+            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea3.pcd", *cloudPlaneInWeldAreaWithSeam);
         }
         MyToolFunc::myFastMaxCluster(cloudPlaneInWeldAreaWithSeam, 2);
         if (saveFlag) {
             cloudPlaneInWeldAreaWithSeam->height = 1;
             cloudPlaneInWeldAreaWithSeam->width = static_cast<uint32_t>(cloudPlaneInWeldAreaWithSeam->size());
-            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea4.pcd",
-                                 *cloudPlaneInWeldAreaWithSeam);
+            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea4.pcd", *cloudPlaneInWeldAreaWithSeam);
         }
-        detectSuccFlag = solveBeamButtSeamEndPoints();
+        detectSuccFlag = solveSeamEndPoints();
         // 保存本次检测到的信息
         tempWeldSeamsInfo[i]->detectSuccFlag = detectSuccFlag;
         if (detectSuccFlag) {
-            tempWeldSeamsInfo[i]->weldEndPointsInCamera.reset(
-                new std::vector<pcl::PointXYZ>(std::move(filletSeamsTSP)));  // 检测结果
+            tempWeldSeamsInfo[i]->weldEndPointsInCamera.reset(new std::vector<pcl::PointXYZ>(std::move(filletSeamsTSP)));  // 检测结果
             tempWeldSeamsInfo[i]->weldEndPointsInRobot.reset(new std::vector<pcl::PointXYZ>());
             tempWeldSeamsInfo[i]->weldPlane = planeCoeffsWithWeldSeam;
             tempWeldSeamsInfo[i]->otherSurface.emplace_back(cylinderCoeffsInWeldArea);
@@ -117,8 +109,7 @@ void TubeSidePlateFilletSeamsDet::statisticFilter(pcl::PointCloud<pcl::PointXYZ>
     sor.filter(*input_cloud);  // 存储内点
 }
 // Ransac拟合平面，并输出平面的内点集合
-void TubeSidePlateFilletSeamsDet::ransacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
-                                              pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_plane,
+void TubeSidePlateFilletSeamsDet::ransacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_plane,
                                               pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_noplane) {
     // 创建分割对象
     pcl::SACSegmentation<pcl::PointXYZ> seg;
@@ -139,8 +130,7 @@ void TubeSidePlateFilletSeamsDet::ransacPlane(pcl::PointCloud<pcl::PointXYZ>::Pt
     extract.filter(*output_cloud_noplane);
 }
 // Ransac拟合平面，并输出平面的内点集合
-void TubeSidePlateFilletSeamsDet::ransacCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
-                                                 pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud) {
+void TubeSidePlateFilletSeamsDet::ransacCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud) {
     if (!input_cloud || input_cloud->empty() || !output_cloud) {
         PLOGE << "Ransac_cylinder: 输入参数无效";
         return;
@@ -211,13 +201,11 @@ void TubeSidePlateFilletSeamsDet::removeCylinderPoints(pcl::PointCloud<pcl::Poin
 
     /* ================== 2 构建局部坐标系 ================== */
 
-    Eigen::Vector3d cylinderDir(cylinderCoeffsInWeldArea->values[3], cylinderCoeffsInWeldArea->values[4],
-                                cylinderCoeffsInWeldArea->values[5]);
+    Eigen::Vector3d cylinderDir(cylinderCoeffsInWeldArea->values[3], cylinderCoeffsInWeldArea->values[4], cylinderCoeffsInWeldArea->values[5]);
 
     cylinderDir.normalize();
 
-    Eigen::Vector3d planeNormal(planeCoeffsWithWeldSeam->values[0], planeCoeffsWithWeldSeam->values[1],
-                                planeCoeffsWithWeldSeam->values[2]);
+    Eigen::Vector3d planeNormal(planeCoeffsWithWeldSeam->values[0], planeCoeffsWithWeldSeam->values[1], planeCoeffsWithWeldSeam->values[2]);
 
     planeNormal.normalize();
 
@@ -367,25 +355,21 @@ void TubeSidePlateFilletSeamsDet::removeCylinderPoints(pcl::PointCloud<pcl::Poin
     cloud->swap(*result);
 }
 
-bool TubeSidePlateFilletSeamsDet::solveBeamButtSeamEndPoints() {
-    if (!cloudPlaneInWeldAreaWithSeam || cloudPlaneInWeldAreaWithSeam->empty() || !cylinderCoeffsInWeldArea ||
-        !planeCoeffsWithWeldSeam) {
+bool TubeSidePlateFilletSeamsDet::solveSeamEndPoints() {
+    if (!cloudPlaneInWeldAreaWithSeam || cloudPlaneInWeldAreaWithSeam->empty() || !cylinderCoeffsInWeldArea || !planeCoeffsWithWeldSeam) {
         PLOGE << "SolveBeamButtSeamEndPoints: 输入参数无效";
         return false;
     }
 
     /* ================== 平面参数 ================== */
-    Eigen::Vector3d planeN(planeCoeffsWithWeldSeam->values[0], planeCoeffsWithWeldSeam->values[1],
-                           planeCoeffsWithWeldSeam->values[2]);
+    Eigen::Vector3d planeN(planeCoeffsWithWeldSeam->values[0], planeCoeffsWithWeldSeam->values[1], planeCoeffsWithWeldSeam->values[2]);
     planeN.normalize();
     double planeD = planeCoeffsWithWeldSeam->values[3];
 
     /* ================== 圆柱参数 ================== */
-    Eigen::Vector3d p0(cylinderCoeffsInWeldArea->values[0], cylinderCoeffsInWeldArea->values[1],
-                       cylinderCoeffsInWeldArea->values[2]);
+    Eigen::Vector3d p0(cylinderCoeffsInWeldArea->values[0], cylinderCoeffsInWeldArea->values[1], cylinderCoeffsInWeldArea->values[2]);
 
-    Eigen::Vector3d ez(cylinderCoeffsInWeldArea->values[3], cylinderCoeffsInWeldArea->values[4],
-                       cylinderCoeffsInWeldArea->values[5]);
+    Eigen::Vector3d ez(cylinderCoeffsInWeldArea->values[3], cylinderCoeffsInWeldArea->values[4], cylinderCoeffsInWeldArea->values[5]);
     ez.normalize();
 
     double R = cylinderCoeffsInWeldArea->values[6];

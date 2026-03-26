@@ -174,7 +174,7 @@ std::string MyToolFunc::getWeldTypeString(WELD_TYPE weldType) {
             return "FRONT_HORIZONTAL_FILLET";
         case WELD_TYPE::FRONT_VERTICAL_FILLET:
             return "FRONT_VERTICAL_FILLET";
-        case WELD_TYPE::Plate_Plate_Fillet:
+        case WELD_TYPE::Plate_Plate_Fillet_V:
             return "Plate_Plate_Fillet";
         case WELD_TYPE::TubeSide_Plate_F_H:
             return "TubeSide_Plate_Fillet";

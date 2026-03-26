@@ -29,6 +29,7 @@ class SeamDetWithPointCloud : public QObject {
     Q_OBJECT
 public:
     explicit SeamDetWithPointCloud(QObject* parent = nullptr);
+    void initGantrayFrameSeamsDet();
 
 signals:
     void sendDetSeamWithPointCloud(std::vector<std::shared_ptr<WeldSeamInfo>> weldInfo);  // 发出求解完成的焊缝
@@ -40,10 +41,9 @@ private:
     // 龙门支架
     std::unordered_map<WELD_AREA_TYPE, std::function<std::shared_ptr<AbstractSeamDet>()>> gantrayFrameSeamsDet;  // 板对板角接焊缝求解类
     // 焊缝信息容器
-    std::vector<std::shared_ptr<WeldSeamInfo>> tubeSidePlateButtInfo;
-
+    std::vector<std::shared_ptr<WeldSeamInfo>> tempWeldSeamsInfo;  // 临时焊缝信息
     // 用于接收线程池返回值的future对象
-    std::vector<std::future<std::vector<std::shared_ptr<WeldSeamInfo>>>> tubeSidePlateButtFuture;
+    std::vector<std::future<std::vector<std::shared_ptr<WeldSeamInfo>>>> WeldSeamsfutures;
 
     // 角钢
     std::shared_ptr<AbstractSeamDet> beamButtSeamsDet{nullptr};        // 横梁对接求解类
@@ -58,8 +58,6 @@ private:
     std::shared_ptr<AbstractSeamDet> cornerButtSeamsDetSec{nullptr};      // 边角对接求解类
     std::shared_ptr<AbstractSeamDet> downBeamFilletSeamsDetSec{nullptr};  // 倒立角接焊缝求解类
     std::shared_ptr<AbstractSeamDet> upBeamFilletSeamsDetSec{nullptr};    // 正立交接焊缝求解类
-
-    std::vector<std::shared_ptr<WeldSeamInfo>> tempWeldSeamsInfo;  // 临时焊缝信息
 
     std::vector<std::shared_ptr<WeldSeamInfo>> beamButtInfo;        // 横梁对接焊缝
     std::vector<std::shared_ptr<WeldSeamInfo>> cornerButtInfo;      // 边角对接焊缝
