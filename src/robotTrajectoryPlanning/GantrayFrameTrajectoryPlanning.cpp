@@ -91,6 +91,7 @@ void GantrayFrameTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::sha
         info->weldAreaPointCloudInRobot = info->cloudFuture.result();
     }
     PLOGD << "已发送";
+
     // 发出规划完成的焊缝
     emit sendPlannedSeams(weldSeamInfo);
 }
@@ -171,6 +172,68 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             applyWeldGunWithdraw(endTransition, 10.0);
 
             outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 10.0 << " " << endTransition.a_ << " "
+                    << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
+                    << " " << weldingVoltage << std::endl;
+        } else if (info->weldType == Plate_Plate_Fillet_V) {
+            const robotPose& startPose = info->robotWeldPose[0];
+            const robotPose& endPose = info->robotWeldPose[1];
+
+            // ================= 起点过渡=================
+            robotPose startTransition = startPose;
+            applyWeldGunWithdraw(startTransition, 40.0);
+
+            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 40.0 << " " << startTransition.a_ << " "
+                    << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed / 10 << " " << ARC_STOP << " " << LINE_WELD << " "
+                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            // ================= 焊接起点=================
+            robotPose startWeld = startPose;
+            applyWeldGunWithdraw(startWeld, 8.0);
+            outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_ << " " << startWeld.c_
+                    << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+
+            // ================= 焊接终点=================
+            robotPose endWeld = endPose;
+            applyWeldGunWithdraw(endWeld, 8.0);
+
+            outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " " << endWeld.c_ << " "
+                    << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+
+            // ================= 终点过渡=================
+            robotPose endTransition = endPose;
+            applyWeldGunWithdraw(endTransition, 40.0);
+
+            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 40.0 << " " << endTransition.a_ << " "
+                    << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
+                    << " " << weldingVoltage << std::endl;
+        } else if (info->weldType == Plate_Plate_Fillet_H) {
+            const robotPose& startPose = info->robotWeldPose[0];
+            const robotPose& endPose = info->robotWeldPose[1];
+
+            // ================= 起点过渡=================
+            robotPose startTransition = startPose;
+            applyWeldGunWithdraw(startTransition, 20.0);
+
+            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 20.0 << " " << startTransition.a_ << " "
+                    << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed / 10 << " " << ARC_STOP << " " << LINE_WELD << " "
+                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            // ================= 焊接起点=================
+            robotPose startWeld = startPose;
+            applyWeldGunWithdraw(startWeld, 5.0);
+            outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_ << " " << startWeld.c_
+                    << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+
+            // ================= 焊接终点=================
+            robotPose endWeld = endPose;
+            applyWeldGunWithdraw(endWeld, 5.0);
+
+            outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " " << endWeld.c_ << " "
+                    << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+
+            // ================= 终点过渡=================
+            robotPose endTransition = endPose;
+            applyWeldGunWithdraw(endTransition, 20.0);
+
+            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 20.0 << " " << endTransition.a_ << " "
                     << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
                     << " " << weldingVoltage << std::endl;
         }
@@ -415,9 +478,9 @@ void GantrayFrameTrajectoryPlanning::determineWorkpieceOri(std::vector<std::shar
 }
 void GantrayFrameTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     // ===== 参考点（机器人当前位置）=====
-    // Eigen::Vector3f ref(trajectoryConfig.matrixEnd2Base(0, 3), trajectoryConfig.matrixEnd2Base(1, 3),
-    //                     trajectoryConfig.matrixEnd2Base(2, 3));
-    Eigen::Vector3f ref(0.0f, 0.0f, 0.0f);  // 基座
+    Eigen::Vector3f ref(trajectoryConfig.matrixEnd2Base(0, 3), trajectoryConfig.matrixEnd2Base(1, 3), trajectoryConfig.matrixEnd2Base(2, 3));
+    if (weldSeamInfo.empty()) return;
+    // Eigen::Vector3f ref(0.0f, 0.0f, 0.0f);  // 基座
 
     for (auto& info : weldSeamInfo) {
         if (!info || !info->detectSuccFlag) continue;
@@ -437,95 +500,259 @@ void GantrayFrameTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<W
             std::swap(pts[0], pts[1]);
         }
     }
+    // =====是否存在 Plate_Plate_F =====
+    if (std::any_of(weldSeamInfo.begin(), weldSeamInfo.end(),
+                    [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == Plate_Plate_F; })) {
+        planPlatePlateFilletSeamOrientation(weldSeamInfo);
+    }
 }
 void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     for (auto& info : weldSeamInfo) {
+        Eigen::Vector3f P0;
+        Eigen::Vector3f P1;
+        double a;
+        double b;
+        double c;
         if (!info || !info->detectSuccFlag) continue;
 
         if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) continue;
+        if (info->weldType == TubeSide_Plate_F_H) {
+            if (!info->weldPlane || info->weldPlane->values.size() != 4) continue;
 
-        if (!info->weldPlane || info->weldPlane->values.size() != 4) continue;
+            if (info->otherSurface.empty()) continue;
 
-        if (info->otherSurface.empty()) continue;
+            // ================= 1. 取起点终点 =================
+            P0 = Eigen::Vector3f(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
 
-        // ================= 1. 取起点终点 =================
-        Eigen::Vector3f P0(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
+            P1 = Eigen::Vector3f(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
 
-        Eigen::Vector3f P1(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
+            Eigen::Vector3f mid = 0.5f * (P0 + P1);
 
-        Eigen::Vector3f mid = 0.5f * (P0 + P1);
+            // ================= 2. 平面法向 =================
+            Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            n1.normalize();
 
-        // ================= 2. 平面法向 =================
-        Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
-        n1.normalize();
+            // ================= 3. 圆柱法向 =================
+            Eigen::Vector3f n2(0, 0, 0);
 
-        // ================= 3. 圆柱法向 =================
-        Eigen::Vector3f n2(0, 0, 0);
+            for (auto& surf : info->otherSurface) {
+                if (!surf || surf->values.size() != 7) continue;
 
-        for (auto& surf : info->otherSurface) {
-            if (!surf || surf->values.size() != 7) continue;
+                Eigen::Vector3f axis(surf->values[3], surf->values[4], surf->values[5]);
+                axis.normalize();
 
-            Eigen::Vector3f axis(surf->values[3], surf->values[4], surf->values[5]);
-            axis.normalize();
+                Eigen::Vector3f pointOnAxis(surf->values[0], surf->values[1], surf->values[2]);
 
-            Eigen::Vector3f pointOnAxis(surf->values[0], surf->values[1], surf->values[2]);
+                Eigen::Vector3f v = mid - pointOnAxis;
+                n2 = v - v.dot(axis) * axis;
 
-            Eigen::Vector3f v = mid - pointOnAxis;
-            n2 = v - v.dot(axis) * axis;
+                if (n2.norm() > 1e-6) {
+                    n2.normalize();
+                    break;
+                }
+            }
 
-            if (n2.norm() > 1e-6) {
+            if (n2.norm() < 1e-6) n2 = n1;
+
+            // ================= 4. Z轴 =================
+            Eigen::Vector3f Z = (tubeSidePlateFilletPlanePoseW * n1 + (1.0f - tubeSidePlateFilletPlanePoseW) * n2).normalized();
+
+            if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+
+            // ================= 5. Y轴（焊缝方向） =================
+            Eigen::Vector3f dir = (P1 - P0).normalized();
+
+            Eigen::Vector3f Y = dir - dir.dot(Z) * Z;
+
+            if (Y.norm() < 1e-6) {
+                Eigen::Vector3f fallback(1, 0, 0);
+                if (fabs(fallback.dot(Z)) > 0.9) fallback = Eigen::Vector3f(0, 1, 0);
+
+                Y = fallback - fallback.dot(Z) * Z;
+            }
+
+            Y.normalize();
+
+            if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
+
+            // ================= 6. X轴 =================
+            Eigen::Vector3f X = Y.cross(Z).normalized();
+
+            if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0) {
+                X = -X;
+                Y = -Y;
+            }
+
+            // ================= 7. 重正交 =================
+            Z = X.cross(Y).normalized();
+
+            // ================= 8. 旋转矩阵 =================
+            Eigen::Matrix3f R_ref;
+            R_ref.col(0) = X;
+            R_ref.col(1) = Y;
+            R_ref.col(2) = Z;
+            std::vector<double> currentABC = {trajectoryConfig.currentRobotPose.a_, trajectoryConfig.currentRobotPose.b_,
+                                              trajectoryConfig.currentRobotPose.c_};
+            std::vector<double> targetABC = MyToolFunc::extractEulerZYX(R_ref, currentABC);
+
+            a = targetABC[0];
+            b = targetABC[1];
+            c = targetABC[2];
+        } else if (info->weldType == Plate_Plate_Fillet_H) {
+            if (info->otherSurface.size() < 1) continue;
+
+            // ===== 1. 端点 =====
+            P0 = Eigen::Vector3f(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
+
+            P1 = Eigen::Vector3f(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
+
+            // ===== 2. 两个平面法向 =====
+            Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            n1.normalize();
+
+            Eigen::Vector3f n2(0, 0, 0);
+            for (auto& surf : info->otherSurface) {
+                if (!surf || surf->values.size() != 4) continue;
+
+                n2 = Eigen::Vector3f(surf->values[0], surf->values[1], surf->values[2]);
                 n2.normalize();
                 break;
             }
+
+            if (n2.norm() < 1e-6) n2 = n1;
+
+            // ===== 3. Z轴（角平分方向）=====
+            Eigen::Vector3f Z = (platePlateFilletPlanePoseW_H * n1 + (1.0f - platePlateFilletPlanePoseW_H) * n2).normalized();
+
+            // 朝下
+            if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+
+            // ===== 4. Y轴（焊缝方向）=====
+            Eigen::Vector3f dir = (P1 - P0).normalized();
+
+            Eigen::Vector3f Y = dir - dir.dot(Z) * Z;
+
+            if (Y.norm() < 1e-6) {
+                Eigen::Vector3f fallback(1, 0, 0);
+                if (fabs(fallback.dot(Z)) > 0.9) fallback = Eigen::Vector3f(0, 1, 0);
+
+                Y = fallback - fallback.dot(Z) * Z;
+            }
+
+            Y.normalize();
+
+            // Y反向
+            if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
+
+            // ===== 5. X轴 =====
+            Eigen::Vector3f X = Y.cross(Z).normalized();
+
+            // X正向
+            if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0) {
+                X = -X;
+                Y = -Y;
+            }
+
+            // ===== 6. 重正交 =====
+            Z = X.cross(Y).normalized();
+
+            // ===== 7. 欧拉角 =====
+            Eigen::Matrix3f R_ref;
+            R_ref.col(0) = X;
+            R_ref.col(1) = Y;
+            R_ref.col(2) = Z;
+
+            std::vector<double> currentABC = {trajectoryConfig.currentRobotPose.a_, trajectoryConfig.currentRobotPose.b_,
+                                              trajectoryConfig.currentRobotPose.c_};
+
+            auto targetABC = MyToolFunc::extractEulerZYX(R_ref, currentABC);
+
+            a = targetABC[0];
+            b = targetABC[1];
+            c = targetABC[2];
+
+        } else if (info->weldType == Plate_Plate_Fillet_V) {
+            if (!info->weldPlane || info->weldPlane->values.size() != 4) continue;
+            if (info->otherSurface.empty()) continue;
+
+            // ===== 1. 端点 =====
+            P0 = Eigen::Vector3f(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
+
+            P1 = Eigen::Vector3f(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
+
+            Eigen::Vector3f seamDir = (P0 - P1).normalized();
+
+            // ===== 2. 主平面法向 =====
+            Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            n1.normalize();
+
+            // ===== 3. otherSurface 法向 =====
+            Eigen::Vector3f n2(0, 0, 0);
+            for (auto& surf : info->otherSurface) {
+                if (!surf || surf->values.size() != 4) continue;
+
+                n2 = Eigen::Vector3f(surf->values[0], surf->values[1], surf->values[2]);
+                n2.normalize();
+                break;
+            }
+            // PLOGD << "区域" << info->areaNum << "第一平面向量系数为" << n1;
+            // PLOGD << "区域" << info->areaNum << "第二平面向量系数为:" << n2;
+            // PLOGD << "区域" << info->areaNum << "焊缝向量系数为:" << seamDir;
+            if (n2.norm() < 1e-6) n2 = n1;
+
+            // ===== 4. 第一层融合（平面角平分）=====
+
+            Eigen::Vector3f N_mid = (platePlateFilletPlanePoseW_V * n1 + (1.0f - platePlateFilletPlanePoseW_V) * n2).normalized();
+
+            // ===== 5. 第二层融合（加入焊缝方向）=====
+
+            Eigen::Vector3f Z = (platePlateFilletWeldPoseW_V * seamDir + (1.0f - platePlateFilletWeldPoseW_V) * N_mid).normalized();
+
+            // ===== 6. Z方向约束（朝下）=====
+            if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+
+            // ===== 7. Y轴（用立板方向 n2）=====
+            Eigen::Vector3f Y = n2;
+
+            // 投影到垂直于Z
+            Y = Y - Y.dot(Z) * Z;
+
+            if (Y.norm() < 1e-6) {
+                Y = seamDir - seamDir.dot(Z) * Z;
+            }
+
+            Y.normalize();
+
+            // Y反向（你要求）
+            if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
+
+            // ===== 8. X轴 =====
+            Eigen::Vector3f X = Y.cross(Z).normalized();
+
+            // X正向
+            if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0) {
+                X = -X;
+                Y = -Y;
+            }
+
+            // ===== 9. 重正交 =====
+            Z = X.cross(Y).normalized();
+
+            // ===== 10. 旋转矩阵 =====
+            Eigen::Matrix3f R_ref;
+            R_ref.col(0) = X;
+            R_ref.col(1) = Y;
+            R_ref.col(2) = Z;
+
+            std::vector<double> currentABC = {trajectoryConfig.currentRobotPose.a_, trajectoryConfig.currentRobotPose.b_,
+                                              trajectoryConfig.currentRobotPose.c_};
+
+            std::vector<double> targetABC = MyToolFunc::extractEulerZYX(R_ref, currentABC);
+
+            a = targetABC[0];
+            b = targetABC[1];
+            c = targetABC[2];
         }
-
-        if (n2.norm() < 1e-6) n2 = n1;
-
-        // ================= 4. Z轴 =================
-        Eigen::Vector3f Z = (tubeSidePlateFilletPlanePoseW * n1 + tubeSidePlateFilletCylinderPoseW * n2).normalized();
-
-        if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
-
-        // ================= 5. Y轴（焊缝方向） =================
-        Eigen::Vector3f dir = (P1 - P0).normalized();
-
-        Eigen::Vector3f Y = dir - dir.dot(Z) * Z;
-
-        if (Y.norm() < 1e-6) {
-            Eigen::Vector3f fallback(1, 0, 0);
-            if (fabs(fallback.dot(Z)) > 0.9) fallback = Eigen::Vector3f(0, 1, 0);
-
-            Y = fallback - fallback.dot(Z) * Z;
-        }
-
-        Y.normalize();
-
-        if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
-
-        // ================= 6. X轴 =================
-        Eigen::Vector3f X = Y.cross(Z).normalized();
-
-        if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0) {
-            X = -X;
-            Y = -Y;
-        }
-
-        // ================= 7. 重正交 =================
-        Z = X.cross(Y).normalized();
-
-        // ================= 8. 旋转矩阵 =================
-        Eigen::Matrix3f R_ref;
-        R_ref.col(0) = X;
-        R_ref.col(1) = Y;
-        R_ref.col(2) = Z;
-        std::vector<double> currentABC = {trajectoryConfig.currentRobotPose.a_, trajectoryConfig.currentRobotPose.b_,
-                                          trajectoryConfig.currentRobotPose.c_};
-        std::vector<double> targetABC = MyToolFunc::extractEulerZYX(R_ref, currentABC);
-
-        double a = targetABC[0];
-        double b = targetABC[1];
-        double c = targetABC[2];
-
         // ================= 10. 写入两个点 =================
         robotPose pose_start, pose_end;
 
@@ -699,61 +926,279 @@ Eigen::Vector3d GantrayFrameTrajectoryPlanning::abcToDirection(double a, double 
     return dir.normalized();
 }
 void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
-    for (auto& info : weldSeamInfo) {
-        if (!info || !info->detectSuccFlag) continue;
-        if (info->weldType = TubeSide_Plate_F_H) {
-            if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
-            if (!info->weldPlane || info->weldPlane->values.size() < 4) continue;
+    if (weldSeamInfo[0]->weldAreaType == TubeSide_Plate_F) {
+        for (auto& info : weldSeamInfo) {
+            if (!info || !info->detectSuccFlag) continue;
+            if (info->weldType = TubeSide_Plate_F_H) {
+                if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
+                if (!info->weldPlane || info->weldPlane->values.size() < 4) continue;
 
-            auto& pts = *(info->weldEndPointsInRobot);
+                auto& pts = *(info->weldEndPointsInRobot);
 
-            Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
-            Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
+                Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
+                Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
 
-            if ((P1 - P0).norm() < 1e-6) continue;
+                if ((P1 - P0).norm() < 1e-6) continue;
 
-            /* ================= 坐标系构建 ================= */
+                /* ================= 坐标系构建 ================= */
 
-            Eigen::Vector3f xAxis = (P1 - P0).normalized();
+                Eigen::Vector3f xAxis = (P1 - P0).normalized();
 
-            Eigen::Vector3f zAxis(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
-            zAxis.normalize();
+                Eigen::Vector3f zAxis(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+                zAxis.normalize();
 
-            Eigen::Vector3f yAxis = zAxis.cross(xAxis).normalized();
-            zAxis = xAxis.cross(yAxis).normalized();
+                Eigen::Vector3f yAxis = zAxis.cross(xAxis).normalized();
+                zAxis = xAxis.cross(yAxis).normalized();
 
-            Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
-            T.block<3, 3>(0, 0).col(0) = xAxis;
-            T.block<3, 3>(0, 0).col(1) = yAxis;
-            T.block<3, 3>(0, 0).col(2) = zAxis;
-            T.block<3, 1>(0, 3) = P0;
-            Eigen::Matrix4f T_inv = T.inverse();
+                Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
+                T.block<3, 3>(0, 0).col(0) = xAxis;
+                T.block<3, 3>(0, 0).col(1) = yAxis;
+                T.block<3, 3>(0, 0).col(2) = zAxis;
+                T.block<3, 1>(0, 3) = P0;
+                Eigen::Matrix4f T_inv = T.inverse();
 
-            /* ================= 转到工具系 ================= */
+                /* ================= 转到工具系 ================= */
 
-            Eigen::Vector4f p0 = T_inv * Eigen::Vector4f(P0.x(), P0.y(), P0.z(), 1.0f);
-            Eigen::Vector4f p1 = T_inv * Eigen::Vector4f(P1.x(), P1.y(), P1.z(), 1.0f);
+                Eigen::Vector4f p0 = T_inv * Eigen::Vector4f(P0.x(), P0.y(), P0.z(), 1.0f);
+                Eigen::Vector4f p1 = T_inv * Eigen::Vector4f(P1.x(), P1.y(), P1.z(), 1.0f);
 
-            /* ================= 补偿策略 ================= */
-            p0.x() += settingPara.TubeSidePlatFilletStart_X;
-            p0.y() += settingPara.TubeSidePlatFilletStart_Y;
-            p0.z() += settingPara.TubeSidePlatFilletStart_Z;
-            p1.x() += settingPara.TubeSidePlatFilletEnd_X;
-            p1.y() += settingPara.TubeSidePlatFilletEnd_Y;
-            p1.z() += settingPara.TubeSidePlatFilletEnd_Z;
+                /* ================= 补偿策略 ================= */
+                p0.x() += settingPara.TubeSidePlatFilletStart_X;
+                p0.y() += settingPara.TubeSidePlatFilletStart_Y;
+                p0.z() += settingPara.TubeSidePlatFilletStart_Z;
+                p1.x() += settingPara.TubeSidePlatFilletEnd_X;
+                p1.y() += settingPara.TubeSidePlatFilletEnd_Y;
+                p1.z() += settingPara.TubeSidePlatFilletEnd_Z;
 
-            /* ================= 转回基座 ================= */
+                /* ================= 转回基座 ================= */
 
-            Eigen::Vector4f p0_new = T * p0;
-            Eigen::Vector4f p1_new = T * p1;
+                Eigen::Vector4f p0_new = T * p0;
+                Eigen::Vector4f p1_new = T * p1;
 
-            pts[0].x = p0_new.x();
-            pts[0].y = p0_new.y();
-            pts[0].z = p0_new.z();
+                pts[0].x = p0_new.x();
+                pts[0].y = p0_new.y();
+                pts[0].z = p0_new.z();
 
-            pts[1].x = p1_new.x();
-            pts[1].y = p1_new.y();
-            pts[1].z = p1_new.z();
+                pts[1].x = p1_new.x();
+                pts[1].y = p1_new.y();
+                pts[1].z = p1_new.z();
+            }
         }
     }
+}
+void GantrayFrameTrajectoryPlanning::planPlatePlateFilletSeamOrientation(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+    std::vector<std::shared_ptr<WeldSeamInfo>> subset;
+
+    for (auto& s : weldSeamInfo) {
+        if (!s || !s->detectSuccFlag) continue;
+
+        if (!s->weldEndPointsInRobot || s->weldEndPointsInRobot->size() != 2) {
+            PLOGD << "区域" << s->areaNum << "板板角接焊缝数量错误";
+            continue;
+        }
+
+        if (s->weldAreaType == Plate_Plate_F) {
+            subset.push_back(s);
+        }
+    }
+
+    // ===== 分类 + 几何校验 =====
+    std::vector<std::shared_ptr<WeldSeamInfo>> V_seams;
+    std::vector<std::shared_ptr<WeldSeamInfo>> H_seams;
+    for (auto& s : subset) {
+        auto& pts = *(s->weldEndPointsInRobot);
+
+        Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
+        Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
+
+        Eigen::Vector3f dir = P1 - P0;
+        Eigen::Vector3f abs_dir = dir.cwiseAbs();
+
+        bool isV_byGeom = (abs_dir.z() >= abs_dir.x() && abs_dir.z() >= abs_dir.y());
+
+        if (isV_byGeom && s->weldType != Plate_Plate_Fillet_V) {
+            PLOGE << "焊缝类型错误：应为V";
+            return;
+        }
+        if (!isV_byGeom && s->weldType != Plate_Plate_Fillet_H) {
+            PLOGE << "焊缝类型错误：应为H";
+            return;
+        }
+
+        if (s->weldType == Plate_Plate_Fillet_V)
+            V_seams.push_back(s);
+        else if (s->weldType == Plate_Plate_Fillet_H)
+            H_seams.push_back(s);
+    }
+    if (subset.size() <= 1) return;
+    // =====================================================
+    // ================== 情况1：两个焊缝 ===================
+    // =====================================================
+    if (subset.size() == 2) {
+        // ===== 1V + 1H =====
+        if (V_seams.size() == 1 && H_seams.size() == 1) {
+            auto V = V_seams[0];
+            auto H = H_seams[0];
+
+            // ===== V方向：起点远离H平面，终点靠近 =====
+            if (!H->otherSurface.empty()) {
+                auto& planeData = H->otherSurface[0]->values;
+                Eigen::Vector4f plane(planeData[0], planeData[1], planeData[2], planeData[3]);
+
+                auto& ptsV = *(V->weldEndPointsInRobot);
+
+                Eigen::Vector3f V0(ptsV[0].x, ptsV[0].y, ptsV[0].z);
+                Eigen::Vector3f V1(ptsV[1].x, ptsV[1].y, ptsV[1].z);
+
+                float d0 = fabs(plane.head<3>().dot(V0) + plane[3]);
+                float d1 = fabs(plane.head<3>().dot(V1) + plane[3]);
+
+                // 👉 起点要远 → 如果P0更近，就交换
+                if (d0 < d1) {
+                    std::swap(ptsV[0], ptsV[1]);
+                }
+            }
+
+            // ===== H 起点靠近 V 终点 =====
+            auto& ptsH = *(H->weldEndPointsInRobot);
+            auto& ptsV = *(V->weldEndPointsInRobot);
+
+            Eigen::Vector3f Vend(ptsV[1].x, ptsV[1].y, ptsV[1].z);
+
+            Eigen::Vector3f H0(ptsH[0].x, ptsH[0].y, ptsH[0].z);
+            Eigen::Vector3f H1(ptsH[1].x, ptsH[1].y, ptsH[1].z);
+
+            if ((H0 - Vend).squaredNorm() > (H1 - Vend).squaredNorm()) {
+                std::swap(ptsH[0], ptsH[1]);
+            }
+
+            // ===== 顺序：V → H =====
+            std::vector<std::shared_ptr<WeldSeamInfo>> newSubset{V, H};
+
+            int idx = 0;
+            for (auto& s : weldSeamInfo) {
+                if (s && s->weldAreaType == Plate_Plate_F) {
+                    s = newSubset[idx++];
+                }
+            }
+
+            return;
+        }
+
+        // ===== 2个V：不处理 =====
+        return;
+    }
+
+    // =====================================================
+    // ================== 情况2：三个焊缝 ===================
+    // =====================================================
+    if (subset.size() == 3 && V_seams.size() == 2 && H_seams.size() == 1) {
+        // ===== V 按 -Y 排序 =====
+        std::sort(V_seams.begin(), V_seams.end(), [](const std::shared_ptr<WeldSeamInfo>& a, const std::shared_ptr<WeldSeamInfo>& b) {
+            auto& pa = *(a->weldEndPointsInRobot);
+            auto& pb = *(b->weldEndPointsInRobot);
+
+            float ya = (pa[0].y + pa[1].y) * 0.5f;
+            float yb = (pb[0].y + pb[1].y) * 0.5f;
+
+            return ya > yb;
+        });
+
+        auto H = H_seams[0];
+
+        // ===== V方向：起点远离H平面 =====
+        if (!H->otherSurface.empty()) {
+            auto& planeData = H->otherSurface[0]->values;
+            Eigen::Vector4f plane(planeData[0], planeData[1], planeData[2], planeData[3]);
+            // ===== 每条V内部方向 =====
+            for (auto& V : V_seams) {
+                auto& pts = *(V->weldEndPointsInRobot);
+
+                Eigen::Vector3f V0(pts[0].x, pts[0].y, pts[0].z);
+                Eigen::Vector3f V1(pts[1].x, pts[1].y, pts[1].z);
+
+                float d0 = fabs(plane.head<3>().dot(V0) + plane[3]);
+                float d1 = fabs(plane.head<3>().dot(V1) + plane[3]);
+
+                if (d0 < d1) {
+                    std::swap(pts[0], pts[1]);
+                }
+            }
+        }
+
+        // ===== H 起点靠近 V0 终点 =====
+        auto& ptsH = *(H->weldEndPointsInRobot);
+        auto& ptsV = *(V_seams[0]->weldEndPointsInRobot);
+
+        Eigen::Vector3f Vend(ptsV[1].x, ptsV[1].y, ptsV[1].z);
+
+        Eigen::Vector3f H0(ptsH[0].x, ptsH[0].y, ptsH[0].z);
+        Eigen::Vector3f H1(ptsH[1].x, ptsH[1].y, ptsH[1].z);
+
+        if ((H0 - Vend).squaredNorm() > (H1 - Vend).squaredNorm()) {
+            std::swap(ptsH[0], ptsH[1]);
+        }
+
+        // ===== 顺序 =====
+        std::vector<std::shared_ptr<WeldSeamInfo>> newSubset{V_seams[0], H, V_seams[1]};
+
+        int idx = 0;
+        for (auto& s : weldSeamInfo) {
+            if (s && s->weldAreaType == Plate_Plate_F) {
+                s = newSubset[idx++];
+            }
+        }
+
+        return;
+    }
+}
+bool GantrayFrameTrajectoryPlanning::checkCylinderPlaneCollision(const Eigen::Vector3d& center, const Eigen::Vector3d& axis, double radius,
+                                                                 const Eigen::Vector4f& plane) {
+    Eigen::Vector3d n(plane[0], plane[1], plane[2]);
+    double d = plane[3];
+
+    double norm_n = n.norm();
+    if (norm_n < 1e-6) return false;
+
+    // 点到平面距离
+    double dist = fabs(n.dot(center) + d) / norm_n;
+
+    // ===== 碰撞判断 =====
+    return dist < radius;
+}
+bool GantrayFrameTrajectoryPlanning::checkCylinderCylinderCollision(const Eigen::Vector3d& p1, const Eigen::Vector3d& d1, double r1,
+                                                                    const Eigen::Matrix<float, 7, 1>& cyl) {
+    Eigen::Vector3d p2(cyl[0], cyl[1], cyl[2]);
+    Eigen::Vector3d d2(cyl[3], cyl[4], cyl[5]);
+    d2.normalize();
+
+    double r2 = cyl[6];
+
+    Eigen::Vector3d w0 = p1 - p2;
+
+    double a = d1.dot(d1);
+    double b = d1.dot(d2);
+    double c = d2.dot(d2);
+    double d = d1.dot(w0);
+    double e = d2.dot(w0);
+
+    double denom = a * c - b * b;
+
+    double sc, tc;
+
+    if (fabs(denom) < 1e-6) {
+        // 平行
+        sc = 0.0;
+        tc = (b > 1e-6) ? d / b : 0.0;
+    } else {
+        sc = (b * e - c * d) / denom;
+        tc = (a * e - b * d) / denom;
+    }
+
+    Eigen::Vector3d closest1 = p1 + sc * d1;
+    Eigen::Vector3d closest2 = p2 + tc * d2;
+
+    double dist = (closest1 - closest2).norm();
+
+    return dist < (r1 + r2);
 }
