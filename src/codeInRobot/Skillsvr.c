@@ -396,7 +396,8 @@ void socketRecv_Task(void) {  // 套接字接收
                                         swingRefTarget[j] = prevTarget[j];
                                         swingPrevTarget[j] = prevTarget[j];
                                     }
-                                    // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册，有点歧义，前一接近点swingPrevTarget作为水平的方向以实际实验为准
+                                    // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册。
+                                    //说明：这个不是上一点，而是实际运动点，上一点为写入文件中的原起点;
                                     switch (CURR_SWING_METHOD) {
                                         case FRONT_LEFT_VERTICAL_SWING_WELD:
                                             swingRefTarget[1] -= 10 * 1000;

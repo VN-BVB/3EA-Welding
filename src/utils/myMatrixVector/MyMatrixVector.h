@@ -66,6 +66,9 @@ Eigen::Matrix4f createTransformationMatrixZYX(MyVector p);
 Eigen::Matrix4f createTransformationMatrixZYX(double x, double y, double z, double a, double b, double c);
 Eigen::Matrix4f createTransformationMatrixZYZ(MyVector p);
 std::vector<double> extractEulerZYX(const Eigen::Matrix3f& R_target, const std::vector<double>& currentEulerDeg);
+Eigen::Quaterniond eulerToQuat(double a, double b, double c);
+Eigen::Vector3d quatToEuler(const Eigen::Quaterniond& q);
+std::vector<double> interpolateEulerZYX(double a1, double b1, double c1, double a2, double b2, double c2, double alpha);
 
 }  // namespace MyToolFunc
 

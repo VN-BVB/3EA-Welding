@@ -43,6 +43,8 @@ protected:
     void readConfig();
     void writeConfig();
     void printConfig();
+    void writeWeldPoint(std::ofstream& outfile, double x = 0, double y = 0, double z = 0, double a = 0, double b = 0, double c = 0, double speed = 0,
+                        ARC_ACTION arcAction = ARC_STOP, SWING_WELD_ACTION weldAction = LINE_WELD, double current = 0, double voltage = 0);
 
     // 配置成员变量（引用类型，所有派生类共享）
     TrajectoryPlanningConfig& trajectoryConfig;

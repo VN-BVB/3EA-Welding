@@ -193,6 +193,34 @@ private slots:
 
     void on_lineEdit_TSPFHWeld_WithdrawDistance_editingFinished();
 
+    void on_lineEdit_PPFHStart_X_Shift_editingFinished();
+
+    void on_lineEdit_PPFHStart_Y_Shift_editingFinished();
+
+    void on_lineEdit_PPFHStart_Z_Shift_editingFinished();
+
+    void on_lineEdit_PPFHEnd_X_Shift_editingFinished();
+
+    void on_lineEdit_PPFHEnd_Y_Shift_editingFinished();
+
+    void on_lineEdit_PPFHEnd_Z_Shift_editingFinished();
+
+    void on_lineEdit_PPFHWeld_WithdrawDistance_editingFinished();
+
+    void on_lineEdit_PPFVStart_X_Shift_editingFinished();
+
+    void on_lineEdit_PPFVStart_Y_Shift_editingFinished();
+
+    void on_lineEdit_PPFVStart_Z_Shift_editingFinished();
+
+    void on_lineEdit_PPFVEnd_X_Shift_editingFinished();
+
+    void on_lineEdit_PPFVEnd_Y_Shift_editingFinished();
+
+    void on_lineEdit_PPFVEnd_Z_Shift_editingFinished();
+
+    void on_lineEdit_PPFVWeld_WithdrawDistance_editingFinished();
+
 private:
     Ui::SettingWidget *ui;
 

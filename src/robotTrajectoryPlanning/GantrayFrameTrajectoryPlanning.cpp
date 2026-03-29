@@ -142,15 +142,17 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
     }
     for (const auto& info : weldSeamInfo) {
         if (!info || info->robotWeldPose.empty()) continue;
+        // 打印 weldType
+
         if (info->weldType == TubeSide_Plate_F_H) {
             const robotPose& startPose = info->robotWeldPose[0];
             const robotPose& endPose = info->robotWeldPose[1];
 
             // ================= 起点过渡=================
             robotPose startTransition = startPose;
-            applyWeldGunWithdraw(startTransition, 10.0);
+            applyWeldGunWithdraw(startTransition, 20.0);
 
-            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 10.0 << " " << startTransition.a_ << " "
+            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 20.0 << " " << startTransition.a_ << " "
                     << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
                     << weldingCurrent << " " << weldingVoltage << std::endl;
 
@@ -169,9 +171,9 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
 
             // ================= 终点过渡=================
             robotPose endTransition = endPose;
-            applyWeldGunWithdraw(endTransition, 10.0);
+            applyWeldGunWithdraw(endTransition, 20.0);
 
-            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 10.0 << " " << endTransition.a_ << " "
+            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 20.0 << " " << endTransition.a_ << " "
                     << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
                     << " " << weldingVoltage << std::endl;
         } else if (info->weldType == Plate_Plate_Fillet_V) {
@@ -183,17 +185,17 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             applyWeldGunWithdraw(startTransition, 40.0);
 
             outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 40.0 << " " << startTransition.a_ << " "
-                    << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed / 10 << " " << ARC_STOP << " " << LINE_WELD << " "
+                    << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed / 5 << " " << ARC_STOP << " " << LINE_WELD << " "
                     << weldingCurrent << " " << weldingVoltage << std::endl;
             // ================= 焊接起点=================
             robotPose startWeld = startPose;
-            applyWeldGunWithdraw(startWeld, 8.0);
+            applyWeldGunWithdraw(startWeld, settingPara.PlatePlateFilletVerticalWithdrawDistance);
             outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_ << " " << startWeld.c_
                     << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
 
             // ================= 焊接终点=================
             robotPose endWeld = endPose;
-            applyWeldGunWithdraw(endWeld, 8.0);
+            applyWeldGunWithdraw(endWeld, settingPara.PlatePlateFilletVerticalWithdrawDistance);
 
             outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " " << endWeld.c_ << " "
                     << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
@@ -201,10 +203,13 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             // ================= 终点过渡=================
             robotPose endTransition = endPose;
             applyWeldGunWithdraw(endTransition, 40.0);
-
+            // auto midABC = MyToolFunc::interpolateEulerZYX(endTransition.a_, endTransition.b_, endTransition.c_, A0, B0, C0, 0.5);
             outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 40.0 << " " << endTransition.a_ << " "
                     << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
                     << " " << weldingVoltage << std::endl;
+            // outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 40.0 << " " << midABC[0] << " " << midABC[1] << " "
+            //         << midABC[2] << " " << moveSpeed / 10 << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage
+            //         << std::endl;
         } else if (info->weldType == Plate_Plate_Fillet_H) {
             const robotPose& startPose = info->robotWeldPose[0];
             const robotPose& endPose = info->robotWeldPose[1];
@@ -218,13 +223,14 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
                     << weldingCurrent << " " << weldingVoltage << std::endl;
             // ================= 焊接起点=================
             robotPose startWeld = startPose;
-            applyWeldGunWithdraw(startWeld, 5.0);
+            applyWeldGunWithdraw(startWeld, settingPara.PlatePlateFilletHorizontalWithdrawDistance);
+
             outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_ << " " << startWeld.c_
                     << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
 
             // ================= 焊接终点=================
             robotPose endWeld = endPose;
-            applyWeldGunWithdraw(endWeld, 5.0);
+            applyWeldGunWithdraw(endWeld, settingPara.PlatePlateFilletHorizontalWithdrawDistance);
 
             outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " " << endWeld.c_ << " "
                     << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
@@ -513,6 +519,8 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
         double a;
         double b;
         double c;
+        robotPose pose_start, pose_end;
+        bool allWrite = true;
         if (!info || !info->detectSuccFlag) continue;
 
         if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) continue;
@@ -656,21 +664,70 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             // ===== 6. 重正交 =====
             Z = X.cross(Y).normalized();
 
-            // ===== 7. 欧拉角 =====
-            Eigen::Matrix3f R_ref;
-            R_ref.col(0) = X;
-            R_ref.col(1) = Y;
-            R_ref.col(2) = Z;
-
+            // ===== 当前姿态（用于欧拉解算连续性）=====
             std::vector<double> currentABC = {trajectoryConfig.currentRobotPose.a_, trajectoryConfig.currentRobotPose.b_,
                                               trajectoryConfig.currentRobotPose.c_};
 
-            auto targetABC = MyToolFunc::extractEulerZYX(R_ref, currentABC);
+            // ===== 倾斜角 =====
+            float theta = platePlateFillettiltW_H * 45.0f * M_PI / 180.0f;
 
-            a = targetABC[0];
-            b = targetABC[1];
-            c = targetABC[2];
+            // ================= 起点姿态 =================
+            {
+                float t = +theta;
 
+                Eigen::Vector3f Y_s = std::cos(t) * Y + std::sin(t) * Z;
+                Eigen::Vector3f Z_s = -std::sin(t) * Y + std::cos(t) * Z;
+
+                Y_s.normalize();
+                Z_s.normalize();
+
+                Eigen::Vector3f X_s = Y_s.cross(Z_s).normalized();
+                Z_s = X_s.cross(Y_s).normalized();
+
+                Eigen::Matrix3f R;
+                R.col(0) = X_s;
+                R.col(1) = Y_s;
+                R.col(2) = Z_s;
+
+                auto abc = MyToolFunc::extractEulerZYX(R, currentABC);
+
+                pose_start.x_ = P0.x();
+                pose_start.y_ = P0.y();
+                pose_start.z_ = P0.z();
+                pose_start.a_ = abc[0];
+                pose_start.b_ = abc[1];
+                pose_start.c_ = abc[2];
+            }
+
+            // ================= 终点姿态 =================
+            {
+                float t = -theta;
+
+                Eigen::Vector3f Y_e = std::cos(t) * Y + std::sin(t) * Z;
+                Eigen::Vector3f Z_e = -std::sin(t) * Y + std::cos(t) * Z;
+
+                Y_e.normalize();
+                Z_e.normalize();
+
+                Eigen::Vector3f X_e = Y_e.cross(Z_e).normalized();
+                Z_e = X_e.cross(Y_e).normalized();
+
+                Eigen::Matrix3f R;
+                R.col(0) = X_e;
+                R.col(1) = Y_e;
+                R.col(2) = Z_e;
+
+                auto abc = MyToolFunc::extractEulerZYX(R, currentABC);
+
+                pose_end.x_ = P1.x();
+                pose_end.y_ = P1.y();
+                pose_end.z_ = P1.z();
+                pose_end.a_ = abc[0];
+                pose_end.b_ = abc[1];
+                pose_end.c_ = abc[2];
+            }
+
+            allWrite = false;
         } else if (info->weldType == Plate_Plate_Fillet_V) {
             if (!info->weldPlane || info->weldPlane->values.size() != 4) continue;
             if (info->otherSurface.empty()) continue;
@@ -754,24 +811,23 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             c = targetABC[2];
         }
         // ================= 10. 写入两个点 =================
-        robotPose pose_start, pose_end;
+        if (allWrite) {
+            // 起点
+            pose_start.x_ = P0.x();
+            pose_start.y_ = P0.y();
+            pose_start.z_ = P0.z();
+            pose_start.a_ = a;
+            pose_start.b_ = b;
+            pose_start.c_ = c;
 
-        // 起点
-        pose_start.x_ = P0.x();
-        pose_start.y_ = P0.y();
-        pose_start.z_ = P0.z();
-        pose_start.a_ = a;
-        pose_start.b_ = b;
-        pose_start.c_ = c;
-
-        // 终点
-        pose_end.x_ = P1.x();
-        pose_end.y_ = P1.y();
-        pose_end.z_ = P1.z();
-        pose_end.a_ = a;
-        pose_end.b_ = b;
-        pose_end.c_ = c;
-
+            // 终点
+            pose_end.x_ = P1.x();
+            pose_end.y_ = P1.y();
+            pose_end.z_ = P1.z();
+            pose_end.a_ = a;
+            pose_end.b_ = b;
+            pose_end.c_ = c;
+        }
         info->robotWeldPose.clear();
         info->robotWeldPose.push_back(pose_start);
         info->robotWeldPose.push_back(pose_end);
@@ -926,63 +982,165 @@ Eigen::Vector3d GantrayFrameTrajectoryPlanning::abcToDirection(double a, double 
     return dir.normalized();
 }
 void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
-    if (weldSeamInfo[0]->weldAreaType == TubeSide_Plate_F) {
-        for (auto& info : weldSeamInfo) {
-            if (!info || !info->detectSuccFlag) continue;
-            if (info->weldType = TubeSide_Plate_F_H) {
-                if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
-                if (!info->weldPlane || info->weldPlane->values.size() < 4) continue;
+    for (auto& info : weldSeamInfo) {
+        if (!info || !info->detectSuccFlag) continue;
+        if (info->weldType == TubeSide_Plate_F_H) {
+            if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
+            if (!info->weldPlane || info->weldPlane->values.size() < 4) continue;
 
-                auto& pts = *(info->weldEndPointsInRobot);
+            auto& pts = *(info->weldEndPointsInRobot);
 
-                Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
-                Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
+            Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
+            Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
 
-                if ((P1 - P0).norm() < 1e-6) continue;
+            if ((P1 - P0).norm() < 1e-6) continue;
 
-                /* ================= 坐标系构建 ================= */
+            /* ================= 坐标系构建 ================= */
 
-                Eigen::Vector3f xAxis = (P1 - P0).normalized();
+            Eigen::Vector3f xAxis = (P1 - P0).normalized();
 
-                Eigen::Vector3f zAxis(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
-                zAxis.normalize();
+            Eigen::Vector3f zAxis(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            zAxis.normalize();
 
-                Eigen::Vector3f yAxis = zAxis.cross(xAxis).normalized();
-                zAxis = xAxis.cross(yAxis).normalized();
+            Eigen::Vector3f yAxis = zAxis.cross(xAxis).normalized();
+            zAxis = xAxis.cross(yAxis).normalized();
 
-                Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
-                T.block<3, 3>(0, 0).col(0) = xAxis;
-                T.block<3, 3>(0, 0).col(1) = yAxis;
-                T.block<3, 3>(0, 0).col(2) = zAxis;
-                T.block<3, 1>(0, 3) = P0;
-                Eigen::Matrix4f T_inv = T.inverse();
+            Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
+            T.block<3, 3>(0, 0).col(0) = xAxis;
+            T.block<3, 3>(0, 0).col(1) = yAxis;
+            T.block<3, 3>(0, 0).col(2) = zAxis;
+            T.block<3, 1>(0, 3) = P0;
+            Eigen::Matrix4f T_inv = T.inverse();
 
-                /* ================= 转到工具系 ================= */
+            /* ================= 转到工具系 ================= */
 
-                Eigen::Vector4f p0 = T_inv * Eigen::Vector4f(P0.x(), P0.y(), P0.z(), 1.0f);
-                Eigen::Vector4f p1 = T_inv * Eigen::Vector4f(P1.x(), P1.y(), P1.z(), 1.0f);
+            Eigen::Vector4f p0 = T_inv * Eigen::Vector4f(P0.x(), P0.y(), P0.z(), 1.0f);
+            Eigen::Vector4f p1 = T_inv * Eigen::Vector4f(P1.x(), P1.y(), P1.z(), 1.0f);
 
-                /* ================= 补偿策略 ================= */
-                p0.x() += settingPara.TubeSidePlatFilletStart_X;
-                p0.y() += settingPara.TubeSidePlatFilletStart_Y;
-                p0.z() += settingPara.TubeSidePlatFilletStart_Z;
-                p1.x() += settingPara.TubeSidePlatFilletEnd_X;
-                p1.y() += settingPara.TubeSidePlatFilletEnd_Y;
-                p1.z() += settingPara.TubeSidePlatFilletEnd_Z;
+            /* ================= 补偿策略 ================= */
+            p0.x() += settingPara.TubeSidePlatFilletStart_X;
+            p0.y() += settingPara.TubeSidePlatFilletStart_Y;
+            p0.z() += settingPara.TubeSidePlatFilletStart_Z;
+            p1.x() += settingPara.TubeSidePlatFilletEnd_X;
+            p1.y() += settingPara.TubeSidePlatFilletEnd_Y;
+            p1.z() += settingPara.TubeSidePlatFilletEnd_Z;
 
-                /* ================= 转回基座 ================= */
+            /* ================= 转回基座 ================= */
 
-                Eigen::Vector4f p0_new = T * p0;
-                Eigen::Vector4f p1_new = T * p1;
+            Eigen::Vector4f p0_new = T * p0;
+            Eigen::Vector4f p1_new = T * p1;
 
-                pts[0].x = p0_new.x();
-                pts[0].y = p0_new.y();
-                pts[0].z = p0_new.z();
+            pts[0].x = p0_new.x();
+            pts[0].y = p0_new.y();
+            pts[0].z = p0_new.z();
 
-                pts[1].x = p1_new.x();
-                pts[1].y = p1_new.y();
-                pts[1].z = p1_new.z();
+            pts[1].x = p1_new.x();
+            pts[1].y = p1_new.y();
+            pts[1].z = p1_new.z();
+        } else if (info->weldType == Plate_Plate_Fillet_H || info->weldType == Plate_Plate_Fillet_V) {
+            if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
+            if (!info->weldPlane || info->weldPlane->values.size() < 4) continue;
+
+            auto& pts = *(info->weldEndPointsInRobot);
+
+            Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
+            Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
+
+            if ((P1 - P0).norm() < 1e-6) continue;
+
+            // ===== 焊缝方向 =====
+            Eigen::Vector3f seamDir = (P0 - P1).normalized();
+
+            // ===== 主平面法向 =====
+            Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            n1.normalize();
+
+            // ===== 次平面法向 =====
+            Eigen::Vector3f n2(0, 0, 0);
+            for (auto& surf : info->otherSurface) {
+                if (!surf || surf->values.size() != 4) continue;
+
+                n2 = Eigen::Vector3f(surf->values[0], surf->values[1], surf->values[2]);
+                n2.normalize();
+                break;
             }
+
+            if (n2.norm() < 1e-6) n2 = n1;
+
+            Eigen::Vector3f xAxis, yAxis, zAxis;
+
+            // ================= H型 =================
+            if (info->weldType == Plate_Plate_Fillet_H) {
+                xAxis = seamDir;
+                yAxis = n1;
+                zAxis = n2;
+
+                // 正交化（非常重要）
+                yAxis = yAxis - yAxis.dot(xAxis) * xAxis;
+                yAxis.normalize();
+
+                zAxis = xAxis.cross(yAxis).normalized();
+                yAxis = zAxis.cross(xAxis).normalized();
+            }
+
+            // ================= V型 =================
+            else if (info->weldType == Plate_Plate_Fillet_V) {
+                zAxis = seamDir;
+                yAxis = n1;
+                xAxis = n2;
+
+                // 正交化
+                yAxis = yAxis - yAxis.dot(zAxis) * zAxis;
+                yAxis.normalize();
+
+                xAxis = yAxis.cross(zAxis).normalized();
+                zAxis = xAxis.cross(yAxis).normalized();
+            }
+
+            // ===== 构建变换矩阵 =====
+            Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
+            T.block<3, 3>(0, 0).col(0) = xAxis;
+            T.block<3, 3>(0, 0).col(1) = yAxis;
+            T.block<3, 3>(0, 0).col(2) = zAxis;
+            T.block<3, 1>(0, 3) = P0;
+
+            Eigen::Matrix4f T_inv = T.inverse();
+
+            // ===== 转到工具系 =====
+            Eigen::Vector4f p0 = T_inv * Eigen::Vector4f(P0.x(), P0.y(), P0.z(), 1.0f);
+            Eigen::Vector4f p1 = T_inv * Eigen::Vector4f(P1.x(), P1.y(), P1.z(), 1.0f);
+
+            // ===== 补偿 =====
+            // ================= H型 =================
+            if (info->weldType == Plate_Plate_Fillet_H) {
+                p0.x() += settingPara.PlatePlateFilletHorizontalStart_X;
+                p0.y() += settingPara.PlatePlateFilletHorizontalStart_Y;
+                p0.z() += settingPara.PlatePlateFilletHorizontalStart_Z;
+
+                p1.x() += settingPara.PlatePlateFilletHorizontalEnd_X;
+                p1.y() += settingPara.PlatePlateFilletHorizontalEnd_Y;
+                p1.z() += settingPara.PlatePlateFilletHorizontalEnd_Z;
+            } else if (info->weldType == Plate_Plate_Fillet_V) {
+                p0.x() += settingPara.PlatePlateFilletVerticalStart_X;
+                p0.y() += settingPara.PlatePlateFilletVerticalStart_Y;
+                p0.z() += settingPara.PlatePlateFilletVerticalStart_Z;
+
+                p1.x() += settingPara.PlatePlateFilletVerticalEnd_X;
+                p1.y() += settingPara.PlatePlateFilletVerticalEnd_Y;
+                p1.z() += settingPara.PlatePlateFilletVerticalEnd_Z;
+            }
+
+            // ===== 转回基座 =====
+            Eigen::Vector4f p0_new = T * p0;
+            Eigen::Vector4f p1_new = T * p1;
+
+            pts[0].x = p0_new.x();
+            pts[0].y = p0_new.y();
+            pts[0].z = p0_new.z();
+
+            pts[1].x = p1_new.x();
+            pts[1].y = p1_new.y();
+            pts[1].z = p1_new.z();
         }
     }
 }

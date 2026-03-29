@@ -6,8 +6,7 @@
 #include "ui_SettingWidget.h"
 // #include "workpieceCoarseLocalization/WorkpieceCoarseLocalization.h"
 
-SettingWidget::SettingWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::SettingWidget), settingPara(&SettingPara::getInstance()) {
+SettingWidget::SettingWidget(QWidget *parent) : QWidget(parent), ui(new Ui::SettingWidget), settingPara(&SettingPara::getInstance()) {
     ui->setupUi(this);
 
     // // 相机触发开关和模式
@@ -74,6 +73,20 @@ void SettingWidget::renewSetting() {
     ui->lineEdit_TSPFHEnd_Y_Shift->setText(QString::number(settingPara->TubeSidePlatFilletEnd_Y));
     ui->lineEdit_TSPFHEnd_Z_Shift->setText(QString::number(settingPara->TubeSidePlatFilletEnd_Z));
     ui->lineEdit_TSPFHWeld_WithdrawDistance->setText(QString::number(settingPara->TubeSidePlatFilletWithdrawDistance));
+    ui->lineEdit_PPFHStart_X_Shift->setText(QString::number(settingPara->PlatePlateFilletHorizontalStart_X));
+    ui->lineEdit_PPFHStart_Y_Shift->setText(QString::number(settingPara->PlatePlateFilletHorizontalStart_Y));
+    ui->lineEdit_PPFHStart_Z_Shift->setText(QString::number(settingPara->PlatePlateFilletHorizontalStart_Z));
+    ui->lineEdit_PPFHEnd_X_Shift->setText(QString::number(settingPara->PlatePlateFilletHorizontalEnd_X));
+    ui->lineEdit_PPFHEnd_Y_Shift->setText(QString::number(settingPara->PlatePlateFilletHorizontalEnd_Y));
+    ui->lineEdit_PPFHEnd_Z_Shift->setText(QString::number(settingPara->PlatePlateFilletHorizontalEnd_Z));
+    ui->lineEdit_PPFHWeld_WithdrawDistance->setText(QString::number(settingPara->PlatePlateFilletHorizontalWithdrawDistance));
+    ui->lineEdit_PPFVStart_X_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalStart_X));
+    ui->lineEdit_PPFVStart_Y_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalStart_Y));
+    ui->lineEdit_PPFVStart_Z_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalStart_Z));
+    ui->lineEdit_PPFVEnd_X_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalEnd_X));
+    ui->lineEdit_PPFVEnd_Y_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalEnd_Y));
+    ui->lineEdit_PPFVEnd_Z_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalEnd_Z));
+    ui->lineEdit_PPFVWeld_WithdrawDistance->setText(QString::number(settingPara->PlatePlateFilletVerticalWithdrawDistance));
     // 工件正面, 焊缝延长
     ui->lineEdit_FrontLeft_ExtendStart->setText(QString::number(settingPara->FrontLeft_ExtendStart));
     ui->lineEdit_FrontLeft_ExtendEnd->setText(QString::number(settingPara->FrontLeft_ExtendEnd));
@@ -1151,7 +1164,90 @@ void SettingWidget::on_lineEdit_TSPFHEnd_Z_Shift_editingFinished() {
 
 void SettingWidget::on_lineEdit_TSPFHWeld_WithdrawDistance_editingFinished() {
     settingPara->TubeSidePlatFilletWithdrawDistance = ui->lineEdit_TSPFHWeld_WithdrawDistance->text().toDouble();
-    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletWithdrawDistance",
-                                    settingPara->TubeSidePlatFilletWithdrawDistance);
+    settingPara->qSetting->setValue("GFSeamPosition/TubeSidePlatFilletWithdrawDistance", settingPara->TubeSidePlatFilletWithdrawDistance);
     PLOGD << "TubeSidePlatFilletWithdrawDistance: " << settingPara->TubeSidePlatFilletWithdrawDistance;
+}
+
+void SettingWidget::on_lineEdit_PPFHStart_X_Shift_editingFinished() {
+    settingPara->PlatePlateFilletHorizontalStart_X = ui->lineEdit_PPFHStart_X_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalStart_X", settingPara->PlatePlateFilletHorizontalStart_X);
+    PLOGD << "PlatePlateFilletHorizontalStart_X: " << settingPara->PlatePlateFilletHorizontalStart_X;
+}
+
+void SettingWidget::on_lineEdit_PPFHStart_Y_Shift_editingFinished() {
+    settingPara->PlatePlateFilletHorizontalStart_Y = ui->lineEdit_PPFHStart_Y_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalStart_Y", settingPara->PlatePlateFilletHorizontalStart_Y);
+    PLOGD << "PlatePlateFilletHorizontalStart_Y: " << settingPara->PlatePlateFilletHorizontalStart_Y;
+}
+
+void SettingWidget::on_lineEdit_PPFHStart_Z_Shift_editingFinished() {
+    settingPara->PlatePlateFilletHorizontalStart_Z = ui->lineEdit_PPFHStart_Z_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalStart_Z", settingPara->PlatePlateFilletHorizontalStart_Z);
+    PLOGD << "PlatePlateFilletHorizontalStart_Z: " << settingPara->PlatePlateFilletHorizontalStart_Z;
+}
+
+void SettingWidget::on_lineEdit_PPFHEnd_X_Shift_editingFinished() {
+    settingPara->PlatePlateFilletHorizontalEnd_X = ui->lineEdit_PPFHEnd_X_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalEnd_X", settingPara->PlatePlateFilletHorizontalEnd_X);
+    PLOGD << "PlatePlateFilletHorizontalEnd_X: " << settingPara->PlatePlateFilletHorizontalEnd_X;
+}
+
+void SettingWidget::on_lineEdit_PPFHEnd_Y_Shift_editingFinished() {
+    settingPara->PlatePlateFilletHorizontalEnd_Y = ui->lineEdit_PPFHEnd_Y_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalEnd_Y", settingPara->PlatePlateFilletHorizontalEnd_Y);
+    PLOGD << "PlatePlateFilletHorizontalEnd_Y: " << settingPara->PlatePlateFilletHorizontalEnd_Y;
+}
+
+void SettingWidget::on_lineEdit_PPFHEnd_Z_Shift_editingFinished() {
+    settingPara->PlatePlateFilletHorizontalEnd_Z = ui->lineEdit_PPFHEnd_Z_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalEnd_Z", settingPara->PlatePlateFilletHorizontalEnd_Z);
+    PLOGD << "PlatePlateFilletHorizontalEnd_Z: " << settingPara->PlatePlateFilletHorizontalEnd_Z;
+}
+
+void SettingWidget::on_lineEdit_PPFHWeld_WithdrawDistance_editingFinished() {
+    settingPara->PlatePlateFilletHorizontalWithdrawDistance = ui->lineEdit_PPFHWeld_WithdrawDistance->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalWithdrawDistance", settingPara->PlatePlateFilletHorizontalWithdrawDistance);
+    PLOGD << "PlatePlateFilletHorizontalWithdrawDistance: " << settingPara->PlatePlateFilletHorizontalWithdrawDistance;
+}
+
+void SettingWidget::on_lineEdit_PPFVStart_X_Shift_editingFinished() {
+    settingPara->PlatePlateFilletVerticalStart_X = ui->lineEdit_PPFVStart_X_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalStart_X", settingPara->PlatePlateFilletVerticalStart_X);
+    PLOGD << "PlatePlateFilletVerticalStart_X: " << settingPara->PlatePlateFilletVerticalStart_X;
+}
+        
+void SettingWidget::on_lineEdit_PPFVStart_Y_Shift_editingFinished() {
+    settingPara->PlatePlateFilletVerticalStart_Y = ui->lineEdit_PPFVStart_Y_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalStart_Y", settingPara->PlatePlateFilletVerticalStart_Y);
+    PLOGD << "PlatePlateFilletVerticalStart_Y: " << settingPara->PlatePlateFilletVerticalStart_Y;
+}
+        
+void SettingWidget::on_lineEdit_PPFVStart_Z_Shift_editingFinished() {
+    settingPara->PlatePlateFilletVerticalStart_Z = ui->lineEdit_PPFVStart_Z_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalStart_Z", settingPara->PlatePlateFilletVerticalStart_Z);
+    PLOGD << "PlatePlateFilletVerticalStart_Z: " << settingPara->PlatePlateFilletVerticalStart_Z;
+}
+
+void SettingWidget::on_lineEdit_PPFVEnd_X_Shift_editingFinished() {
+    settingPara->PlatePlateFilletVerticalEnd_X = ui->lineEdit_PPFVEnd_X_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalEnd_X", settingPara->PlatePlateFilletVerticalEnd_X);
+    PLOGD << "PlatePlateFilletVerticalEnd_X: " << settingPara->PlatePlateFilletVerticalEnd_X;
+}
+
+void SettingWidget::on_lineEdit_PPFVEnd_Y_Shift_editingFinished() {
+    settingPara->PlatePlateFilletVerticalEnd_Y = ui->lineEdit_PPFVEnd_Y_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalEnd_Y", settingPara->PlatePlateFilletVerticalEnd_Y);
+    PLOGD << "PlatePlateFilletVerticalEnd_Y: " << settingPara->PlatePlateFilletVerticalEnd_Y;
+}
+
+void SettingWidget::on_lineEdit_PPFVEnd_Z_Shift_editingFinished() {
+    settingPara->PlatePlateFilletVerticalEnd_Z = ui->lineEdit_PPFVEnd_Z_Shift->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalEnd_Z", settingPara->PlatePlateFilletVerticalEnd_Z);
+    PLOGD << "PlatePlateFilletVerticalEnd_Z: " << settingPara->PlatePlateFilletVerticalEnd_Z;
+}
+
+void SettingWidget::on_lineEdit_PPFVWeld_WithdrawDistance_editingFinished() {
+    settingPara->PlatePlateFilletVerticalWithdrawDistance = ui->lineEdit_PPFVWeld_WithdrawDistance->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalWithdrawDistance", settingPara->PlatePlateFilletVerticalWithdrawDistance);
+    PLOGD << "PlatePlateFilletVerticalWithdrawDistance: " << settingPara->PlatePlateFilletVerticalWithdrawDistance;
 }

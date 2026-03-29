@@ -243,3 +243,45 @@ std::vector<double> MyToolFunc::extractEulerZYX(const Eigen::Matrix3f &R, const 
 
     return sols[bestIdx];
 }
+// 欧拉角（度）→ 四元数
+Eigen::Quaterniond MyToolFunc::eulerToQuat(double a, double b, double c) {
+    double A = a * M_PI / 180.0;
+    double B = b * M_PI / 180.0;
+    double C = c * M_PI / 180.0;
+
+    Eigen::AngleAxisd rx(A, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd ry(B, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd rz(C, Eigen::Vector3d::UnitZ());
+
+    return rz * ry * rx;  // ZYX 顺序（和你 extractEulerZYX 一致）
+}
+
+// 四元数 → 欧拉角（度）
+Eigen::Vector3d MyToolFunc::quatToEuler(const Eigen::Quaterniond &q) {
+    Eigen::Matrix3d R = q.toRotationMatrix();
+    Eigen::Vector3d euler = R.eulerAngles(2, 1, 0);  // ZYX
+
+    return Eigen::Vector3d(euler[2] * 180.0 / M_PI,  // a (X)
+                           euler[1] * 180.0 / M_PI,  // b (Y)
+                           euler[0] * 180.0 / M_PI   // c (Z)
+    );
+}
+
+// 求中间姿态
+std::vector<double> MyToolFunc::interpolateEulerZYX(double a1, double b1, double c1, double a2, double b2, double c2, double alpha) {
+    // 1. 转四元数
+    Eigen::Quaterniond q1 = eulerToQuat(a1, b1, c1);
+    Eigen::Quaterniond q2 = eulerToQuat(a2, b2, c2);
+
+    // 2. 最短路径修正（关键！）
+    if (q1.dot(q2) < 0.0) {
+        q2.coeffs() *= -1.0;
+    }
+    // 3. slerp 插值
+    Eigen::Quaterniond q_mid = q1.slerp(alpha, q2);
+
+    // 4. 转回欧拉角
+    Eigen::Vector3d euler_mid = quatToEuler(q_mid);
+
+    return {euler_mid[0], euler_mid[1], euler_mid[2]};
+}

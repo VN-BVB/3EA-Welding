@@ -46,9 +46,9 @@ private:
 
     float tubeSidePlateFilletPlanePoseW = 0.7f;  // 管侧与板角接焊缝靠近三角肘板平面法向量权重
     float platePlateFilletPlanePoseW_H = 0.5f;   // 板板水平角接靠近立板法向量权重（变大--靠近底）
+    float platePlateFillettiltW_H = 0.5f;        // 板板水平角接靠近焊缝权重（变大--靠近焊缝，1为45）
     float platePlateFilletPlanePoseW_V = 0.5f;   // 板板垂直角接靠近立板法向量权重（变大-靠近侧壁）
-    float platePlateFilletWeldPoseW_V = 0.5f;    // 板板垂直角接靠近焊缝方向向量权重 （变大-靠近Z，增大与地面角度）
-    friend class RailWeldingSystem;
+    float platePlateFilletWeldPoseW_V = 0.45f;   // 板板垂直角接靠近焊缝方向向量权重 （变大-靠近Z，增大与地面角度）
 
     double moveSpeed = 170 * 60;           // 过渡运动速度
     double weldingSpeedDefault = 5 * 60;   // 焊接速度(默认速度，宽度检测失败时用这个速度)
@@ -56,5 +56,6 @@ private:
     double weldingCurrent_Vertical = 130;  // 焊接电流(竖直焊缝用这个电流)
     double weldingVoltage = 24;            // 焊接电压(默认焊接电压)
     double weldingVoltage_Vertical = 18;   // 焊接电压(竖直焊缝用这个电压)
+    friend class RailWeldingSystem;
 };
 #endif  // GANTRAYFRAMETRAJECTORYPLANNING_H
