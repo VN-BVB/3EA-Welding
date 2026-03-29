@@ -126,17 +126,12 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
     // ########################### 眼在手上写入拍照点, 眼在手外写入零过渡点 ###########################
     if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
         if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
-            outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-            outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, takePhotoX0, takePhotoY0, takePhotoZ0, takePhotoA0, takePhotoB0, takePhotoC0, moveSpeed, ARC_STOP, LINE_WELD,
+                           weldingCurrent, weldingVoltage);
         }
-        outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
-                << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
     } else if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_TO_HAND)) {
-        outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
-                << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
     } else {
         PLOGE << "机器人手眼关系错误";
     }
@@ -151,62 +146,64 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             // ================= 起点过渡=================
             robotPose startTransition = startPose;
             applyWeldGunWithdraw(startTransition, 20.0);
-
-            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 20.0 << " " << startTransition.a_ << " "
-                    << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, startTransition.x_, startTransition.y_, startTransition.z_ + 20.0, startTransition.a_, startTransition.b_,
+                           startTransition.c_, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
 
             // ================= 焊接起点=================
             robotPose startWeld = startPose;
             applyWeldGunWithdraw(startWeld, settingPara.TubeSidePlatFilletWithdrawDistance);
-            outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_ << " " << startWeld.c_
-                    << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, startWeld.x_, startWeld.y_, startWeld.z_, startWeld.a_, startWeld.b_, startWeld.c_, moveSpeed, ARC_START,
+                           LINE_WELD, weldingCurrent, weldingVoltage);
 
             // ================= 焊接终点=================
             robotPose endWeld = endPose;
             applyWeldGunWithdraw(endWeld, settingPara.TubeSidePlatFilletWithdrawDistance);
 
-            outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " " << endWeld.c_ << " "
-                    << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP, LINE_WELD,
+                           weldingCurrent, weldingVoltage);
 
             // ================= 终点过渡=================
             robotPose endTransition = endPose;
             applyWeldGunWithdraw(endTransition, 20.0);
+            writeWeldPoint(outfile, endTransition.x_, endTransition.y_, endTransition.z_ + 20.0, endTransition.a_, endTransition.b_, endTransition.c_,
+                           moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
 
-            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 20.0 << " " << endTransition.a_ << " "
-                    << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
-                    << " " << weldingVoltage << std::endl;
         } else if (info->weldType == Plate_Plate_Fillet_V) {
             const robotPose& startPose = info->robotWeldPose[0];
             const robotPose& endPose = info->robotWeldPose[1];
-
+            SWING_WELD_ACTION CURR_SWING_METHOD = LINE_WELD;
+            if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
+                if (startPose.y_ >= 0) {
+                    CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
+                } else if (startPose.y_ < 0) {
+                    CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_RIGHT_VERTICAL_SWING_WELD;
+                }
+            }
             // ================= 起点过渡=================
             robotPose startTransition = startPose;
             applyWeldGunWithdraw(startTransition, 40.0);
+            writeWeldPoint(outfile, startTransition.x_, startTransition.y_, startTransition.z_ + 40.0, startTransition.a_, startTransition.b_,
+                           startTransition.c_, moveSpeed / 5, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
 
-            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 40.0 << " " << startTransition.a_ << " "
-                    << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed / 5 << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
             // ================= 焊接起点=================
             robotPose startWeld = startPose;
             applyWeldGunWithdraw(startWeld, settingPara.PlatePlateFilletVerticalWithdrawDistance);
-            outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_ << " " << startWeld.c_
-                    << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, startWeld.x_, startWeld.y_, startWeld.z_, startWeld.a_, startWeld.b_, startWeld.c_, moveSpeed, ARC_START,
+                           LINE_WELD, weldingCurrent, weldingVoltage);
 
             // ================= 焊接终点=================
             robotPose endWeld = endPose;
             applyWeldGunWithdraw(endWeld, settingPara.PlatePlateFilletVerticalWithdrawDistance);
 
-            outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " " << endWeld.c_ << " "
-                    << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP,
+                           CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
 
             // ================= 终点过渡=================
             robotPose endTransition = endPose;
             applyWeldGunWithdraw(endTransition, 40.0);
             // auto midABC = MyToolFunc::interpolateEulerZYX(endTransition.a_, endTransition.b_, endTransition.c_, A0, B0, C0, 0.5);
-            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 40.0 << " " << endTransition.a_ << " "
-                    << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
-                    << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, endTransition.x_, endTransition.y_, endTransition.z_ + 40.0, endTransition.a_, endTransition.b_, endTransition.c_,
+                           moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             // outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 40.0 << " " << midABC[0] << " " << midABC[1] << " "
             //         << midABC[2] << " " << moveSpeed / 10 << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage
             //         << std::endl;
@@ -217,31 +214,27 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             // ================= 起点过渡=================
             robotPose startTransition = startPose;
             applyWeldGunWithdraw(startTransition, 20.0);
+            writeWeldPoint(outfile, startTransition.x_, startTransition.y_, startTransition.z_ + 20.0, startTransition.a_, startTransition.b_,
+                           startTransition.c_, moveSpeed / 10.0, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
 
-            outfile << startTransition.x_ << " " << startTransition.y_ << " " << startTransition.z_ + 20.0 << " " << startTransition.a_ << " "
-                    << startTransition.b_ << " " << startTransition.c_ << " " << moveSpeed / 10 << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
             // ================= 焊接起点=================
             robotPose startWeld = startPose;
             applyWeldGunWithdraw(startWeld, settingPara.PlatePlateFilletHorizontalWithdrawDistance);
 
-            outfile << startWeld.x_ << " " << startWeld.y_ << " " << startWeld.z_ << " " << startWeld.a_ << " " << startWeld.b_ << " " << startWeld.c_
-                    << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, startWeld.x_, startWeld.y_, startWeld.z_, startWeld.a_, startWeld.b_, startWeld.c_, moveSpeed, ARC_START,
+                           LINE_WELD, weldingCurrent, weldingVoltage);
 
             // ================= 焊接终点=================
             robotPose endWeld = endPose;
             applyWeldGunWithdraw(endWeld, settingPara.PlatePlateFilletHorizontalWithdrawDistance);
-
-            outfile << endWeld.x_ << " " << endWeld.y_ << " " << endWeld.z_ << " " << endWeld.a_ << " " << endWeld.b_ << " " << endWeld.c_ << " "
-                    << weldingSpeedDefault << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP, LINE_WELD,
+                           weldingCurrent, weldingVoltage);
 
             // ================= 终点过渡=================
             robotPose endTransition = endPose;
             applyWeldGunWithdraw(endTransition, 20.0);
-
-            outfile << endTransition.x_ << " " << endTransition.y_ << " " << endTransition.z_ + 20.0 << " " << endTransition.a_ << " "
-                    << endTransition.b_ << " " << endTransition.c_ << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent
-                    << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, endTransition.x_, endTransition.y_, endTransition.z_ + 20.0, endTransition.a_, endTransition.b_, endTransition.c_,
+                           moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         }
     }
     // ########################### 眼在手上写入拍照点, 眼在手外写入零过渡点 ###########################

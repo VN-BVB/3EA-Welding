@@ -46,7 +46,7 @@ void AbstractTrajectoryPlanning::printConfig() {
     }
 }
 
-void AbstractTrajectoryPlanning::writeWeldPoint(ofstream& outfile, double x, double y, double z, double a, double b, double c, double speed,
+void AbstractTrajectoryPlanning::writeWeldPoint(std::fstream& outfile, double x, double y, double z, double a, double b, double c, double speed,
                                                 ARC_ACTION arcAction, SWING_WELD_ACTION weldAction, double current, double voltage) {
     outfile << x << " " << y << " " << z << " " << a << " " << b << " " << c << " " << speed << " " << static_cast<int>(arcAction) << " "
             << static_cast<int>(weldAction) << " " << current << " " << voltage << std::endl;
