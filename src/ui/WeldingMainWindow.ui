@@ -1218,7 +1218,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>130</string>
+             <string>150</string>
             </property>
            </widget>
           </item>
@@ -1263,7 +1263,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>-55</string>
+             <string>-58</string>
             </property>
            </widget>
           </item>
@@ -1431,7 +1431,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>600</string>
+             <string>760</string>
             </property>
            </widget>
           </item>
@@ -1527,7 +1527,7 @@ border-radius: 10px;</string>
              <string notr="true">background-color: rgb(255, 255, 255);</string>
             </property>
             <property name="text">
-             <string>30</string>
+             <string>50</string>
             </property>
            </widget>
           </item>

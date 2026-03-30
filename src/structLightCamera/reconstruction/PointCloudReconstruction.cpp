@@ -297,9 +297,12 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
     if (detRes->size() == 0) {
         PLOGW << "检测结果为空，使用默认ROI";
         // detRes->emplace_back(1, 1.0f, 91, 237, 1500, 600);//管侧与三角肘板
-        detRes->emplace_back(0, 1.0f, 414, 343, 498, 438);
-        detRes->emplace_back(0, 1.0f, 596, 419, 1090, 469);
-        detRes->emplace_back(0, 1.0f, 1170, 285, 1207, 391);
+        // detRes->emplace_back(0, 1.0f, 414, 343, 498, 438);
+        // detRes->emplace_back(0, 1.0f, 596, 419, 1090, 469);
+        // detRes->emplace_back(0, 1.0f, 1170, 285, 1207, 391);
+        detRes->emplace_back(0, 1.0f, 289, 786, 420, 880);
+        detRes->emplace_back(0, 1.0f, 533, 758, 1100, 800);
+        detRes->emplace_back(0, 1.0f, 1170, 750, 1238, 865);
     }
     // 如果检测到大于4个, 按照置信度排序, 并取前4个
     if (detRes->size() > 4) {

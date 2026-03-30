@@ -13,11 +13,11 @@ SteelAngleTrajectoryPlanning::SteelAngleTrajectoryPlanning(QObject* parent) : Ab
 // 初始化参数
 void SteelAngleTrajectoryPlanning::initPara() {
     if (trajectoryConfig.robotType == MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN)) {
-        moveSpeed = settingPara.Value_MoveSpeed * 60;               // 过渡运动速度
-        weldingSpeedDefault = settingPara.Value_WeldingSpeed * 60;  // 焊接速度 (默认速度，宽度检测失败时用这个速度)
-        weldingSpeed0To1 = settingPara.Value_WeldingSpeed0To1 * 60;  // 焊接速度 (焊缝宽度1mm以下用这个速度)
-        weldingSpeed1To3 = settingPara.Value_WeldingSpeed1To3 * 60;  // 焊接速度 (焊缝宽度1mm到3mm用这个速度)
-        weldingSpeed3To5 = settingPara.Value_WeldingSpeed3To5 * 60;  // 焊接速度 (焊缝宽度1mm到3mm用这个速度)
+        moveSpeed = settingPara.Value_MoveSpeed * 60;                            // 过渡运动速度
+        weldingSpeedDefault = settingPara.Value_WeldingSpeed * 60;               // 焊接速度 (默认速度，宽度检测失败时用这个速度)
+        weldingSpeed0To1 = settingPara.Value_WeldingSpeed0To1 * 60;              // 焊接速度 (焊缝宽度1mm以下用这个速度)
+        weldingSpeed1To3 = settingPara.Value_WeldingSpeed1To3 * 60;              // 焊接速度 (焊缝宽度1mm到3mm用这个速度)
+        weldingSpeed3To5 = settingPara.Value_WeldingSpeed3To5 * 60;              // 焊接速度 (焊缝宽度1mm到3mm用这个速度)
         weldingSpeedHorizontal = settingPara.Value_WeldingSpeedHorizontal * 60;  // 焊接速度 (水平焊缝的焊接速度)
         weldingSpeedVertical = settingPara.Value_WeldingSpeedVertical * 60;      // 焊接速度 (水平焊缝的焊接速度)
     }
@@ -153,15 +153,12 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
     float X0 = trajectoryConfig.zeroPointX, Y0 = trajectoryConfig.zeroPointY, Z0 = trajectoryConfig.zeroPointZ;
     float A0 = trajectoryConfig.zeroPointA, B0 = trajectoryConfig.zeroPointB, C0 = trajectoryConfig.zeroPointC;
 
-    float takePhotoX0 = trajectoryConfig.takePhotoX, takePhotoY0 = trajectoryConfig.takePhotoY,
-          takePhotoZ0 = trajectoryConfig.takePhotoZ;
-    float takePhotoA0 = trajectoryConfig.takePhotoA, takePhotoB0 = trajectoryConfig.takePhotoB,
-          takePhotoC0 = trajectoryConfig.takePhotoC;
+    float takePhotoX0 = trajectoryConfig.takePhotoX, takePhotoY0 = trajectoryConfig.takePhotoY, takePhotoZ0 = trajectoryConfig.takePhotoZ;
+    float takePhotoA0 = trajectoryConfig.takePhotoA, takePhotoB0 = trajectoryConfig.takePhotoB, takePhotoC0 = trajectoryConfig.takePhotoC;
 
     float leftA = trajectoryConfig.leftPoseA, leftB = trajectoryConfig.leftPoseB, leftC = trajectoryConfig.leftPoseC;
     float rightA = trajectoryConfig.rightPoseA, rightB = trajectoryConfig.rightPoseB, rightC = trajectoryConfig.rightPoseC;
-    float backBeamA = trajectoryConfig.beamButtPoseA, backBeamB = trajectoryConfig.beamButtPoseB,
-          backBeamC = trajectoryConfig.beamButtPoseC;
+    float backBeamA = trajectoryConfig.beamButtPoseA, backBeamB = trajectoryConfig.beamButtPoseB, backBeamC = trajectoryConfig.beamButtPoseC;
 
     // clang-format off
     // 机器人焊接其左侧或右侧工件时, 分别单独配置零点、拍照点、焊接时姿态
@@ -191,17 +188,12 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
     // ########################### 眼在手上写入拍照点, 眼在手外写入零过渡点 ###########################
     if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
         if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
-            outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-            outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " "
-                    << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, takePhotoX0, takePhotoY0, takePhotoZ0, takePhotoA0, takePhotoB0, takePhotoC0, moveSpeed, ARC_STOP, LINE_WELD,
+                           weldingCurrent, weldingVoltage);
         }
-        outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
     } else if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_TO_HAND)) {
-        outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
     } else {
         PLOGE << "机器人手眼关系错误";
     }
@@ -219,7 +211,7 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
     PLOGD << "背面横梁焊缝偏移量: " << backVector[0] << " " << backVector[1] << " " << backVector[2];
 
     // 提前判断需要摆焊的焊缝如何摆
-    int CURR_SWING_METHOD = SWING_WELD_ACTION::LINE_WELD;
+    SWING_WELD_ACTION CURR_SWING_METHOD = SWING_WELD_ACTION::LINE_WELD;
     if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT)
         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
     else if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::LEFT)
@@ -231,16 +223,14 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
     for (int i = 0; i <= endOfLeftSeams; ++i) {  // 焊缝编号归类预存
         if (weldSeamInfo[i]->detectSuccFlag == true && weldSeamInfo[i]->weldEndPointsInRobot != nullptr &&
             weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
-            if (weldSeamInfo[i]->weldType == WELD_TYPE::BACK_CORNER_BUTT ||
-                weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {  // 边角焊缝
+            if (weldSeamInfo[i]->weldType == WELD_TYPE::BACK_CORNER_BUTT || weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {  // 边角焊缝
                 cornerIndex = i;
             } else if (weldSeamInfo[i]->weldType == WELD_TYPE::BACK_BEAM_BUTT) {  // 背面横梁对接
                 backBeamIndex = i;
             } else if (weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_BEAM_BUTT) {  // 正面横梁对接
                 frontBeamIndex = i;
                 // TODO 临时误差补偿?
-                if (weldSeamInfo[i]->detectSuccFlag && weldSeamInfo[i]->weldEndPointsInRobot &&
-                    weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
+                if (weldSeamInfo[i]->detectSuccFlag && weldSeamInfo[i]->weldEndPointsInRobot && weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
                     if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::LEFT) {
                         weldSeamInfo[i]->weldEndPointsInRobot->at(0).x += 6;
                         weldSeamInfo[i]->weldEndPointsInRobot->at(1).x += 6;
@@ -269,30 +259,24 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
         pcl::PointXYZ p1 = weldSeamInfo[cornerIndex]->weldEndPointsInRobot->at(0);
         pcl::PointXYZ p2 = weldSeamInfo[cornerIndex]->weldEndPointsInRobot->at(1);
         // 起始过渡点的八维坐标
-        outfile << p1.x - leftVector[0] / withdrawDis * 7 << " " << p1.y - leftVector[1] / withdrawDis * 7 << " "
-                << p1.z - leftVector[2] / withdrawDis * 7 + 50 << " ";
-        outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - leftVector[0] / withdrawDis * 7, p1.y - leftVector[1] / withdrawDis * 7,
+                       p1.z - leftVector[2] / withdrawDis * 7 + 50, leftA, leftB, leftC, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                       weldingVoltage);
+
         // 写入第一个点的八维信息
-        outfile << p1.x - leftVector[0] / withdrawDis * 7 << " " << p1.y - leftVector[1] / withdrawDis * 7 << " "
-                << p1.z - leftVector[2] / withdrawDis * 7 << " ";
-        outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - leftVector[0] / withdrawDis * 7, p1.y - leftVector[1] / withdrawDis * 7,
+                       p1.z - leftVector[2] / withdrawDis * 7, leftA, leftB, leftC, moveSpeed, ARC_START, LINE_WELD, weldingCurrent, weldingVoltage);
         // 写入第二个点的八维信息
-        outfile << p2.x - leftVector[0] / withdrawDis * 7 << " " << p2.y - leftVector[1] / withdrawDis * 7 << " "
-                << p2.z - leftVector[2] / withdrawDis * 7 << " ";
-        outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p2.x - leftVector[0] / withdrawDis * 7, p2.y - leftVector[1] / withdrawDis * 7,
+                       p2.z - leftVector[2] / withdrawDis * 7, leftA, leftB, leftC, weldingSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                       weldingVoltage);
         // 终止过渡点的八维坐标
-        outfile << p2.x - leftVector[0] / withdrawDis * 7 << " " << p2.y - leftVector[1] / withdrawDis * 7 << " "
-                << p2.z - leftVector[2] / withdrawDis * 7 + 50 << " ";
-        outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p2.x - leftVector[0] / withdrawDis * 7, p2.y - leftVector[1] / withdrawDis * 7,
+                       p2.z - leftVector[2] / withdrawDis * 7 + 50, leftA, leftB, leftC, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                       weldingVoltage);
 
         if (backBeamIndex != -1) {  // 如果后面还有横梁焊缝, 就加一个过渡点
-            outfile << X0 << " " << Y0 << " " << Z0 << " ";
-            outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         }
     }
 
@@ -307,21 +291,19 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
         pcl::PointXYZ p1 = weldSeamInfo[backBeamIndex]->weldEndPointsInRobot->at(0);
         pcl::PointXYZ p2 = weldSeamInfo[backBeamIndex]->weldEndPointsInRobot->at(1);
         // 起始过渡点的八维坐标
-        outfile << p1.x - backVector[0] * 3 << " " << p1.y - backVector[1] * 3 << " " << p1.z - backVector[2] * 3 + 50 << " ";
-        outfile << backBeamA << " " << backBeamB << " " << backBeamC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - backVector[0] * 3, p1.y - backVector[1] * 3, p1.z - backVector[2] * 3 + 50, backBeamA, backBeamB, backBeamC,
+                       moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
+
         // 写入第一个点的八维信息
-        outfile << p1.x - backVector[0] * 3 << " " << p1.y - backVector[1] * 3 << " " << p1.z - backVector[2] * 3 << " ";
-        outfile << backBeamA << " " << backBeamB << " " << backBeamC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD
-                << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - backVector[0] * 3, p1.y - backVector[1] * 3, p1.z - backVector[2] * 3, backBeamA, backBeamB, backBeamC,
+                       moveSpeed, ARC_START, LINE_WELD, weldingCurrent, weldingVoltage);
         // 写入第二个点的八维信息
-        outfile << p2.x - backVector[0] * 3 << " " << p2.y - backVector[1] * 3 << " " << p2.z - backVector[2] * 3 << " ";
-        outfile << backBeamA << " " << backBeamB << " " << backBeamC << " " << weldingSpeed << " " << ARC_STOP << " " << LINE_WELD
-                << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p2.x - backVector[0] * 3, p2.y - backVector[1] * 3, p2.z - backVector[2] * 3, backBeamA, backBeamB, backBeamC,
+                       weldingSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
+
         // 终止过渡点的八维坐标
-        outfile << p2.x - backVector[0] * 3 << " " << p2.y - backVector[1] * 3 << " " << p2.z - backVector[2] * 3 + 50 << " ";
-        outfile << backBeamA << " " << backBeamB << " " << backBeamC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p2.x - backVector[0] * 3, p2.y - backVector[1] * 3, p2.z - backVector[2] * 3 + 50, backBeamA, backBeamB, backBeamC,
+                       moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
     }
 
     // 写入正面横梁处焊缝 1'2'3'12'13'23'123'-1
@@ -329,14 +311,11 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
         pcl::PointXYZ p1 = weldSeamInfo[frontBeamIndex]->weldEndPointsInRobot->at(0);
         pcl::PointXYZ p2 = weldSeamInfo[frontBeamIndex]->weldEndPointsInRobot->at(1);
         // 起始过渡点的八维坐标
-        outfile << p1.x + leftVector[0] / 5 << " " << p1.y + leftVector[1] / 5 << " " << p1.z + leftVector[2] / 5 + 50 << " ";
-        outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x + leftVector[0] / 5, p1.y + leftVector[1] / 5, p1.z + leftVector[2] / 5 + 50, leftA, leftB, leftC, moveSpeed,
+                       ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         // 写入第一个点的八维信息
-        outfile << p1.x - leftVector[0] / withdrawDis * 5 << " " << p1.y - leftVector[1] / withdrawDis * 5 << " "
-                << p1.z - leftVector[2] / withdrawDis * 5 << " ";
-        outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - leftVector[0] / withdrawDis * 5, p1.y - leftVector[1] / withdrawDis * 5,
+                       p1.z - leftVector[2] / withdrawDis * 5, leftA, leftB, leftC, moveSpeed, ARC_START, LINE_WELD, weldingCurrent, weldingVoltage);
 
         if (horizontalIndex != -1) {  // 并且存在水平焊缝, 先把横梁对接走完, 再走水平焊缝
             width = weldSeamInfo[frontBeamIndex]->width;
@@ -347,62 +326,49 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
             else weldingSpeed = weldingSpeedDefault;  // clang-format on
 
             // 写入第二个点的八维信息
-            outfile << p2.x - leftVector[0] / withdrawDis * 5 << " " << p2.y - leftVector[1] / withdrawDis * 5 << " "
-                    << p2.z - leftVector[2] / withdrawDis * 5 << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p2.x - leftVector[0] / withdrawDis * 5, p2.y - leftVector[1] / withdrawDis * 5,
+                           p2.z - leftVector[2] / withdrawDis * 5, leftA, leftB, leftC, weldingSpeed, ARC_START, LINE_WELD, weldingCurrent,
+                           weldingVoltage);
 
             pcl::PointXYZ p3 = weldSeamInfo[horizontalIndex]->weldEndPointsInRobot->at(0);
             pcl::PointXYZ p4 = weldSeamInfo[horizontalIndex]->weldEndPointsInRobot->at(1);
             // 写入第三个点的八维信息
-            outfile << p3.x + leftVector[0] / 5 << " " << p3.y + leftVector[1] / 5 << " " << p3.z + leftVector[2] / 5 << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p3.x + leftVector[0] / 5, p3.y + leftVector[1] / 5, p3.z + leftVector[2] / 5, leftA, leftB, leftC, weldingSpeed,
+                           ARC_START, LINE_WELD, weldingCurrent, weldingVoltage);
 
             if (verticalIndex != -1) {  // 并且还存在竖直焊缝, 先把水平焊缝走完, 再走竖直焊缝 这里由于摆焊，需要熄弧到点再起弧
-                if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) &&
-                    settingPara.weldingVerticalWeld) {
+                if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) && settingPara.weldingVerticalWeld) {
                     // 写入第四个点的八维信息
-                    outfile << p4.x + leftVector[0] / 2 << " " << p4.y + leftVector[1] / 2 << " " << p4.z + leftVector[2] / 2
-                            << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                            << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p4.x + leftVector[0] / 2, p4.y + leftVector[1] / 2, p4.z + leftVector[2] / 2, leftA, leftB, leftC,
+                                   weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
 
                     pcl::PointXYZ p5 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(0);
                     pcl::PointXYZ p6 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(1);
 
                     // 写入第五个点的八维信息
-                    outfile << p5.x + leftVector[0] << " " << p5.y + leftVector[1] << " " << p5.z + leftVector[2] << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD
-                            << " " << weldingCurrent_Vertical << " " << weldingVoltage_Vertical << std::endl;
+                    writeWeldPoint(outfile, p5.x + leftVector[0], p5.y + leftVector[1], p5.z + leftVector[2], leftA, leftB, leftC, moveSpeed,
+                                   ARC_START, LINE_WELD, weldingCurrent_Vertical, weldingVoltage_Vertical);
                     // 写入第六个点的八维信息
-                    outfile << p6.x + leftVector[0] << " " << p6.y + leftVector[1] << " " << p6.z + leftVector[2] << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedVertical << " " << ARC_STOP << " "
-                            << CURR_SWING_METHOD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p6.x + leftVector[0], p6.y + leftVector[1], p6.z + leftVector[2], leftA, leftB, leftC,
+                                   weldingSpeedVertical, ARC_STOP, CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
                     // 终止过渡点的八维坐标
-                    outfile << p6.x + leftVector[0] << " " << p6.y + leftVector[1] << " " << p6.z + leftVector[2] + 50 << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                            << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p6.x + leftVector[0], p6.y + leftVector[1], p6.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed,
+                                   ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 } else {
                     // 写入第四个点的八维信息
-                    outfile << p4.x + leftVector[0] / 2 << " " << p4.y + leftVector[1] / 2 << " " << p4.z + leftVector[2] / 2
-                            << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                            << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p4.x + leftVector[0] / 2, p4.y + leftVector[1] / 2, p4.z + leftVector[2] / 2, leftA, leftB, leftC,
+                                   weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                     // 终止过渡点的八维信息
-                    outfile << p4.x + leftVector[0] << " " << p4.y + leftVector[1] << " " << p4.z + leftVector[2] + 50 << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                            << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p4.x + leftVector[0], p4.y + leftVector[1], p4.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed,
+                                   ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 }
             } else {  // 没有竖直焊缝, 则只把水平焊缝走完
                 // 写入第四个点的八维信息
-                outfile << p4.x + leftVector[0] / 2 << " " << p4.y + leftVector[1] / 2 << " " << p4.z + leftVector[2] / 2 << " ";
-                outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                        << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + leftVector[0] / 2, p4.y + leftVector[1] / 2, p4.z + leftVector[2] / 2, leftA, leftB, leftC,
+                               weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 // 终止过渡点的八维信息
-                outfile << p4.x + leftVector[0] << " " << p4.y + leftVector[1] << " " << p4.z + leftVector[2] + 50 << " ";
-                outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                        << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + leftVector[0], p4.y + leftVector[1], p4.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed,
+                               ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             }
         } else {  // 不存在水平焊缝, 就继续把横梁对接走完, 再判断有没有竖直焊缝
             width = weldSeamInfo[frontBeamIndex]->width;
@@ -413,37 +379,30 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
             else weldingSpeed = weldingSpeedDefault;  // clang-format on
 
             // 写入第二个点的八维信息
-            outfile << p2.x - leftVector[0] / withdrawDis * 5 << " " << p2.y - leftVector[1] / withdrawDis * 5 << " "
-                    << p2.z - leftVector[2] / withdrawDis * 5 << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p2.x - leftVector[0] / withdrawDis * 5, p2.y - leftVector[1] / withdrawDis * 5,
+                           p2.z - leftVector[2] / withdrawDis * 5, leftA, leftB, leftC, weldingSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                           weldingVoltage);
             // 终止过渡点的八维坐标
-            outfile << p2.x + leftVector[0] / 5 << " " << p2.y + leftVector[1] / 5 << " " << p2.z + leftVector[2] / 5 + 50 << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p2.x + leftVector[0] / 5, p2.y + leftVector[1] / 5, p2.z + leftVector[2] / 5 + 50, leftA, leftB, leftC, moveSpeed,
+                           ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
 
             if (verticalIndex != -1) {
-                if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) &&
-                    settingPara.weldingVerticalWeld) {
+                if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) && settingPara.weldingVerticalWeld) {
                     pcl::PointXYZ p5 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(0);
                     pcl::PointXYZ p6 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(1);
 
                     // 起始过渡点的八维坐标
-                    outfile << p5.x + leftVector[0] << " " << p5.y + leftVector[1] << " " << p5.z + leftVector[2] + 50 << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                            << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p5.x + leftVector[0], p5.y + leftVector[1], p5.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed,
+                                   ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                     // 写入第五个点的八维信息
-                    outfile << p5.x + leftVector[0] << " " << p5.y + leftVector[1] << " " << p5.z + leftVector[2] << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD
-                            << " " << weldingCurrent_Vertical << " " << weldingVoltage_Vertical << std::endl;
+                    writeWeldPoint(outfile, p5.x + leftVector[0], p5.y + leftVector[1], p5.z + leftVector[2], leftA, leftB, leftC, moveSpeed,
+                                   ARC_START, LINE_WELD, weldingCurrent_Vertical, weldingVoltage_Vertical);
                     // 写入第六个点的八维信息
-                    outfile << p6.x + leftVector[0] << " " << p6.y + leftVector[1] << " " << p6.z + leftVector[2] << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedVertical << " " << ARC_STOP << " "
-                            << CURR_SWING_METHOD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p6.x + leftVector[0], p6.y + leftVector[1], p6.z + leftVector[2], leftA, leftB, leftC,
+                                   weldingSpeedVertical, ARC_STOP, CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
                     // 终止过渡点的八维坐标
-                    outfile << p6.x + leftVector[0] << " " << p6.y + leftVector[1] << " " << p6.z + leftVector[2] + 50 << " ";
-                    outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                            << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p6.x + leftVector[0], p6.y + leftVector[1], p6.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed,
+                                   ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 }
             }
         }
@@ -451,80 +410,65 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
         pcl::PointXYZ p3 = weldSeamInfo[horizontalIndex]->weldEndPointsInRobot->at(0);
         pcl::PointXYZ p4 = weldSeamInfo[horizontalIndex]->weldEndPointsInRobot->at(1);
         // 起始过渡点的八维坐标
-        outfile << p3.x + leftVector[0] / 5 << " " << p3.y + leftVector[1] / 5 << " " << p3.z + leftVector[2] / 5 + 50 << " ";
-        outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p3.x + leftVector[0] / 5, p3.y + leftVector[1] / 5, p3.z + leftVector[2] / 5 + 50, leftA, leftB, leftC, moveSpeed,
+                       ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         // 写入第三个点的八维信息
-        outfile << p3.x + leftVector[0] / 5 << " " << p3.y + leftVector[1] / 5 << " " << p3.z + leftVector[2] / 5 << " ";
-        outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p3.x + leftVector[0] / 5, p3.y + leftVector[1] / 5, p3.z + leftVector[2] / 5, leftA, leftB, leftC, moveSpeed,
+                       ARC_START, LINE_WELD, weldingCurrent, weldingVoltage);
 
         if (verticalIndex != -1) {  // 并且还存在竖直焊缝, 先把水平焊缝走完, 再走竖直焊缝
-            if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) &&
-                settingPara.weldingVerticalWeld) {
+            if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) && settingPara.weldingVerticalWeld) {
                 // 写入第四个点的八维信息
-                outfile << p4.x + leftVector[0] / 2 << " " << p4.y + leftVector[1] / 2 << " " << p4.z + leftVector[2] / 2 << " ";
-                outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                        << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
-
+                writeWeldPoint(outfile, p4.x + leftVector[0] / 2, p4.y + leftVector[1] / 2, p4.z + leftVector[2] / 2, leftA, leftB, leftC,
+                               weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 pcl::PointXYZ p5 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(0);
                 pcl::PointXYZ p6 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(1);
 
                 // 写入第五个点的八维信息
-                outfile << p5.x + leftVector[0] << " " << p5.y + leftVector[1] << " " << p5.z + leftVector[2] - 4
-                        << " ";  // TODO 临时误差补偿
-                outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD
-                        << " " << weldingCurrent_Vertical << " " << weldingVoltage_Vertical << std::endl;
+
+                writeWeldPoint(outfile, p5.x + leftVector[0], p5.y + leftVector[1], p5.z + leftVector[2] - 4, leftA, leftB, leftC, moveSpeed,
+                               ARC_START, LINE_WELD, weldingCurrent_Vertical, weldingVoltage_Vertical);
+
                 // 写入第六个点的八维信息
-                outfile << p6.x + leftVector[0] << " " << p6.y + leftVector[1] << " " << p6.z + leftVector[2] - 2 << " ";
-                outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedVertical << " " << ARC_STOP << " "
-                        << CURR_SWING_METHOD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p6.x + leftVector[0], p6.y + leftVector[1], p6.z + leftVector[2] - 2, leftA, leftB, leftC,
+                               weldingSpeedVertical, ARC_STOP, CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
+
                 // 终止过渡点的八维坐标
-                outfile << p6.x + leftVector[0] << " " << p6.y + leftVector[1] << " " << p6.z + leftVector[2] + 50 << " ";
-                outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                        << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p6.x + leftVector[0], p6.y + leftVector[1], p6.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed,
+                               ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             } else {
                 // 写入第四个点的八维信息
-                outfile << p4.x + leftVector[0] / 2 << " " << p4.y + leftVector[1] / 2 << " " << p4.z + leftVector[2] / 2 << " ";
-                outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                        << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + leftVector[0] / 2, p4.y + leftVector[1] / 2, p4.z + leftVector[2] / 2, leftA, leftB, leftC,
+                               weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 // 终止过渡点的八维信息
-                outfile << p4.x + leftVector[0] << " " << p4.y + leftVector[1] << " " << p4.z + leftVector[2] + 50 << " ";
-                outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                        << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + leftVector[0], p4.y + leftVector[1], p4.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed,
+                               ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             }
         } else {  // 没有竖直焊缝, 则只把水平焊缝走完
             // 写入第四个点的八维信息
-            outfile << p4.x + leftVector[0] / 2 << " " << p4.y + leftVector[1] / 2 << " " << p4.z + leftVector[2] / 2 << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                    << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p4.x + leftVector[0] / 2, p4.y + leftVector[1] / 2, p4.z + leftVector[2] / 2, leftA, leftB, leftC,
+                           weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             // 终止过渡点的八维信息
-            outfile << p4.x + leftVector[0] << " " << p4.y + leftVector[1] << " " << p4.z + leftVector[2] + 50 << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p4.x + leftVector[0], p4.y + leftVector[1], p4.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed, ARC_STOP,
+                           LINE_WELD, weldingCurrent, weldingVoltage);
         }
     } else if (verticalIndex != -1) {  // 不存在横梁对接和水平, 但存在竖直焊缝
-        if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) &&
-            settingPara.weldingVerticalWeld) {
+        if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) && settingPara.weldingVerticalWeld) {
             pcl::PointXYZ p5 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(0);
             pcl::PointXYZ p6 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(1);
 
             // 起始过渡点的八维坐标
-            outfile << p5.x + leftVector[0] << " " << p5.y + leftVector[1] << " " << p5.z + leftVector[2] + 50 << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p5.x + leftVector[0], p5.y + leftVector[1], p5.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed, ARC_STOP,
+                           LINE_WELD, weldingCurrent, weldingVoltage);
             // 写入第五个点的八维信息
-            outfile << p5.x + leftVector[0] << " " << p5.y + leftVector[1] << " " << p5.z + leftVector[2] << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                    << weldingCurrent_Vertical << " " << weldingVoltage_Vertical << std::endl;
+            writeWeldPoint(outfile, p5.x + leftVector[0], p5.y + leftVector[1], p5.z + leftVector[2], leftA, leftB, leftC, moveSpeed, ARC_START,
+                           LINE_WELD, weldingCurrent_Vertical, weldingVoltage_Vertical);
             // 写入第六个点的八维信息
-            outfile << p6.x + leftVector[0] << " " << p6.y + leftVector[1] << " " << p6.z + leftVector[2] << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << weldingSpeedVertical << " " << ARC_STOP << " "
-                    << CURR_SWING_METHOD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p6.x + leftVector[0], p6.y + leftVector[1], p6.z + leftVector[2], leftA, leftB, leftC, weldingSpeedVertical,
+                           ARC_STOP, CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
             // 终止过渡点的八维坐标
-            outfile << p6.x + leftVector[0] << " " << p6.y + leftVector[1] << " " << p6.z + leftVector[2] + 50 << " ";
-            outfile << leftA << " " << leftB << " " << leftC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p6.x + leftVector[0], p6.y + leftVector[1], p6.z + leftVector[2] + 50, leftA, leftB, leftC, moveSpeed, ARC_STOP,
+                           LINE_WELD, weldingCurrent, weldingVoltage);
         }
     }
 
@@ -532,9 +476,7 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
     // ########################### 写入中间过渡点 ###########################
     // ###########################               ###########################
     if (weldSeamInfo.size() - 1 > endOfLeftSeams) {
-        outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
     }
 
     // ###########################             ###########################
@@ -560,16 +502,14 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
     for (int i = endOfLeftSeams + 1; i < weldSeamInfo.size(); ++i) {  // 焊缝编号归类预存
         if (weldSeamInfo[i]->detectSuccFlag == true && weldSeamInfo[i]->weldEndPointsInRobot != nullptr &&
             weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
-            if (weldSeamInfo[i]->weldType == WELD_TYPE::BACK_CORNER_BUTT ||
-                weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {  // 边角焊缝
+            if (weldSeamInfo[i]->weldType == WELD_TYPE::BACK_CORNER_BUTT || weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {  // 边角焊缝
                 cornerIndex = i;
             } else if (weldSeamInfo[i]->weldType == WELD_TYPE::BACK_BEAM_BUTT) {  // 背面横梁对接
                 backBeamIndex = i;
             } else if (weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_BEAM_BUTT) {  // 正面横梁对接
                 frontBeamIndex = i;
                 // TODO 临时误差补偿
-                if (weldSeamInfo[i]->detectSuccFlag && weldSeamInfo[i]->weldEndPointsInRobot &&
-                    weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
+                if (weldSeamInfo[i]->detectSuccFlag && weldSeamInfo[i]->weldEndPointsInRobot && weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
                     if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::LEFT) {
                         weldSeamInfo[i]->weldEndPointsInRobot->at(0).x -= 5;
                         weldSeamInfo[i]->weldEndPointsInRobot->at(1).x -= 5;
@@ -597,30 +537,24 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
         pcl::PointXYZ p1 = weldSeamInfo[cornerIndex]->weldEndPointsInRobot->at(0);
         pcl::PointXYZ p2 = weldSeamInfo[cornerIndex]->weldEndPointsInRobot->at(1);
         // 起始过渡点的八维坐标
-        outfile << p1.x - rightVector[0] / withdrawDis * 7 << " " << p1.y - rightVector[1] / withdrawDis * 7 << " "
-                << p1.z - rightVector[2] / withdrawDis * 7 + 50 << " ";
-        outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - rightVector[0] / withdrawDis * 7, p1.y - rightVector[1] / withdrawDis * 7,
+                       p1.z - rightVector[2] / withdrawDis * 7 + 50, rightA, rightB, rightC, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                       weldingVoltage);
         // 写入第一个点的八维信息
-        outfile << p1.x - rightVector[0] / withdrawDis * 7 << " " << p1.y - rightVector[1] / withdrawDis * 7 << " "
-                << p1.z - rightVector[2] / withdrawDis * 7 << " ";
-        outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - rightVector[0] / withdrawDis * 7, p1.y - rightVector[1] / withdrawDis * 7,
+                       p1.z - rightVector[2] / withdrawDis * 7, rightA, rightB, rightC, moveSpeed, ARC_START, LINE_WELD, weldingCurrent,
+                       weldingVoltage);
         // 写入第二个点的八维信息
-        outfile << p2.x - rightVector[0] / withdrawDis * 7 << " " << p2.y - rightVector[1] / withdrawDis * 7 << " "
-                << p2.z - rightVector[2] / withdrawDis * 7 << " ";
-        outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p2.x - rightVector[0] / withdrawDis * 7, p2.y - rightVector[1] / withdrawDis * 7,
+                       p2.z - rightVector[2] / withdrawDis * 7, rightA, rightB, rightC, weldingSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                       weldingVoltage);
         // 终止过渡点的八维坐标
-        outfile << p2.x - rightVector[0] / withdrawDis * 7 << " " << p2.y - rightVector[1] / withdrawDis * 7 << " "
-                << p2.z - rightVector[2] / withdrawDis * 7 + 50 << " ";
-        outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p2.x - rightVector[0] / withdrawDis * 7, p2.y - rightVector[1] / withdrawDis * 7,
+                       p2.z - rightVector[2] / withdrawDis * 7 + 50, rightA, rightB, rightC, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                       weldingVoltage);
 
         if (backBeamIndex != -1) {  // 如果后面还有横梁焊缝, 就加一个过渡点
-            outfile << X0 << " " << Y0 << " " << Z0 << " ";
-            outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         }
     }
 
@@ -635,21 +569,17 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
         pcl::PointXYZ p1 = weldSeamInfo[backBeamIndex]->weldEndPointsInRobot->at(0);
         pcl::PointXYZ p2 = weldSeamInfo[backBeamIndex]->weldEndPointsInRobot->at(1);
         // 起始过渡点的八维坐标
-        outfile << p1.x - backVector[0] * 3 << " " << p1.y - backVector[1] * 3 << " " << p1.z - backVector[2] * 3 + 50 << " ";
-        outfile << backBeamA << " " << backBeamB << " " << backBeamC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - backVector[0] * 3, p1.y - backVector[1] * 3, p1.z - backVector[2] * 3 + 50, backBeamA, backBeamB, backBeamC,
+                       moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         // 写入第一个点的八维信息
-        outfile << p1.x - backVector[0] * 3 << " " << p1.y - backVector[1] * 3 << " " << p1.z - backVector[2] * 3 << " ";
-        outfile << backBeamA << " " << backBeamB << " " << backBeamC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD
-                << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - backVector[0] * 3, p1.y - backVector[1] * 3, p1.z - backVector[2] * 3, backBeamA, backBeamB, backBeamC,
+                       moveSpeed, ARC_START, LINE_WELD, weldingCurrent, weldingVoltage);
         // 写入第二个点的八维信息
-        outfile << p2.x - backVector[0] * 3 << " " << p2.y - backVector[1] * 3 << " " << p2.z - backVector[2] * 3 << " ";
-        outfile << backBeamA << " " << backBeamB << " " << backBeamC << " " << weldingSpeed << " " << ARC_STOP << " " << LINE_WELD
-                << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p2.x - backVector[0] * 3, p2.y - backVector[1] * 3, p2.z - backVector[2] * 3, backBeamA, backBeamB, backBeamC,
+                       weldingSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         // 终止过渡点的八维坐标
-        outfile << p2.x - backVector[0] * 3 << " " << p2.y - backVector[1] * 3 << " " << p2.z - backVector[2] * 3 + 50 << " ";
-        outfile << backBeamA << " " << backBeamB << " " << backBeamC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p2.x - backVector[0] * 3, p2.y - backVector[1] * 3, p2.z - backVector[2] * 3 + 50, backBeamA, backBeamB, backBeamC,
+                       moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
     }
 
     // 写入正面横梁处焊缝
@@ -657,14 +587,12 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
         pcl::PointXYZ p1 = weldSeamInfo[frontBeamIndex]->weldEndPointsInRobot->at(0);
         pcl::PointXYZ p2 = weldSeamInfo[frontBeamIndex]->weldEndPointsInRobot->at(1);
         // 起始过渡点的八维坐标
-        outfile << p1.x + rightVector[0] / 5 << " " << p1.y + rightVector[1] / 5 << " " << p1.z + rightVector[2] / 5 + 50 << " ";
-        outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x + rightVector[0] / 5, p1.y + rightVector[1] / 5, p1.z + rightVector[2] / 5 + 50, rightA, rightB, rightC,
+                       moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         // 写入第一个点的八维信息
-        outfile << p1.x - rightVector[0] / withdrawDis * 5 << " " << p1.y - rightVector[1] / withdrawDis * 5 << " "
-                << p1.z - rightVector[2] / withdrawDis * 5 << " ";
-        outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p1.x - rightVector[0] / withdrawDis * 5, p1.y - rightVector[1] / withdrawDis * 5,
+                       p1.z - rightVector[2] / withdrawDis * 5, rightA, rightB, rightC, moveSpeed, ARC_START, LINE_WELD, weldingCurrent,
+                       weldingVoltage);
 
         if (horizontalIndex != -1) {  // 并且存在水平焊缝, 先把横梁对接走完, 再走水平焊缝
             width = weldSeamInfo[frontBeamIndex]->width;
@@ -675,63 +603,48 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
             else weldingSpeed = weldingSpeedDefault;  // clang-format on
 
             // 写入第二个点的八维信息
-            outfile << p2.x - rightVector[0] / withdrawDis * 5 << " " << p2.y - rightVector[1] / withdrawDis * 5 << " "
-                    << p2.z - rightVector[2] / withdrawDis * 5 << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeed << " " << ARC_START << " " << LINE_WELD
-                    << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p2.x - rightVector[0] / withdrawDis * 5, p2.y - rightVector[1] / withdrawDis * 5,
+                           p2.z - rightVector[2] / withdrawDis * 5, rightA, rightB, rightC, weldingSpeed, ARC_START, LINE_WELD, weldingCurrent,
+                           weldingVoltage);
 
             pcl::PointXYZ p3 = weldSeamInfo[horizontalIndex]->weldEndPointsInRobot->at(0);
             pcl::PointXYZ p4 = weldSeamInfo[horizontalIndex]->weldEndPointsInRobot->at(1);
             // 写入第三个点的八维信息
-            outfile << p3.x + rightVector[0] / 5 << " " << p3.y + rightVector[1] / 5 << " " << p3.z + rightVector[2] / 5 << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeed << " " << ARC_START << " " << LINE_WELD
-                    << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p3.x + rightVector[0] / 5, p3.y + rightVector[1] / 5, p3.z + rightVector[2] / 5, rightA, rightB, rightC,
+                           weldingSpeed, ARC_START, LINE_WELD, weldingCurrent, weldingVoltage);
 
             if (verticalIndex != -1) {  // 并且还存在竖直焊缝, 先把水平焊缝走完, 再走竖直焊缝
-                if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) &&
-                    settingPara.weldingVerticalWeld) {
+                if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) && settingPara.weldingVerticalWeld) {
                     // 写入第四个点的八维信息
-                    outfile << p4.x + rightVector[0] / 2 << " " << p4.y + rightVector[1] / 2 << " " << p4.z + rightVector[2] / 2
-                            << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                            << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
-
+                    writeWeldPoint(outfile, p4.x + rightVector[0] / 2, p4.y + rightVector[1] / 2, p4.z + rightVector[2] / 2, rightA, rightB, rightC,
+                                   weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                     pcl::PointXYZ p5 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(0);
                     pcl::PointXYZ p6 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(1);
 
                     // 写入第五个点的八维信息
-                    outfile << p5.x + rightVector[0] << " " << p5.y + rightVector[1] << " " << p5.z + rightVector[2] << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_START << " "
-                            << LINE_WELD << " " << weldingCurrent_Vertical << " " << weldingVoltage_Vertical << std::endl;
+                    writeWeldPoint(outfile, p5.x + rightVector[0], p5.y + rightVector[1], p5.z + rightVector[2], rightA, rightB, rightC, moveSpeed,
+                                   ARC_START, LINE_WELD, weldingCurrent_Vertical, weldingVoltage_Vertical);
                     // 写入第六个点的八维信息
-                    outfile << p6.x + rightVector[0] << " " << p6.y + rightVector[1] << " " << p6.z + rightVector[2] << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedVertical << " " << ARC_STOP << " "
-                            << CURR_SWING_METHOD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p6.x + rightVector[0], p6.y + rightVector[1], p6.z + rightVector[2], rightA, rightB, rightC,
+                                   weldingSpeedVertical, ARC_STOP, CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
                     // 终止过渡点的八维坐标
-                    outfile << p6.x + rightVector[0] << " " << p6.y + rightVector[1] << " " << p6.z + rightVector[2] + 50 << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                            << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p6.x + rightVector[0], p6.y + rightVector[1], p6.z + rightVector[2] + 50, rightA, rightB, rightC,
+                                   moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 } else {
                     // 写入第四个点的八维信息
-                    outfile << p4.x + rightVector[0] / 2 << " " << p4.y + rightVector[1] / 2 << " " << p4.z + rightVector[2] / 2
-                            << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                            << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p4.x + rightVector[0] / 2, p4.y + rightVector[1] / 2, p4.z + rightVector[2] / 2, rightA, rightB, rightC,
+                                   weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                     // 终止过渡点的八维信息
-                    outfile << p4.x + rightVector[0] << " " << p4.y + rightVector[1] << " " << p4.z + rightVector[2] + 50 << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                            << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p4.x + rightVector[0], p4.y + rightVector[1], p4.z + rightVector[2] + 50, rightA, rightB, rightC,
+                                   moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 }
             } else {  // 没有竖直焊缝, 则只把水平焊缝走完
                 // 写入第四个点的八维信息
-                outfile << p4.x + rightVector[0] / 2 << " " << p4.y + rightVector[1] / 2 << " " << p4.z + rightVector[2] / 2
-                        << " ";
-                outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                        << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + rightVector[0] / 2, p4.y + rightVector[1] / 2, p4.z + rightVector[2] / 2, rightA, rightB, rightC,
+                               weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 // 终止过渡点的八维信息
-                outfile << p4.x + rightVector[0] << " " << p4.y + rightVector[1] << " " << p4.z + rightVector[2] + 50 << " ";
-                outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                        << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + rightVector[0], p4.y + rightVector[1], p4.z + rightVector[2] + 50, rightA, rightB, rightC, moveSpeed,
+                               ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             }
         } else {  // 不存在水平焊缝, 就继续把横梁对接走完, 再判断有没有竖直焊缝
             width = weldSeamInfo[frontBeamIndex]->width;
@@ -742,38 +655,30 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
             else weldingSpeed = weldingSpeedDefault;  // clang-format on
 
             // 写入第二个点的八维信息
-            outfile << p2.x - rightVector[0] / withdrawDis * 5 << " " << p2.y - rightVector[1] / withdrawDis * 5 << " "
-                    << p2.z - rightVector[2] / withdrawDis * 5 << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeed << " " << ARC_STOP << " " << LINE_WELD
-                    << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p2.x - rightVector[0] / withdrawDis * 5, p2.y - rightVector[1] / withdrawDis * 5,
+                           p2.z - rightVector[2] / withdrawDis * 5, rightA, rightB, rightC, weldingSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                           weldingVoltage);
             // 终止过渡点的八维坐标
-            outfile << p2.x + rightVector[0] / 5 << " " << p2.y + rightVector[1] / 5 << " " << p2.z + rightVector[2] / 5 + 50
-                    << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p2.x + rightVector[0] / 5, p2.y + rightVector[1] / 5, p2.z + rightVector[2] / 5 + 50, rightA, rightB, rightC,
+                           moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
 
             if (verticalIndex != -1) {
-                if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) &&
-                    settingPara.weldingVerticalWeld) {
+                if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) && settingPara.weldingVerticalWeld) {
                     pcl::PointXYZ p5 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(0);
                     pcl::PointXYZ p6 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(1);
 
                     // 起始过渡点的八维坐标
-                    outfile << p5.x + rightVector[0] << " " << p5.y + rightVector[1] << " " << p5.z + rightVector[2] + 50 << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                            << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p5.x + rightVector[0], p5.y + rightVector[1], p5.z + rightVector[2] + 50, rightA, rightB, rightC,
+                                   moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                     // 写入第五个点的八维信息
-                    outfile << p5.x + rightVector[0] << " " << p5.y + rightVector[1] << " " << p5.z + rightVector[2] << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_START << " "
-                            << LINE_WELD << " " << weldingCurrent_Vertical << " " << weldingVoltage_Vertical << std::endl;
+                    writeWeldPoint(outfile, p5.x + rightVector[0], p5.y + rightVector[1], p5.z + rightVector[2], rightA, rightB, rightC, moveSpeed,
+                                   ARC_START, LINE_WELD, weldingCurrent_Vertical, weldingVoltage_Vertical);
                     // 写入第六个点的八维信息
-                    outfile << p6.x + rightVector[0] << " " << p6.y + rightVector[1] << " " << p6.z + rightVector[2] << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedVertical << " " << ARC_STOP << " "
-                            << CURR_SWING_METHOD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p6.x + rightVector[0], p6.y + rightVector[1], p6.z + rightVector[2], rightA, rightB, rightC,
+                                   weldingSpeedVertical, ARC_STOP, CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
                     // 终止过渡点的八维坐标
-                    outfile << p6.x + rightVector[0] << " " << p6.y + rightVector[1] << " " << p6.z + rightVector[2] + 50 << " ";
-                    outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                            << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                    writeWeldPoint(outfile, p6.x + rightVector[0], p6.y + rightVector[1], p6.z + rightVector[2] + 50, rightA, rightB, rightC,
+                                   moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 }
             }
         }
@@ -781,100 +686,81 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
         pcl::PointXYZ p3 = weldSeamInfo[horizontalIndex]->weldEndPointsInRobot->at(0);
         pcl::PointXYZ p4 = weldSeamInfo[horizontalIndex]->weldEndPointsInRobot->at(1);
         // 起始过渡点的八维坐标
-        outfile << p3.x + rightVector[0] / 5 << " " << p3.y + rightVector[1] / 5 << " " << p3.z + rightVector[2] / 5 + 50 << " ";
-        outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p3.x + rightVector[0] / 5, p3.y + rightVector[1] / 5, p3.z + rightVector[2] / 5 + 50, rightA, rightB, rightC,
+                       moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         // 写入第三个点的八维信息
-        outfile << p3.x + rightVector[0] / 5 << " " << p3.y + rightVector[1] / 5 << " " << p3.z + rightVector[2] / 5 << " ";
-        outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, p3.x + rightVector[0] / 5, p3.y + rightVector[1] / 5, p3.z + rightVector[2] / 5, rightA, rightB, rightC, moveSpeed,
+                       ARC_START, LINE_WELD, weldingCurrent, weldingVoltage);
 
         if (verticalIndex != -1) {  // 并且还存在竖直焊缝, 先把水平焊缝走完, 再走竖直焊缝
-            if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) &&
-                settingPara.weldingVerticalWeld) {
+            if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) && settingPara.weldingVerticalWeld) {
                 // 写入第四个点的八维信息
-                outfile << p4.x + rightVector[0] / 2 << " " << p4.y + rightVector[1] / 2 << " " << p4.z + rightVector[2] / 2
-                        << " ";
-                outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                        << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + rightVector[0] / 2, p4.y + rightVector[1] / 2, p4.z + rightVector[2] / 2, rightA, rightB, rightC,
+                               weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
 
                 pcl::PointXYZ p5 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(0);
                 pcl::PointXYZ p6 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(1);
 
                 // 写入第五个点的八维信息
-                outfile << p5.x + rightVector[0] << " " << p5.y + rightVector[1] << " " << p5.z + rightVector[2] - 4
-                        << " ";  // TODO 临时误差补偿
-                outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD
-                        << " " << weldingCurrent_Vertical << " " << weldingVoltage_Vertical << std::endl;
+                writeWeldPoint(outfile, p5.x + rightVector[0], p5.y + rightVector[1], p5.z + rightVector[2] - 4, rightA, rightB, rightC, moveSpeed,
+                               ARC_START, LINE_WELD, weldingCurrent_Vertical, weldingVoltage_Vertical);
                 // 写入第六个点的八维信息
-                outfile << p6.x + rightVector[0] << " " << p6.y + rightVector[1] << " " << p6.z + rightVector[2] - 2 << " ";
-                outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedVertical << " " << ARC_STOP << " "
-                        << CURR_SWING_METHOD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p6.x + rightVector[0], p6.y + rightVector[1], p6.z + rightVector[2] - 2, rightA, rightB, rightC,
+                               weldingSpeedVertical, ARC_STOP, CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
                 // 终止过渡点的八维坐标
-                outfile << p6.x + rightVector[0] << " " << p6.y + rightVector[1] << " " << p6.z + rightVector[2] + 50 << " ";
-                outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                        << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p6.x + rightVector[0], p6.y + rightVector[1], p6.z + rightVector[2] + 50, rightA, rightB, rightC, moveSpeed,
+                               ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             } else {
                 // 写入第四个点的八维信息
-                outfile << p4.x + rightVector[0] / 2 << " " << p4.y + rightVector[1] / 2 << " " << p4.z + rightVector[2] / 2
-                        << " ";
-                outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                        << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + rightVector[0] / 2, p4.y + rightVector[1] / 2, p4.z + rightVector[2] / 2, rightA, rightB, rightC,
+                               weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
                 // 终止过渡点的八维信息
-                outfile << p4.x + rightVector[0] << " " << p4.y + rightVector[1] << " " << p4.z + rightVector[2] + 50 << " ";
-                outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD
-                        << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+                writeWeldPoint(outfile, p4.x + rightVector[0], p4.y + rightVector[1], p4.z + rightVector[2] + 50, rightA, rightB, rightC, moveSpeed,
+                               ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             }
         } else {  // 没有竖直焊缝, 则只把水平焊缝走完
             // 写入第四个点的八维信息
-            outfile << p4.x + rightVector[0] / 2 << " " << p4.y + rightVector[1] / 2 << " " << p4.z + rightVector[2] / 2 << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedHorizontal << " " << ARC_STOP << " "
-                    << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p4.x + rightVector[0] / 2, p4.y + rightVector[1] / 2, p4.z + rightVector[2] / 2, rightA, rightB, rightC,
+                           weldingSpeedHorizontal, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             // 终止过渡点的八维信息
-            outfile << p4.x + rightVector[0] << " " << p4.y + rightVector[1] << " " << p4.z + rightVector[2] + 50 << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p4.x + rightVector[0], p4.y + rightVector[1], p4.z + rightVector[2] + 50, rightA, rightB, rightC, moveSpeed,
+                           ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         }
     } else if (verticalIndex != -1) {  // 不存在横梁对接和水平, 但存在竖直焊缝
-        if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) &&
-            settingPara.weldingVerticalWeld) {
+        if (trajectoryConfig.robotType != MyToolFunc::getRobotTypeString(ROBOT_TYPE::BAO_YUAN) && settingPara.weldingVerticalWeld) {
             pcl::PointXYZ p5 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(0);
             pcl::PointXYZ p6 = weldSeamInfo[verticalIndex]->weldEndPointsInRobot->at(1);
 
             // 起始过渡点的八维坐标
-            outfile << p5.x + rightVector[0] << " " << p5.y + rightVector[1] << " " << p5.z + rightVector[2] + 50 << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p5.x + rightVector[0], p5.y + rightVector[1], p5.z + rightVector[2] + 50, rightA, rightB, rightC, moveSpeed,
+                           ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             // 写入第五个点的八维信息
-            outfile << p5.x + rightVector[0] << " " << p5.y + rightVector[1] << " " << p5.z + rightVector[2] << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_START << " " << LINE_WELD << " "
-                    << weldingCurrent_Vertical << " " << weldingVoltage_Vertical << std::endl;
+            writeWeldPoint(outfile, p5.x + rightVector[0], p5.y + rightVector[1], p5.z + rightVector[2], rightA, rightB, rightC, moveSpeed, ARC_START,
+                           LINE_WELD, weldingCurrent_Vertical, weldingVoltage_Vertical);
             // 写入第六个点的八维信息
-            outfile << p6.x + rightVector[0] << " " << p6.y + rightVector[1] << " " << p6.z + rightVector[2] << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << weldingSpeedVertical << " " << ARC_STOP << " "
-                    << CURR_SWING_METHOD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p6.x + rightVector[0], p6.y + rightVector[1], p6.z + rightVector[2], rightA, rightB, rightC, weldingSpeedVertical,
+                           ARC_STOP, CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
             // 终止过渡点的八维坐标
-            outfile << p6.x + rightVector[0] << " " << p6.y + rightVector[1] << " " << p6.z + rightVector[2] + 50 << " ";
-            outfile << rightA << " " << rightB << " " << rightC << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                    << weldingCurrent << " " << weldingVoltage << std::endl;
+            writeWeldPoint(outfile, p6.x + rightVector[0], p6.y + rightVector[1], p6.z + rightVector[2] + 50, rightA, rightB, rightC, moveSpeed,
+                           ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
         }
     }
 
     // ########################### 眼在手上写入拍照点, 眼在手外写入零过渡点 ###########################
     if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
         outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
+        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
+                << weldingVoltage << std::endl;
+        outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
+        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
                 << weldingCurrent << " " << weldingVoltage << std::endl;
         outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " "
-                << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
-        outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " "
-                << LINE_WELD << " " << weldingCurrent << " " << weldingVoltage << std::endl;
+        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
+                << weldingCurrent << " " << weldingVoltage << std::endl;
     } else if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_TO_HAND)) {
         outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
+                << weldingVoltage << std::endl;
     } else {
         PLOGE << "机器人手眼关系错误";
     }
@@ -1010,8 +896,7 @@ void SteelAngleTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<Wel
     for (int i = 0; i < weldSeamInfo.size(); ++i) {
         if (weldSeamInfo[i]->detectSuccFlag == true && weldSeamInfo[i]->weldEndPointsInRobot != nullptr &&
             weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
-            if (weldSeamInfo[i]->weldType == WELD_TYPE::BACK_BEAM_BUTT ||
-                weldSeamInfo[i]->weldType == WELD_TYPE::BACK_CORNER_BUTT ||
+            if (weldSeamInfo[i]->weldType == WELD_TYPE::BACK_BEAM_BUTT || weldSeamInfo[i]->weldType == WELD_TYPE::BACK_CORNER_BUTT ||
                 weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_BEAM_BUTT ||
                 weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {  // 不区分左右即可修改方向的焊缝
                 if (weldSeamInfo[i]->weldEndPointsInRobot->at(0).y > weldSeamInfo[i]->weldEndPointsInRobot->at(1).y) {
@@ -1060,8 +945,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
          */
         if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
             for (auto& info : weldSeamInfo) {
-                if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr &&
-                    info->weldEndPointsInRobot->size() == 2) {
+                if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
                     for (auto& end : *(info->weldEndPointsInRobot)) {
                         end = MyToolFunc::transformSinglePoint(end, trajectoryConfig.middleErrorCompensationMatrix);
                         // 不处理
@@ -1070,8 +954,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
             }
         } else if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::LEFT) {
             for (auto& info : weldSeamInfo) {
-                if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr &&
-                    info->weldEndPointsInRobot->size() == 2) {
+                if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
                     for (auto& end : *(info->weldEndPointsInRobot)) {
                         end = MyToolFunc::transformSinglePoint(end, trajectoryConfig.leftErrorCompensationMatrix);
                         if (info->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {
@@ -1094,8 +977,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
                                 end.y += settingPara.Back_Region2_Y_Shift;
                                 end.z += settingPara.Back_Region2_Z_Shift;
                             }
-                        } else if (info->weldType == WELD_TYPE::FRONT_BEAM_BUTT &&
-                                   info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
+                        } else if (info->weldType == WELD_TYPE::FRONT_BEAM_BUTT && info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
                             if (end.x < 0) {
                                 end.x += settingPara.Front_Beam_Region1_X_Shift;
                                 end.y += settingPara.Front_Beam_Region1_Y_Shift;
@@ -1105,8 +987,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
                                 end.y += settingPara.Front_Beam_Region2_Y_Shift;
                                 end.z += settingPara.Front_Beam_Region2_Z_Shift;
                             }
-                        } else if (info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET &&
-                                   info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
+                        } else if (info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET && info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
                             if (end.x < 0) {
                                 end.x += settingPara.Front_L_Beam_H_X_Shift;
                                 end.y += settingPara.Front_L_Beam_H_Y_Shift;
@@ -1116,8 +997,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
                                 end.y += settingPara.Front_R_Beam_H_Y_Shift;
                                 end.z += settingPara.Front_R_Beam_H_Z_Shift;
                             }
-                        } else if (info->weldType == WELD_TYPE::FRONT_VERTICAL_FILLET &&
-                                   info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
+                        } else if (info->weldType == WELD_TYPE::FRONT_VERTICAL_FILLET && info->weldAreaType == WELD_AREA_TYPE::FRONT_UP_BEAM) {
                             if (end.x < 0) {
                                 end.x += settingPara.Front_L_Beam_V_X_Shift;
                                 end.y += settingPara.Front_L_Beam_V_Y_Shift;
@@ -1127,8 +1007,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
                                 end.y += settingPara.Front_R_Beam_V_Y_Shift;
                                 end.z += settingPara.Front_R_Beam_V_Z_Shift;
                             }
-                        } else if (info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET &&
-                                   info->weldAreaType == WELD_AREA_TYPE::FRONT_DOWN_BEAM) {
+                        } else if (info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET && info->weldAreaType == WELD_AREA_TYPE::FRONT_DOWN_BEAM) {
                             if (end.x < 0) {
                                 end.x += settingPara.Front_L_Beam_DH_X_Shift;
                                 end.y += settingPara.Front_L_Beam_DH_Y_Shift;
@@ -1138,8 +1017,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
                                 end.y += settingPara.Front_R_Beam_DH_Y_Shift;
                                 end.z += settingPara.Front_R_Beam_DH_Z_Shift;
                             }
-                        } else if (info->weldType == WELD_TYPE::FRONT_VERTICAL_FILLET &&
-                                   info->weldAreaType == WELD_AREA_TYPE::FRONT_DOWN_BEAM) {
+                        } else if (info->weldType == WELD_TYPE::FRONT_VERTICAL_FILLET && info->weldAreaType == WELD_AREA_TYPE::FRONT_DOWN_BEAM) {
                             if (end.x < 0) {
                                 end.x += settingPara.Front_L_Beam_DV_X_Shift;
                                 end.y += settingPara.Front_L_Beam_DV_Y_Shift;
@@ -1168,8 +1046,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
             }
         } else if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::RIGHT) {
             for (auto& info : weldSeamInfo) {
-                if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr &&
-                    info->weldEndPointsInRobot->size() == 2) {
+                if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() == 2) {
                     for (auto& end : *(info->weldEndPointsInRobot)) {
                         end = MyToolFunc::transformSinglePoint(end, trajectoryConfig.rightErrorCompensationMatrix);
                         if (info->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {
@@ -1192,8 +1069,7 @@ void SteelAngleTrajectoryPlanning::seamsErrorCompensate(std::vector<std::shared_
                                 end.y += settingPara.Back_Region2_Y_Shift_R;
                                 end.z += settingPara.Back_Region2_Z_Shift_R;
                             }
-                        } else if (info->weldType == WELD_TYPE::FRONT_BEAM_BUTT ||
-                                   info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET ||
+                        } else if (info->weldType == WELD_TYPE::FRONT_BEAM_BUTT || info->weldType == WELD_TYPE::FRONT_HORIZONTAL_FILLET ||
                                    info->weldType == WELD_TYPE::FRONT_VERTICAL_FILLET) {
                             if (end.x > 0) {
                                 end.x += settingPara.Front_Beam_Region1_X_Shift_R;
@@ -1327,29 +1203,28 @@ int SteelAngleTrajectoryPlanning::findEndOfLeftSeams(std::vector<std::shared_ptr
 
 // 将焊缝信息按照X值进行排序
 void SteelAngleTrajectoryPlanning::sortSeamsWithX(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
-    std::sort(weldSeamInfo.begin(), weldSeamInfo.end(),
-              [](const std::shared_ptr<WeldSeamInfo>& a, const std::shared_ptr<WeldSeamInfo>& b) {
-                  // 优先级1: detectSuccFlag 为 true 的排前面
-                  if (a->detectSuccFlag != b->detectSuccFlag) {
-                      return a->detectSuccFlag > b->detectSuccFlag;
-                  }
+    std::sort(weldSeamInfo.begin(), weldSeamInfo.end(), [](const std::shared_ptr<WeldSeamInfo>& a, const std::shared_ptr<WeldSeamInfo>& b) {
+        // 优先级1: detectSuccFlag 为 true 的排前面
+        if (a->detectSuccFlag != b->detectSuccFlag) {
+            return a->detectSuccFlag > b->detectSuccFlag;
+        }
 
-                  // 两者 detectSuccFlag 状态相同
-                  if (!a->detectSuccFlag) {  // 都为 false, 保持原顺序
-                      return false;
-                  }
+        // 两者 detectSuccFlag 状态相同
+        if (!a->detectSuccFlag) {  // 都为 false, 保持原顺序
+            return false;
+        }
 
-                  // 检查指针和容器有效性
-                  auto& pointsA = a->weldEndPointsInCamera;
-                  auto& pointsB = b->weldEndPointsInCamera;
-                  if (!pointsA || !pointsB || pointsA->empty() || pointsB->empty()) {
-                      // 处理无效数据, 将无效项排在后面
-                      return (pointsA && !pointsA->empty()) > (pointsB && !pointsB->empty());
-                  }
+        // 检查指针和容器有效性
+        auto& pointsA = a->weldEndPointsInCamera;
+        auto& pointsB = b->weldEndPointsInCamera;
+        if (!pointsA || !pointsB || pointsA->empty() || pointsB->empty()) {
+            // 处理无效数据, 将无效项排在后面
+            return (pointsA && !pointsA->empty()) > (pointsB && !pointsB->empty());
+        }
 
-                  // 优先级2: 比较 x 坐标
-                  return pointsA->front().x < pointsB->front().x;
-              });
+        // 优先级2: 比较 x 坐标
+        return pointsA->front().x < pointsB->front().x;
+    });
 }
 
 // 真实坐标系转虚拟坐标系
@@ -1485,8 +1360,7 @@ std::array<std::array<double, 3>, 3> SteelAngleTrajectoryPlanning::getYawMatrix(
 }
 
 // 旋转向量
-std::array<double, 3> SteelAngleTrajectoryPlanning::rotateVector(const std::array<std::array<double, 3>, 3>& mat,
-                                                            const std::array<double, 3>& vec) {
+std::array<double, 3> SteelAngleTrajectoryPlanning::rotateVector(const std::array<std::array<double, 3>, 3>& mat, const std::array<double, 3>& vec) {
     std::array<double, 3> result = {0.0, 0.0, 0.0};
 
     for (int i = 0; i < 3; ++i) {

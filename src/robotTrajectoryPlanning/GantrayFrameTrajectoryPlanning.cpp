@@ -239,19 +239,13 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
     }
     // ########################### 眼在手上写入拍照点, 眼在手外写入零过渡点 ###########################
     if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_IN_HAND)) {
-        outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
-                << weldingVoltage << std::endl;
-        outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
-        outfile << takePhotoX0 << " " << takePhotoY0 << " " << takePhotoZ0 << " ";
-        outfile << takePhotoA0 << " " << takePhotoB0 << " " << takePhotoC0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " "
-                << weldingCurrent << " " << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
+        writeWeldPoint(outfile, takePhotoX0, takePhotoY0, takePhotoZ0, takePhotoA0, takePhotoB0, takePhotoC0, moveSpeed, ARC_STOP, LINE_WELD,
+                       weldingCurrent, weldingVoltage);
+        writeWeldPoint(outfile, takePhotoX0, takePhotoY0, takePhotoZ0, takePhotoA0, takePhotoB0, takePhotoC0, moveSpeed, ARC_STOP, LINE_WELD,
+                       weldingCurrent, weldingVoltage);
     } else if (trajectoryConfig.handEyeType == MyToolFunc::getHandTypeTypeString(HAND_EYE_TYPE::EYE_TO_HAND)) {
-        outfile << X0 << " " << Y0 << " " << Z0 << " ";
-        outfile << A0 << " " << B0 << " " << C0 << " " << moveSpeed << " " << ARC_STOP << " " << LINE_WELD << " " << weldingCurrent << " "
-                << weldingVoltage << std::endl;
+        writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
     } else {
         PLOGE << "机器人手眼关系错误";
     }
@@ -1061,7 +1055,7 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
             if (n2.norm() < 1e-6) n2 = n1;
 
             Eigen::Vector3f xAxis, yAxis, zAxis;
-
+            bool debug = false;
             // ================= H型 =================
             if (info->weldType == Plate_Plate_Fillet_H) {
                 xAxis = seamDir;
@@ -1074,6 +1068,11 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
 
                 zAxis = xAxis.cross(yAxis).normalized();
                 yAxis = zAxis.cross(xAxis).normalized();
+                if (zAxis.dot(n2) < 0) {
+                    zAxis = -zAxis;
+                    yAxis = -yAxis;  // 保持右手系
+                }
+                debug = true;
             }
 
             // ================= V型 =================
@@ -1102,8 +1101,10 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
             // ===== 转到工具系 =====
             Eigen::Vector4f p0 = T_inv * Eigen::Vector4f(P0.x(), P0.y(), P0.z(), 1.0f);
             Eigen::Vector4f p1 = T_inv * Eigen::Vector4f(P1.x(), P1.y(), P1.z(), 1.0f);
-
             // ===== 补偿 =====
+            // std::cout << "==== BEFORE ====" << std::endl;
+            // std::cout << "p0(local): " << p0.transpose() << std::endl;
+            // std::cout << "p1(local): " << p1.transpose() << std::endl;
             // ================= H型 =================
             if (info->weldType == Plate_Plate_Fillet_H) {
                 p0.x() += settingPara.PlatePlateFilletHorizontalStart_X;
@@ -1122,10 +1123,20 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
                 p1.y() += settingPara.PlatePlateFilletVerticalEnd_Y;
                 p1.z() += settingPara.PlatePlateFilletVerticalEnd_Z;
             }
+            // std::cout << "==== AFTER OFFSET ====" << std::endl;
+            // std::cout << "p0(local): " << p0.transpose() << std::endl;
+            // std::cout << "p1(local): " << p1.transpose() << std::endl;
 
             // ===== 转回基座 =====
             Eigen::Vector4f p0_new = T * p0;
             Eigen::Vector4f p1_new = T * p1;
+            // std::cout << "==== WORLD ====" << std::endl;
+            // std::cout << "p0(world): " << p0_new.transpose() << std::endl;
+            // std::cout << "p1(world): " << p1_new.transpose() << std::endl;
+            // std::cout << "==== AXIS ====" << std::endl;
+            // std::cout << "xAxis: " << xAxis.transpose() << std::endl;
+            // std::cout << "yAxis: " << yAxis.transpose() << std::endl;
+            // std::cout << "zAxis: " << zAxis.transpose() << std::endl;
 
             pts[0].x = p0_new.x();
             pts[0].y = p0_new.y();
