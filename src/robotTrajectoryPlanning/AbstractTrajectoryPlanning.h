@@ -36,7 +36,8 @@ protected:
         LEFT_LEFT_VERTICAL_SWING_WELD = 3,    // 机器人左方左侧竖直焊缝摆焊
         LEFT_RIGHT_VERTICAL_SWING_WELD = 4,   // 机器人左方右侧竖直焊缝摆焊
         RIGHT_LEFT_VERTICAL_SWING_WELD = 5,   // 机器人右方左侧竖直焊缝摆焊
-        RIGHT_RIGHT_VERTICAL_SWING_WELD = 6   // 机器人右方右侧竖直焊缝摆焊
+        RIGHT_RIGHT_VERTICAL_SWING_WELD = 6,  // 机器人右方右侧竖直焊缝摆焊
+        GANTRAY_FRAME_SWING_WELD = 100
     };
     // 配置初始化方法（供派生类调用）
     void initConfig();
@@ -44,7 +45,8 @@ protected:
     void writeConfig();
     void printConfig();
     void writeWeldPoint(std::fstream& outfile, double x = 0, double y = 0, double z = 0, double a = 0, double b = 0, double c = 0, double speed = 0,
-                        ARC_ACTION arcAction = ARC_STOP, SWING_WELD_ACTION weldAction = LINE_WELD, double current = 0, double voltage = 0);
+                        ARC_ACTION arcAction = ARC_STOP, SWING_WELD_ACTION weldAction = LINE_WELD, double current = 0, double voltage = 0,
+                        double p1x = 0, double p1y = 0, double p1z = 0, double p2x = 0, double p2y = 0, double p2z = 0);
 
     // 配置成员变量（引用类型，所有派生类共享）
     TrajectoryPlanningConfig& trajectoryConfig;

@@ -89,12 +89,10 @@ void RailWeldingSystem::initTrajectoryPlanning() {
         // // 分割方法检测焊缝类计算出焊缝, 发送到轨迹规划线程. 同时发送到本类暂存, 以便未来保存错误数据以及显示.
         connect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
                 &AbstractTrajectoryPlanning::whenPlanningTrajectory);
-        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this,
-                &RailWeldingSystem::whenGetFinalSeams);
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this, &RailWeldingSystem::whenGetFinalSeams);
 
         // 轨迹规划完成后, 发送到本类以便自动模式直接开始焊接
-        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this,
-                &RailWeldingSystem::whenTrajectoryPlanOver);
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this, &RailWeldingSystem::whenTrajectoryPlanOver);
 
         PLOGD << "轨迹规划类初始化成功";
     } else {
@@ -106,8 +104,7 @@ void RailWeldingSystem::switchTrajectoryPlanning(WORKPIECE_TYPE workpieceType) {
         // 断开旧的信号连接
         disconnect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
                    &AbstractTrajectoryPlanning::whenPlanningTrajectory);
-        disconnect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this,
-                   &RailWeldingSystem::whenGetFinalSeams);
+        disconnect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this, &RailWeldingSystem::whenGetFinalSeams);
         disconnect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this,
                    &RailWeldingSystem::whenTrajectoryPlanOver);
 
@@ -137,10 +134,8 @@ void RailWeldingSystem::switchTrajectoryPlanning(WORKPIECE_TYPE workpieceType) {
         // 重新建立信号连接
         connect(seamDetWithSeg.get(), &SeamDetWithSeg::sendDetSeamWithSeg, robotTrajectoryPlanning.get(),
                 &AbstractTrajectoryPlanning::whenPlanningTrajectory);
-        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this,
-                &RailWeldingSystem::whenGetFinalSeams);
-        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this,
-                &RailWeldingSystem::whenTrajectoryPlanOver);
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendPlannedSeams, this, &RailWeldingSystem::whenGetFinalSeams);
+        connect(robotTrajectoryPlanning.get(), &AbstractTrajectoryPlanning::sendTrajectoryPlanOver, this, &RailWeldingSystem::whenTrajectoryPlanOver);
 
         PLOGD << "轨迹规划类切换成功";
     } else {
@@ -168,8 +163,7 @@ void RailWeldingSystem::initRobot() {
             connect(this, &RailWeldingSystem::sendWelding, robot.get(), &AbstractRobot::welding);
             connect(this, &RailWeldingSystem::sendRobotMoveLData, robot.get(), &AbstractRobot::moveL);
             connect(robot.get(), &AbstractRobot::sendRobotCurrentPose, this, &RailWeldingSystem::whenGetRobotCurrentPose);
-            connect(robot.get(), &AbstractRobot::sendRobotCurrentJointAngle, this,
-                    &RailWeldingSystem::whenGetRobotCurrentJointAngle);
+            connect(robot.get(), &AbstractRobot::sendRobotCurrentJointAngle, this, &RailWeldingSystem::whenGetRobotCurrentJointAngle);
 
             // 机器人焊接完成后, 发送信号通知此线程
             connect(robot.get(), &AbstractRobot::sendRobotWeldOver, this, &RailWeldingSystem::whenRobotWeldOver);
@@ -233,15 +227,14 @@ void RailWeldingSystem::welding() { emit sendWelding(); }
 void RailWeldingSystem::move2SelectedWorkpiece(int tableRow) {}
 void RailWeldingSystem::whenGetRobotMoveLData(robotPose p, double speed) {
     // PLOGD << "收到机器人直线运动数据: " << p.x_ << " " << p.y_ << " " << p.z_ << " " << p.a_ << " " << p.b_ << " " << p.c_;
-    emit sendRobotMoveLData(p, speed * 10);
+    emit sendRobotMoveLData(p, speed);
 }
 
 void RailWeldingSystem::whenGetRobotCurrentPose(robotPose p) {
     // PLOGD << "当前机器人位姿: " << p.x_ << " " << p.y_ << " " << p.z_ << " " << p.a_ << " " << p.b_ << " " << p.c_;
     robotTrajectoryPlanning->trajectoryConfig.currentRobotPose = p;
     // 计算末端(工具)到基坐标系的转换矩阵
-    robotTrajectoryPlanning->trajectoryConfig.matrixEnd2Base =
-        MyToolFunc::createTransformationMatrixZYX(p.x_, p.y_, p.z_, p.a_, p.b_, p.c_);
+    robotTrajectoryPlanning->trajectoryConfig.matrixEnd2Base = MyToolFunc::createTransformationMatrixZYX(p.x_, p.y_, p.z_, p.a_, p.b_, p.c_);
 
     emit sendRobotCurrentPose(p);
 }

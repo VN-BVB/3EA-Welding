@@ -52,6 +52,10 @@ public slots:
     // ============================== 帮助算子 ==================================
     void Sleep(int msec);                                          // 延时一段时间（ms）
     void Btn_Send_loop(std::vector<QString> data, int sleepTime);  // 连续发送一组数据
+private:
+    std::vector<QString> packPoint(double x = 0, double y = 0, double z = 0, double rx = 0, double ry = 0, double rz = 0, double speed = 0,
+                                   double arc = 0, double swing = 0, double current = 0, double voltage = 0, double p1x = 0, double p1y = 0,
+                                   double p1z = 0, double p2x = 0, double p2y = 0, double p2z = 0);
 
 private:
     const QByteArray BUF_INITIALIZATION = "1000";

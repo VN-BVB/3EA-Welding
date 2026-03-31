@@ -66,6 +66,31 @@ bool AnChuanRobot::disconnectRobot() {
     emit sendRobotStatus(MY_COLOR::RED);
     return true;
 }
+std::vector<QString> AnChuanRobot::packPoint(double x, double y, double z, double rx, double ry, double rz, double speed, double arc, double swing,
+                                             double current, double voltage, double p1x, double p1y, double p1z, double p2x, double p2y, double p2z) {
+    return {
+        // clang-format off
+            QString::number(x * 1000) + "$$",
+            QString::number(y * 1000) + "$$",
+            QString::number(z * 1000) + "$$",
+            QString::number(rx * 10000) + "$$",
+            QString::number(ry * 10000) + "$$",
+            QString::number(rz * 10000) + "$$",
+            QString::number((int)speed) + "$$",
+            QString::number(arc) + "$$",
+            QString::number(swing) + "$$",
+            QString::number(current) + "$$",
+            QString::number(voltage * 10) + "$$",
+            // ===== 摆焊参考点 =====
+            QString::number(p1x * 1000) + "$$",
+            QString::number(p1y * 1000) + "$$",
+            QString::number(p1z * 1000) + "$$",
+            QString::number(p2x * 1000) + "$$",
+            QString::number(p2y * 1000) + "$$",
+            QString::number(p2z * 1000) + "$$"
+        // clang-format on
+    };
+}
 
 // 机器人焊接
 bool AnChuanRobot::welding() {
@@ -74,38 +99,26 @@ bool AnChuanRobot::welding() {
         return false;
     }
 
-    weldOverFlag = false;                    // 机器人开始焊接, 标志位置为false
-    running = true;                          // 进入运动模式
-    std::ifstream infile;                    // 路点文件
-    double x, y, z, rx, ry, rz;              // 路点的xyz型信息
-    double moveSpeed, arc;                   // 焊接速度以及是否起弧（对安川机器人保留）
-    double swingWeldAction;                  // 是否摆焊
-    double weldingCurrent, weldingVoltage;   // 焊接电流电压
-    std::vector<QString> datai;              // 存放每个路点具体信息的变量
+    weldOverFlag = false;                   // 机器人开始焊接, 标志位置为false
+    running = true;                         // 进入运动模式
+    std::ifstream infile;                   // 路点文件
+    double x, y, z, rx, ry, rz;             // 路点的xyz型信息
+    double moveSpeed, arc;                  // 焊接速度以及是否起弧（对安川机器人保留）
+    double swingWeldAction;                 // 是否摆焊
+    double weldingCurrent, weldingVoltage;  // 焊接电流电压
+    double p1x, p1y, p1z;                   //  摆焊第一参考点
+    double p2x, p2y, p2z;                   //  摆焊第二参考点 （或者是起点，就以上一个程序作为临近点）
+    // std::vector<QString> datai;              // 存放每个路点具体信息的变量
     std::vector<std::vector<QString>> data;  // 存放路点的变量
 
     infile.open("./data/SeamCoordinate.txt");
 
     // 将路点信息读取到内存，等待发送
-    while (infile >> x >> y >> z >> rx >> ry >> rz >> moveSpeed >> arc >> swingWeldAction >> weldingCurrent >> weldingVoltage) {
-        datai.push_back(QString::number(x * 1000) + "$$");
-        datai.push_back(QString::number(y * 1000) + "$$");
-        datai.push_back(QString::number(z * 1000) + "$$");
-        datai.push_back(QString::number(rx * 10000) + "$$");
-        datai.push_back(QString::number(ry * 10000) + "$$");
-        datai.push_back(QString::number(rz * 10000) + "$$");
-        datai.push_back(QString::number(moveSpeed / 6) + "$$");
-        if (robotWorkMode == ROBOT_WORK_MODE::SIMULATION_MODE) {
-            datai.push_back(QString::number(0) + "$$");
-        } else if (robotWorkMode == ROBOT_WORK_MODE::WELDING_MODE) {
-            datai.push_back(QString::number(arc) + "$$");
-        }
-        datai.push_back(QString::number(swingWeldAction) + "$$");
-        datai.push_back(QString::number(weldingCurrent) + "$$");
-        datai.push_back(QString::number(weldingVoltage * 10) + "$$");
-
-        data.push_back(datai);
-        datai.clear();
+    while (infile >> x >> y >> z >> rx >> ry >> rz >> moveSpeed >> arc >> swingWeldAction >> weldingCurrent >> weldingVoltage >> p1x >> p1y >> p1z >>
+           p2x >> p2y >> p2z) {
+        data.push_back(packPoint(x, y, z, rx, ry, rz, moveSpeed / 6,
+                                 (robotWorkMode == SIMULATION_MODE ? 0 : arc),  //
+                                 swingWeldAction, weldingCurrent, weldingVoltage, p1x, p1y, p1z, p2x, p2y, p2z));
     }
     PLOGD << "共读取到 " << data.size() << " 个路点, 开始发送数据... ...";
 
@@ -223,19 +236,12 @@ bool AnChuanRobot::moveL(robotPose p, double speed) {
 
     moveOverFlag = false;  // 机器人开始运动, 标志位置为false
     running = true;        // 进入运动模式
-    std::vector<QString> datai = {
-        QString::number(p.x_ * 1000) + "$$",
-        QString::number(p.y_ * 1000) + "$$",
-        QString::number(p.z_ * 1000) + "$$",
-        QString::number(p.a_ * 10000) + "$$",
-        QString::number(p.b_ * 10000) + "$$",
-        QString::number(p.c_ * 10000) + "$$",
-        QString::number((int)speed) + "$$",
-        QString::number(0) + "$$",
-        QString::number(0) + "$$",
-        QString::number(0) + "$$",
-        QString::number(0) + "$$",
-    };
+    std::vector<QString> datai = packPoint(p.x_, p.y_, p.z_, p.a_, p.b_, p.c_, speed * 10.0,
+                                           0,  // arc
+                                           0,  // swing
+                                           0,  // current
+                                           0   // voltage
+    );
     std::vector<std::vector<QString>> data;  // 存放路点的变量
     data.push_back(datai);
     data.push_back(datai);
@@ -467,8 +473,8 @@ void AnChuanRobot::Unpack() {
     // 数据打包进队列
     if (q_upPackData.size() >= 1) {
         QByteArray qb_temp = q_upPackData.dequeue();
-        if (qb_temp != BUF_INITIALIZATION && qb_temp != ASK_TO_SEND_DATA && qb_temp != STOP_TO_SEND_DATA &&
-            qb_temp != STOP_TO_ACCEPT_ASK && qb_temp != JBI_START_RUN) {
+        if (qb_temp != BUF_INITIALIZATION && qb_temp != ASK_TO_SEND_DATA && qb_temp != STOP_TO_SEND_DATA && qb_temp != STOP_TO_ACCEPT_ASK &&
+            qb_temp != JBI_START_RUN) {
             // 位姿数据进pose队列
             double data = qb_temp.toDouble();
 
@@ -481,10 +487,10 @@ void AnChuanRobot::Unpack() {
 
             // 每收到六个数据 (一组位姿, 就发出一次)
             if (q_pose.size() == 12) {
-                emit sendRobotCurrentPose(robotPose(q_pose[0] / 1000, q_pose[1] / 1000, q_pose[2] / 1000, q_pose[3] / 10000,
-                                                    q_pose[4] / 10000, q_pose[5] / 10000));
-                emit sendRobotCurrentJointAngle(robotJointAngle(q_pose[6] / 10000, q_pose[7] / 10000, q_pose[8] / 10000,
-                                                                q_pose[9] / 10000, q_pose[10] / 10000, q_pose[11] / 10000));
+                emit sendRobotCurrentPose(
+                    robotPose(q_pose[0] / 1000, q_pose[1] / 1000, q_pose[2] / 1000, q_pose[3] / 10000, q_pose[4] / 10000, q_pose[5] / 10000));
+                emit sendRobotCurrentJointAngle(robotJointAngle(q_pose[6] / 10000, q_pose[7] / 10000, q_pose[8] / 10000, q_pose[9] / 10000,
+                                                                q_pose[10] / 10000, q_pose[11] / 10000));
                 q_pose.clear();
             }
 

@@ -41,7 +41,8 @@ enum SWING_WELD_ACTION {
     LEFT_LEFT_VERTICAL_SWING_WELD = 3,    // 机器人左方左侧竖直焊缝摆焊
     LEFT_RIGHT_VERTICAL_SWING_WELD = 4,   // 机器人左方右侧竖直焊缝摆焊
     RIGHT_LEFT_VERTICAL_SWING_WELD = 5,   // 机器人右方左侧竖直焊缝摆焊
-    RIGHT_RIGHT_VERTICAL_SWING_WELD = 6   // 机器人右方右侧竖直焊缝摆焊
+    RIGHT_RIGHT_VERTICAL_SWING_WELD = 6,  // 机器人右方右侧竖直焊缝摆焊
+    GANTRAY_FRAME_SWING_WELD = 100
 };
 
 // 等待来自程序的 skill 指令， 根据指令的内容（cmd）决定执行的处理的任务。
@@ -332,6 +333,7 @@ void socketRecv_Task(void) {  // 套接字接收
         float prevTarget[COORD_NUM + 1];  // 存放上一个目标点，用于生成摆焊上个点以及摆焊参考点
         float swingRefTarget[COORD_NUM + 1];  // 存放摆焊参考点
         float swingPrevTarget[COORD_NUM + 1];  // 存放摆焊所需的上一点
+        int CURR_SWING_METHOD = LINE_WELD;  // 当前摆焊方式, 默认不摆焊
 
         SetBVar(3, 1);
 
@@ -368,7 +370,6 @@ void socketRecv_Task(void) {  // 套接字接收
                         if (strncmp(data, "EXIT", 4) != 0 && strncmp(data, "START", 5) != 0 && strncmp(data, "POSE", 4) != 0
                             && strncmp(data, "MOVEJL", 6) != 0 && strncmp(data, "MOVEJR", 6) != 0) {
                             float fbuff = atof(data);
-                            int CURR_SWING_METHOD = LINE_WELD;  // 当前摆焊方式, 默认不摆焊
 
                             if (buffNum < 6) {  // 如果目标点数据还没到6个, 就继续存入数组
                                 target[buffNum] = fbuff;
@@ -390,82 +391,58 @@ void socketRecv_Task(void) {  // 套接字接收
                             } else if (buffNum < 9)  {  // 如果到了9个, 说明当前数据是摆焊指令, 就存到摆焊处
                                 CURR_SWING_METHOD = (int)fbuff;
 
-                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)) {  // 也就是prevTarget不为空且确实需要摆焊
+                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)){ // 也就是prevTarget不为空且为角钢摆焊
                                     int j = 0;
-                                    for (j = 0; j < COORD_NUM; j++) {  // 摆焊参考点和上一点以上一次运动目标点为基准
+                                    for (j = 0; j < COORD_NUM; j++)
+                                    { // 摆焊参考点和上一点以上一次运动目标点为基准
                                         swingRefTarget[j] = prevTarget[j];
                                         swingPrevTarget[j] = prevTarget[j];
                                     }
                                     // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册。
-                                    //说明：这个不是上一点，而是实际运动点，上一点为写入文件中的原起点；
-                                    switch (CURR_SWING_METHOD) {
-                                        case FRONT_LEFT_VERTICAL_SWING_WELD:
-                                            swingRefTarget[1] -= 10 * 1000;
-                                            swingPrevTarget[0] += 0.1 * 1000;
-                                            swingPrevTarget[1] += 0.1 * 1000;
-                                            break;
-                                        case FRONT_RIGHT_VERTICAL_SWING_WELD:
-                                            swingRefTarget[1] += 10 * 1000;
-                                            swingPrevTarget[0] += 0.1 * 1000;
-                                            swingPrevTarget[1] -= 0.1 * 1000;
-                                            break;
-                                        case LEFT_LEFT_VERTICAL_SWING_WELD:
-                                            swingRefTarget[0] += 10 * 1000;
-                                            swingPrevTarget[0] -= 0.1 * 1000;
-                                            swingPrevTarget[1] += 0.1 * 1000;
-                                            break;
-                                        case LEFT_RIGHT_VERTICAL_SWING_WELD:
-                                            swingRefTarget[0] -= 10 * 1000;
-                                            swingPrevTarget[0] += 0.1 * 1000;
-                                            swingPrevTarget[1] += 0.1 * 1000;
-                                            break;
-                                        case RIGHT_LEFT_VERTICAL_SWING_WELD:
-                                            swingRefTarget[0] -= 10 * 1000;
-                                            swingPrevTarget[0] += 0.1 * 1000;
-                                            swingPrevTarget[1] -= 0.1 * 1000;
-                                            break;
-                                        case RIGHT_RIGHT_VERTICAL_SWING_WELD:
-                                            swingRefTarget[0] += 10 * 1000;
-                                            swingPrevTarget[0] -= 0.1 * 1000;
-                                            swingPrevTarget[1] -= 0.1 * 1000;
-                                            break;
+                                    // 说明：这个不是上一点，而是实际运动点，上一点为写入文件中的原起点；
+                                    switch (CURR_SWING_METHOD)
+                                    {
+                                    case FRONT_LEFT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[1] -= 10 * 1000;
+                                        swingPrevTarget[0] += 0.1 * 1000;
+                                        swingPrevTarget[1] += 0.1 * 1000;
+                                        break;
+                                    case FRONT_RIGHT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[1] += 10 * 1000;
+                                        swingPrevTarget[0] += 0.1 * 1000;
+                                        swingPrevTarget[1] -= 0.1 * 1000;
+                                        break;
+                                    case LEFT_LEFT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[0] += 10 * 1000;
+                                        swingPrevTarget[0] -= 0.1 * 1000;
+                                        swingPrevTarget[1] += 0.1 * 1000;
+                                        break;
+                                    case LEFT_RIGHT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[0] -= 10 * 1000;
+                                        swingPrevTarget[0] += 0.1 * 1000;
+                                        swingPrevTarget[1] += 0.1 * 1000;
+                                        break;
+                                    case RIGHT_LEFT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[0] -= 10 * 1000;
+                                        swingPrevTarget[0] += 0.1 * 1000;
+                                        swingPrevTarget[1] -= 0.1 * 1000;
+                                        break;
+                                    case RIGHT_RIGHT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[0] += 10 * 1000;
+                                        swingPrevTarget[0] -= 0.1 * 1000;
+                                        swingPrevTarget[1] -= 0.1 * 1000;
+                                        break;
                                     }
-
-                                    if (targetNum % 2 == 0) {
-                                        valRet = setValP(swingRefTarget, 7);  // 1，3，5...的摆焊参考点存进P007
-                                        if (valRet < 0) {
-                                            SetBVar(2, 0);
-                                            break;
-                                        }
-                                        valRet = setValP(swingPrevTarget, 9);  // 1，3，5...的摆焊上一点存进P009
-                                        if (valRet < 0) {
-                                            SetBVar(2, 0);
-                                            break;
-                                        }
-                                        SetBVar(15, 1);
-                                        SetIVar(3, (int)fbuff);  // 1，3，5...的摆焊类型存进I003
-                                    } else {
-                                        valRet = setValP(swingRefTarget, 8);  // 2，4，6...的摆焊参考点存进P008
-                                        if (valRet < 0) {
-                                            SetBVar(2, 0);
-                                            break;
-                                        }
-                                        valRet = setValP(swingPrevTarget, 10);  // 2，4，6...的摆焊上一点存进P010
-                                        if (valRet < 0) {
-                                            SetBVar(2, 0);
-                                            break;
-                                        }
-                                        SetBVar(15, 1);
-                                        SetIVar(4, (int)fbuff);  // 2，4，6...的摆焊类型存进I004
-                                    }
+                                    SetBVar(15, 1); //摆焊标志位
                                 }
 
                                 // 存储摆焊类型
-                                if (targetNum % 2 == 0) {
-                                        SetIVar(3, (int)fbuff);  // 1，3，5...的摆焊类型存进I003
-                                    } else {
-                                        SetIVar(4, (int)fbuff);  // 2，4，6...的摆焊类型存进I004
-                                    }
+                                if (targetNum % 2 == 0){
+                                    SetIVar(3, (int)fbuff); // 1，3，5...的摆焊类型存进I003
+                                }
+                                else{
+                                    SetIVar(4, (int)fbuff); // 2，4，6...的摆焊类型存进I004
+                                }
                                 buffNum++;
                             } else if (buffNum < 10) {  // 如果到了10个, 说明当前数据是电流指令。
                                  if (targetNum % 2 == 0) {
@@ -482,9 +459,58 @@ void socketRecv_Task(void) {  // 套接字接收
                                 }
                                 buffNum++;
                             }
+                            else if (buffNum < 14){ // p1
+                                if ((targetNum != 0) && (CURR_SWING_METHOD == GANTRAY_FRAME_SWING_WELD)){ 
+                                    swingRefTarget[buffNum - 11] = fbuff; 
+                                }
+                                buffNum++;
+                            }
+                            else if (buffNum < 17){ // p2
+                                if ((targetNum != 0) && (CURR_SWING_METHOD == GANTRAY_FRAME_SWING_WELD)){ 
+                                    swingPrevTarget[buffNum - 14] = fbuff; 
+                                }
+                                buffNum++;
+                            }
 
-                            // 每解包出9组数据打包一次 (第7个数为速度, 第8个数为是否起弧, 第9个数为摆焊类型)
-                            if (buffNum == 11) {
+                            // 数据打包 (第7个数为速度, 第8个数为是否起弧, 第9个数为摆焊类型)
+                            if (buffNum == 17) {
+                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)){
+                                    if (targetNum % 2 == 0){
+                                        valRet = setValP(swingRefTarget, 7); // 1，3，5...的摆焊参考点存进P007
+                                        if (valRet < 0)
+                                        {
+                                            SetBVar(2, 0);
+                                            break;
+                                        }
+                                        valRet = setValP(swingPrevTarget, 9); // 1，3，5...的摆焊上一点存进P009
+                                        if (valRet < 0)
+                                        {
+                                            SetBVar(2, 0);
+                                            break;
+                                        }
+
+                                        SetIVar(3, (int)fbuff); // 1，3，5...的摆焊类型存进I003
+                                    }else{
+                                        valRet = setValP(swingRefTarget, 8); // 2，4，6...的摆焊参考点存进P008
+                                        if (valRet < 0)
+                                        {
+                                            SetBVar(2, 0);
+                                            break;
+                                        }
+                                        valRet = setValP(swingPrevTarget, 10); // 2，4，6...的摆焊上一点存进P010
+                                        if (valRet < 0)
+                                        {
+                                            SetBVar(2, 0);
+                                            break;
+                                        }
+                                        SetIVar(4, (int)fbuff); // 2，4，6...的摆焊类型存进I004
+                                    }
+                                }
+                                 if (targetNum % 2 == 0) {
+                                    valRet = setValP(target, 1);  // 1，3，5...打包进P001
+                                } else {
+                                    valRet = setValP(target, 2);  // 2，4，6...打包进P002
+                                }
                                 targetNum++;
 
                                 int j = 0;
@@ -492,11 +518,8 @@ void socketRecv_Task(void) {  // 套接字接收
                                     prevTarget[j] = target[j];
                                 }
 
-                                if (targetNum % 2 != 0) {
-                                    valRet = setValP(target, 1);  // 1，3，5...打包进P001
-                                } else {
-                                    valRet = setValP(target, 2);  // 2，4，6...打包进P002
-                                }
+                               
+                                
                                 if (valRet < 0) {
                                     SetBVar(2, 0);
                                     break;

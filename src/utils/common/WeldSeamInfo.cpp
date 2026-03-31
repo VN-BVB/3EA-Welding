@@ -32,8 +32,9 @@ WeldSeamInfo& WeldSeamInfo::operator=(const WeldSeamInfo& other) noexcept {
         weldEndPointsInCamera = other.weldEndPointsInCamera;
         weldEndPointsInRobot = other.weldEndPointsInRobot;
         weldEndPointsFromSeg = other.weldEndPointsFromSeg;
+        swingReferencePoints = other.swingReferencePoints;
         rectPtr = other.rectPtr;
-        // 新增成员变量
+        //
         otherSurface = other.otherSurface;
         robotWeldPose = other.robotWeldPose;
     }
@@ -101,6 +102,7 @@ std::shared_ptr<WeldSeamInfo> WeldSeamInfo::clone() const {
 
     // 机器人位姿深拷贝
     copy->robotWeldPose = robotWeldPose;
+    copy->swingReferencePoints = swingReferencePoints;
 
     return copy;
 }

@@ -171,14 +171,13 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
         } else if (info->weldType == Plate_Plate_Fillet_V) {
             const robotPose& startPose = info->robotWeldPose[0];
             const robotPose& endPose = info->robotWeldPose[1];
-            SWING_WELD_ACTION CURR_SWING_METHOD = LINE_WELD;
-            if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
-                if (startPose.y_ >= 0) {
-                    CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
-                } else if (startPose.y_ < 0) {
-                    CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_RIGHT_VERTICAL_SWING_WELD;
-                }
-            }
+            // if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
+            //     if (startPose.y_ >= 0) {
+            //         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
+            //     } else if (startPose.y_ < 0) {
+            //         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_RIGHT_VERTICAL_SWING_WELD;
+            //     }
+            // }
             // ================= 起点过渡=================
             robotPose startTransition = startPose;
             applyWeldGunWithdraw(startTransition, 40.0);
@@ -195,8 +194,23 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             robotPose endWeld = endPose;
             applyWeldGunWithdraw(endWeld, settingPara.PlatePlateFilletVerticalWithdrawDistance);
 
+            std::vector<double> v;
+            if (!computePlatePlateFilletVerticalSwingPoints(info, startWeld, v)) {
+                v.clear();
+            }
+            SWING_WELD_ACTION CURR_SWING_METHOD = GANTRAY_FRAME_SWING_WELD;
+            if (v.size() != 6) {
+                CURR_SWING_METHOD = LINE_WELD;
+            }
+            // if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
+            //     if (startPose.y_ >= 0) {
+            //         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
+            //     } else if (startPose.y_ < 0) {
+            //         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_RIGHT_VERTICAL_SWING_WELD;
+            //     }
+            // }
             writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP,
-                           CURR_SWING_METHOD, weldingCurrent, weldingVoltage);
+                           CURR_SWING_METHOD, weldingCurrent, weldingVoltage, v[0], v[1], v[2], v[3], v[4], v[5]);
 
             // ================= 终点过渡=================
             robotPose endTransition = endPose;
@@ -767,7 +781,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
 
             Y.normalize();
 
-            // Y反向（你要求）
+            // Y与机器人基座坐标系反向
             if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
 
             // ===== 8. X轴 =====
@@ -1312,6 +1326,115 @@ void GantrayFrameTrajectoryPlanning::planPlatePlateFilletSeamOrientation(std::ve
         }
 
         return;
+    }
+}
+bool GantrayFrameTrajectoryPlanning::computePlatePlateFilletVerticalSwingPoints(const std::shared_ptr<WeldSeamInfo>& info, const robotPose& refPose,
+                                                                                std::vector<double>& swingPoints) {
+    swingPoints.clear();
+    if (info->weldType == Plate_Plate_Fillet_V) {
+        if (!info || !info->weldPlane || info->weldPlane->values.size() != 4) return false;
+
+        if (info->otherSurface.empty()) return false;
+
+        if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) return false;
+
+        // ===== 1. 焊缝端点 → seamDir =====
+        Eigen::Vector3f P0(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
+
+        Eigen::Vector3f P1(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
+
+        Eigen::Vector3f seamDir = (P0 - P1).normalized();
+
+        // ===== 2. 主平面法向 n1 =====
+        Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+        n1.normalize();
+
+        // ===== 3. 第二平面法向 n2 =====
+        Eigen::Vector3f n2(0, 0, 0);
+        for (auto& surf : info->otherSurface) {
+            if (!surf || surf->values.size() != 4) continue;
+
+            n2 = Eigen::Vector3f(surf->values[0], surf->values[1], surf->values[2]);
+            n2.normalize();
+            break;
+        }
+
+        if (n2.norm() < 1e-6) n2 = n1;
+
+        // ===== 4. 参考点（后撤后的点）=====
+        Eigen::Vector3f P_ref(refPose.x_, refPose.y_, refPose.z_);
+
+        // ================= 第一参考点 =================
+        // 主平面内 ⟂ seamDir
+        Eigen::Vector3f seamDir_proj = seamDir - seamDir.dot(n1) * n1;
+        if (seamDir_proj.norm() < 1e-6) return false;
+        seamDir_proj.normalize();
+
+        Eigen::Vector3f verticalDir = n1.cross(seamDir_proj);
+        if (verticalDir.norm() < 1e-6) return false;
+        verticalDir.normalize();
+
+        // 朝 n2
+        if (verticalDir.dot(n2) < 0) verticalDir = -verticalDir;
+
+        float L1 = 1.0f;
+        Eigen::Vector3f refPoint1 = P_ref + L1 * verticalDir;
+
+        // ================= 第二参考点 =================
+        Eigen::Vector3f seamDir_proj2 = seamDir - seamDir.dot(n2) * n2;
+        if (seamDir_proj2.norm() < 1e-6) return false;
+        seamDir_proj2.normalize();
+
+        Eigen::Vector3f horizontalDir = n2.cross(seamDir_proj2);
+        if (horizontalDir.norm() < 1e-6) return false;
+        horizontalDir.normalize();
+
+        // 朝 n1
+        if (horizontalDir.dot(n1) < 0) horizontalDir = -horizontalDir;
+
+        float L2 = 0.1f;
+        Eigen::Vector3f refPoint2 = P_ref - L2 * horizontalDir;
+
+        // ===== 5. 输出 =====
+        swingPoints.reserve(6);
+
+        swingPoints.push_back(refPoint1.x());
+        swingPoints.push_back(refPoint1.y());
+        swingPoints.push_back(refPoint1.z());
+
+        swingPoints.push_back(refPoint2.x());
+        swingPoints.push_back(refPoint2.y());
+        swingPoints.push_back(refPoint2.z());
+        PLOGD << "========== Swing Debug (Plate_Plate_Fillet_V) ==========";
+
+        // 原点（后撤点）
+        PLOGD << "P_ref: " << P_ref.x() << ", " << P_ref.y() << ", " << P_ref.z();
+
+        // seamDir
+        PLOGD << "seamDir: " << seamDir.x() << ", " << seamDir.y() << ", " << seamDir.z();
+
+        // 法向
+        PLOGD << "n1 (main plane): " << n1.x() << ", " << n1.y() << ", " << n1.z();
+
+        PLOGD << "n2 (other plane): " << n2.x() << ", " << n2.y() << ", " << n2.z();
+
+        // 第一方向（主平面摆动方向）
+        PLOGD << "verticalDir (ref1 dir): " << verticalDir.x() << ", " << verticalDir.y() << ", " << verticalDir.z();
+
+        // 第二方向（另一板摆动方向）
+        PLOGD << "horizontalDir (ref2 dir): " << horizontalDir.x() << ", " << horizontalDir.y() << ", " << horizontalDir.z();
+
+        // 第一参考点
+        PLOGD << "refPoint1: " << refPoint1.x() << ", " << refPoint1.y() << ", " << refPoint1.z();
+
+        // 第二参考点
+        PLOGD << "refPoint2: " << refPoint2.x() << ", " << refPoint2.y() << ", " << refPoint2.z();
+
+        PLOGD << "=======================================================";
+
+        return true;
+    } else {
+        return false;
     }
 }
 bool GantrayFrameTrajectoryPlanning::checkCylinderPlaneCollision(const Eigen::Vector3d& center, const Eigen::Vector3d& axis, double radius,

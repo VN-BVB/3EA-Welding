@@ -103,7 +103,8 @@ public:
     double width = 1.5;                                                // 焊缝宽度
 
     // 机器人位姿
-    std::vector<robotPose> robotWeldPose;
+    std::vector<robotPose> robotWeldPose;      // 机器人位姿
+    std::vector<double> swingReferencePoints;  // 摆焊参考点
 };
 
 #endif  // WELDSEAMINFO_H
