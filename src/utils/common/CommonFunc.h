@@ -18,7 +18,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
 enum ROBOT_TYPE {  // 机器人类型
     AN_CHUAN,      // 安川
     BAO_YUAN       // 宝元
@@ -45,4 +44,18 @@ std::string getHandTypeTypeString(HAND_EYE_TYPE handTypeType);
 
 }  // namespace MyToolFunc
 
+class ScopedTimer {
+public:
+    ScopedTimer(const std::string &name) : name_(name), start_(std::chrono::high_resolution_clock::now()) {}
+
+    ~ScopedTimer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        double ms = std::chrono::duration<double, std::milli>(end - start_).count();
+        std::cout << "[TIME] " << name_ << " : " << ms << " ms" << std::endl;
+    }
+
+private:
+    std::string name_;
+    std::chrono::high_resolution_clock::time_point start_;
+};
 #endif  // COMMONFUNC_H

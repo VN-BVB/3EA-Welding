@@ -75,7 +75,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
         if (detectSuccFlag) {
             tempWeldSeamsInfo[i]->weldEndPointsInCamera.reset(new std::vector<pcl::PointXYZ>(std::move(filletSeamsTSP)));  // 检测结果
             tempWeldSeamsInfo[i]->weldEndPointsInRobot.reset(new std::vector<pcl::PointXYZ>());
-            tempWeldSeamsInfo[i]->weldPlane = planeCoeffsWithWeldSeam;
+            tempWeldSeamsInfo[i]->weldCoeff = planeCoeffsWithWeldSeam;
             tempWeldSeamsInfo[i]->otherSurface.emplace_back(cylinderCoeffsInWeldArea);
             tempWeldSeamsInfo[i]->weldType = TubeSide_Plate_F_H;
             tempWeldSeamsInfo[i]->seamsLineToVal = lineCoeffsWithWeldSeam2Val;

@@ -2723,7 +2723,7 @@ QTabBar::tab:!selected {  /* 未选中的标签页 */
 }</string>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="tab_3">
        <attribute name="title">

@@ -2,6 +2,7 @@
 
 #include "seamDetWithPointCloud/AbstractSeamDet.h"
 #include "seamDetWithPointCloud/gantrayFrameDet/platePlateFilletSeamsDet/PlatePlateFilletSeamsDet.h"
+#include "seamDetWithPointCloud/gantrayFrameDet/tubePlateFilletSeamsDet/TubePlateFilletSeamsDet.h"
 #include "seamDetWithPointCloud/gantrayFrameDet/tubeSidePlateFilletSeamsDet/TubeSidePlateFilletSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/beamButtSeamsDet/BeamButtSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/cornerButtSeamsDet/CornerButtSeamsDet.h"
@@ -26,11 +27,7 @@ void SeamDetWithPointCloud::initGantrayFrameSeamsDet() {
 
     gantrayFrameSeamsDet[WELD_AREA_TYPE::Plate_Plate_F] = []() { return std::make_shared<PlatePlateFilletSeamsDet>(nullptr); };
     gantrayFrameSeamsDet[WELD_AREA_TYPE::TubeSide_Plate_F] = []() { return std::make_shared<TubeSidePlateFilletSeamsDet>(nullptr); };
-    // 预留扩展
-    // gantrayFrameSeamsDet[WELD_AREA_TYPE::Tube_Plate_F] = []() {
-    //     return std::make_shared<TubePlateFilletSeamsDet>(nullptr);
-    // };
-
+    gantrayFrameSeamsDet[WELD_AREA_TYPE::Tube_Plate_F] = []() { return std::make_shared<TubePlateFilletSeamsDet>(nullptr); };
     // gantrayFrameSeamsDet[WELD_AREA_TYPE::Tube_Tube_F] = []() {
     //     return std::make_shared<TubeTubeFilletSeamsDet>(nullptr);
     // };
@@ -53,21 +50,16 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloudGF(std::vector<std::shared_
     for (auto& info : weldAreaInfo) {
         if (info->weldAreaType == WELD_AREA_TYPE::TubeSide_Plate_F) {
             PLOGD << "管侧板角接焊缝";
-
-            WeldSeamsfutures.emplace_back(threadPool->addTask([this, info]() {
-                auto det = createSeamDet(info->weldAreaType);
-                std::vector<std::shared_ptr<WeldSeamInfo>> tmp{info};
-                return det->solveSeamsEndPoints(tmp);
-            }));
         } else if (info->weldAreaType == WELD_AREA_TYPE::Plate_Plate_F) {
             PLOGD << "板板角接焊缝";
-
-            WeldSeamsfutures.emplace_back(threadPool->addTask([this, info]() {
-                auto det = createSeamDet(info->weldAreaType);
-                std::vector<std::shared_ptr<WeldSeamInfo>> tmp{info};
-                return det->solveSeamsEndPoints(tmp);
-            }));
+        } else if (info->weldAreaType == WELD_AREA_TYPE::Tube_Plate_F) {
+            PLOGD << "管板角接焊缝";
         }
+        WeldSeamsfutures.emplace_back(threadPool->addTask([this, info]() {
+            auto det = createSeamDet(info->weldAreaType);
+            std::vector<std::shared_ptr<WeldSeamInfo>> tmp{info};
+            return det->solveSeamsEndPoints(tmp);
+        }));
     }
 
     // 等待所有任务完成
@@ -92,9 +84,9 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloudGF(std::vector<std::shared_
             PLOGD << "   焊缝端点坐标: (" << info->weldEndPointsInCamera->at(0).x << " " << info->weldEndPointsInCamera->at(0).y << " "
                   << info->weldEndPointsInCamera->at(0).z << ") (" << info->weldEndPointsInCamera->at(1).x << " "
                   << info->weldEndPointsInCamera->at(1).y << " " << info->weldEndPointsInCamera->at(1).z << ")";
-            if (info->weldPlane != nullptr && info->weldPlane->values.size() == 4) {
-                PLOGD << "   焊缝所在平面: (" << info->weldPlane->values[0] << " " << info->weldPlane->values[1] << " " << info->weldPlane->values[2]
-                      << " " << info->weldPlane->values[3] << ")";
+            if (info->weldCoeff != nullptr && info->weldCoeff->values.size() == 4) {
+                PLOGD << "   焊缝所在平面: (" << info->weldCoeff->values[0] << " " << info->weldCoeff->values[1] << " " << info->weldCoeff->values[2]
+                      << " " << info->weldCoeff->values[3] << ")";
             }
             if (info->seamsLineToVal != nullptr && info->seamsLineToVal->values.size() == 6) {
                 PLOGD << "   焊缝验证直线: (" << info->seamsLineToVal->values[0] << " " << info->seamsLineToVal->values[1] << " "
@@ -261,9 +253,9 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloud(std::vector<std::shared_pt
             PLOGD << "   焊缝端点坐标: (" << info->weldEndPointsInCamera->at(0).x << " " << info->weldEndPointsInCamera->at(0).y << " "
                   << info->weldEndPointsInCamera->at(0).z << ") (" << info->weldEndPointsInCamera->at(1).x << " "
                   << info->weldEndPointsInCamera->at(1).y << " " << info->weldEndPointsInCamera->at(1).z << ")";
-            if (info->weldPlane != nullptr && info->weldPlane->values.size() == 4) {
-                PLOGD << "   焊缝所在平面: (" << info->weldPlane->values[0] << " " << info->weldPlane->values[1] << " " << info->weldPlane->values[2]
-                      << " " << info->weldPlane->values[3] << ")";
+            if (info->weldCoeff != nullptr && info->weldCoeff->values.size() == 4) {
+                PLOGD << "   焊缝所在平面: (" << info->weldCoeff->values[0] << " " << info->weldCoeff->values[1] << " " << info->weldCoeff->values[2]
+                      << " " << info->weldCoeff->values[3] << ")";
             }
             if (info->seamsLineToVal != nullptr && info->seamsLineToVal->values.size() == 6) {
                 PLOGD << "   焊缝验证直线: (" << info->seamsLineToVal->values[0] << " " << info->seamsLineToVal->values[1] << " "

@@ -34,17 +34,13 @@ void SystemMirrorWidget::importSTL() {
         // 0.85} },
         // {link0, "./data/3D_Models/robot/an_chuan_STL/newBase.stl", {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {1.0, 0.85,
         // 0.85}},
-        {link1, "./data/3D_Models/robot/an_chuan_STL/Link 1.stl", {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {0.2, 0.45, 1.0}},
-        {link2, "./data/3D_Models/robot/an_chuan_STL/Link 2.stl", {155, 0, 450},  {90, 0, 0},  {155, 0, 450},  {0.2, 0.45, 1.0}},
-        {link3, "./data/3D_Models/robot/an_chuan_STL/Link 3.stl", {769, 0, 450},  {90, 0, 0},  {769, 0, 450},  {0.2, 0.45, 1.0}},
-        {link4, "./data/3D_Models/robot/an_chuan_STL/Link 4.stl", {969, 0, -190}, {180, 0, 0}, {969, 0, -190}, {0.2, 0.45, 1.0}},
-        {link5, "./data/3D_Models/robot/an_chuan_STL/Link 5.stl", {969, 0, -190}, {90, 0, 0},  {969, 0, -190}, {0.2, 0.45, 1.0}},
-        {link6, "./data/3D_Models/robot/an_chuan_STL/Link 6.stl", {969, 0, -190}, {180, 0, 0}, {969, 0, -190}, {0.2, 0.45, 1.0}},
-        {Tlink,
-         "./data/3D_Models/robot/an_chuan_STL/weldgun.stl",       {969, 0, -290},
-         {180, -90, 0},
-         {969, 0, -290},
-         {0.4, 0.4, 0.4}                                                                                                       },
+        {link1, "./data/3D_Models/robot/an_chuan_STL/Link 1.stl",  {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.2, 0.45, 1.0}},
+        {link2, "./data/3D_Models/robot/an_chuan_STL/Link 2.stl",  {155, 0, 450},  {90, 0, 0},    {155, 0, 450},  {0.2, 0.45, 1.0}},
+        {link3, "./data/3D_Models/robot/an_chuan_STL/Link 3.stl",  {769, 0, 450},  {90, 0, 0},    {769, 0, 450},  {0.2, 0.45, 1.0}},
+        {link4, "./data/3D_Models/robot/an_chuan_STL/Link 4.stl",  {969, 0, -190}, {180, 0, 0},   {969, 0, -190}, {0.2, 0.45, 1.0}},
+        {link5, "./data/3D_Models/robot/an_chuan_STL/Link 5.stl",  {969, 0, -190}, {90, 0, 0},    {969, 0, -190}, {0.2, 0.45, 1.0}},
+        {link6, "./data/3D_Models/robot/an_chuan_STL/Link 6.stl",  {969, 0, -190}, {180, 0, 0},   {969, 0, -190}, {0.2, 0.45, 1.0}},
+        {Tlink, "./data/3D_Models/robot/an_chuan_STL/weldgun.stl", {969, 0, -290}, {180, -90, 0}, {969, 0, -290}, {0.4, 0.4, 0.4} },
     };
 
     // 连接各模块
@@ -77,8 +73,7 @@ void SystemMirrorWidget::setCameraPos(int fromX, int fromY, int fromZ, int toX, 
 }
 
 // 点云显示
-void SystemMirrorWidget::displayPointCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr visualCloud,
-                                           const std::array<double, 3>& color) {
+void SystemMirrorWidget::displayPointCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr visualCloud, const std::array<double, 3>& color) {
     if (!renderer || !visualCloud || visualCloud->empty()) return;
 
     auto vtkPointsObj = vtkSmartPointer<vtkPoints>::New();
@@ -106,34 +101,51 @@ void SystemMirrorWidget::displayPointCloud(const pcl::PointCloud<pcl::PointXYZ>:
     pointCloudActors.push_back(actor);  // 保存点云Actor
 }
 
-// 显示直线
-void SystemMirrorWidget::displayLines(const std::shared_ptr<std::vector<pcl::PointXYZ>>& lineEndpoints,
-                                      const std::array<double, 3>& color, double lineWidth) {
+// 显示直线 / 曲线
+void SystemMirrorWidget::displayLines(const std::shared_ptr<std::vector<pcl::PointXYZ>>& lineEndpoints, const std::array<double, 3>& color,
+                                      double lineWidth) {
+    bool asPolyline;
+    if (lineEndpoints->size() >= 3) asPolyline = true;
     if (!renderer || !lineEndpoints || lineEndpoints->empty()) return;
-
-    if (lineEndpoints->size() % 2 != 0) {
-        qWarning("displayLines(): 点数量应为偶数，每两个点组成一条线段。");
-        return;
-    }
 
     auto points = vtkSmartPointer<vtkPoints>::New();
     auto lines = vtkSmartPointer<vtkCellArray>::New();
 
+    // ================= 1. 添加点 =================
     for (size_t i = 0; i < lineEndpoints->size(); ++i) {
         points->InsertNextPoint((*lineEndpoints)[i].x + railPosition, (*lineEndpoints)[i].y, (*lineEndpoints)[i].z + 450);
     }
 
-    for (vtkIdType i = 0; i < static_cast<vtkIdType>(lineEndpoints->size()); i += 2) {
-        auto line = vtkSmartPointer<vtkLine>::New();
-        line->GetPointIds()->SetId(0, i);
-        line->GetPointIds()->SetId(1, i + 1);
-        lines->InsertNextCell(line);
+    // ================= 2. 构建线 =================
+    if (asPolyline) {
+        // 曲线（连续折线）
+        for (vtkIdType i = 0; i < static_cast<vtkIdType>(lineEndpoints->size()) - 1; ++i) {
+            auto line = vtkSmartPointer<vtkLine>::New();
+            line->GetPointIds()->SetId(0, i);
+            line->GetPointIds()->SetId(1, i + 1);
+            lines->InsertNextCell(line);
+        }
+    } else {
+        //  原始逻辑：每两个点一条线
+        if (lineEndpoints->size() % 2 != 0) {
+            qWarning("displayLines(): 点数量应为偶数，每两个点组成一条线段。");
+            return;
+        }
+
+        for (vtkIdType i = 0; i < static_cast<vtkIdType>(lineEndpoints->size()); i += 2) {
+            auto line = vtkSmartPointer<vtkLine>::New();
+            line->GetPointIds()->SetId(0, i);
+            line->GetPointIds()->SetId(1, i + 1);
+            lines->InsertNextCell(line);
+        }
     }
 
+    // ================= 3. 构建 PolyData =================
     auto polyData = vtkSmartPointer<vtkPolyData>::New();
     polyData->SetPoints(points);
     polyData->SetLines(lines);
 
+    // ================= 4. 映射 =================
     auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputData(polyData);
 
@@ -143,9 +155,8 @@ void SystemMirrorWidget::displayLines(const std::shared_ptr<std::vector<pcl::Poi
     actor->GetProperty()->SetLineWidth(lineWidth);
 
     renderer->AddActor(actor);
-    lineActors.push_back(actor);  // 保存线段Actor
+    lineActors.push_back(actor);
 }
-
 // 清空界面中的点云
 void SystemMirrorWidget::clearPointCloud() {
     if (!renderer) return;

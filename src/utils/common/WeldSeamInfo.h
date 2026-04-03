@@ -91,7 +91,7 @@ public:
     bool detectSuccFlag = false;                                        // 焊缝检测成功标志
     std::shared_ptr<std::vector<pcl::PointXYZ>> weldEndPointsInCamera;  // 焊缝端点 (相机坐标系下)
     std::shared_ptr<std::vector<pcl::PointXYZ>> weldEndPointsInRobot;   // 焊缝端点 (机器人坐标系下)
-    pcl::ModelCoefficients::Ptr weldPlane;                              // 焊缝所在平面
+    pcl::ModelCoefficients::Ptr weldCoeff;                              // 焊缝所在平面
     std::vector<pcl::ModelCoefficients::Ptr> otherSurface;              // 其他母材表面
     WELD_TYPE weldType;                                                 // 焊缝类型
     pcl::ModelCoefficients::Ptr seamsLineToVal;                         // 焊缝验证直线

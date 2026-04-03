@@ -143,6 +143,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PointCloudReconstruction::weldAreaRec
         reInitialize();             // 变量重新初始化
         imageDistribute();          // 0. 将采集到的图像放入相移和格雷码容器
         makeMaskForSeamsDetToGF();  // 1.2 完成重建掩膜的生成 (包括背景和焊缝区域)
+
         if (!skipWorkbenchFilter) {
             maskForReconstruct = maskForWorkbench.clone();
             solveWrapPhase();           // 2. 相移法求包裹相位
@@ -299,10 +300,12 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
         // detRes->emplace_back(1, 1.0f, 91, 237, 1500, 600);//管侧与三角肘板
         // detRes->emplace_back(0, 1.0f, 414, 343, 498, 438);
         // detRes->emplace_back(0, 1.0f, 596, 419, 1090, 469);
-        // detRes->emplace_back(0, 1.0f, 1170, 285, 1207, 391);
-        detRes->emplace_back(0, 1.0f, 289, 786, 420, 880);
-        detRes->emplace_back(0, 1.0f, 533, 758, 1100, 800);
-        detRes->emplace_back(0, 1.0f, 1170, 750, 1238, 865);
+        // detRes->emplace_back(0, 1.0f, 1170, 285, 1207, 391); //板板角接
+        // detRes->emplace_back(0, 1.0f, 289, 786, 420, 880);
+        // detRes->emplace_back(0, 1.0f, 533, 758, 1100, 800);
+        // detRes->emplace_back(0, 1.0f, 1170, 750, 1238, 865); //板板角接
+        detRes->emplace_back(2, 1.0f, 642, 329, 1125, 461);  // 板管角接
+        // detRes->emplace_back(2, 1.0f, 361, 503, 1324, 617);  // 板管角接
     }
     // 如果检测到大于4个, 按照置信度排序, 并取前4个
     if (detRes->size() > 4) {
@@ -693,28 +696,29 @@ void PointCloudReconstruction::reconstructForWorkbench() {
     }
     // 背景平面赋值
     pcl::copyPointCloud(*reconstructPointCloud, inliers, *workbenchPointCloud);
-    // 获取工件点云
-    double a = workbenchCoeff[0];
-    double b = workbenchCoeff[1];
-    double c = workbenchCoeff[2];
-    double d = workbenchCoeff[3];
-
-    double norm = sqrt(a * a + b * b + c * c);
-
-    nonPlanePointCloud->clear();
-
-    for (const auto& p : reconstructPointCloud->points) {
-        double dist = fabs(a * p.x + b * p.y + c * p.z + d) / norm;
-
-        if (dist > ransacPlaneThreshold)  // 非平面
-        {
-            nonPlanePointCloud->points.push_back(p);
-        }
-    }
-
-    nonPlanePointCloud->width = nonPlanePointCloud->points.size();
-    nonPlanePointCloud->height = 1;
+    // 获取工件点云--改为保存获取用于看的去平面点云
     if (SettingPara::getInstance().bool_save_model) {
+        double a = workbenchCoeff[0];
+        double b = workbenchCoeff[1];
+        double c = workbenchCoeff[2];
+        double d = workbenchCoeff[3];
+
+        double norm = sqrt(a * a + b * b + c * c);
+
+        nonPlanePointCloud->clear();
+
+        for (const auto& p : reconstructPointCloud->points) {
+            double dist = fabs(a * p.x + b * p.y + c * p.z + d) / norm;
+
+            if (dist > ransacPlaneThreshold)  // 非平面
+            {
+                nonPlanePointCloud->points.push_back(p);
+            }
+        }
+
+        nonPlanePointCloud->width = nonPlanePointCloud->points.size();
+        nonPlanePointCloud->height = 1;
+
         pcl::io::savePCDFile("./data/common/nonPlanePointCloud.pcd", *nonPlanePointCloud);
     }
     PLOGD << "重建完成";
@@ -759,7 +763,7 @@ void PointCloudReconstruction::reconstructForSeamArea() {
 
         // 5. 保存点云到本地(若需)
         // PLOGD << "bool_save_model: " << SettingPara::getInstance().bool_save_model;
-        PLOGD << "reconstructPointCloud->size(): " << reconstructPointCloud->size();
+        // PLOGD << "reconstructPointCloud->size(): " << reconstructPointCloud->size();
         if (SettingPara::getInstance().bool_save_model) {
             pcl::io::savePCDFile("./data/common/pointCloud" + std::to_string(areaInfo->areaNum) + ".pcd", *reconstructPointCloud);
         }

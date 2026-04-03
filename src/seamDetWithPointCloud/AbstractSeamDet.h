@@ -17,6 +17,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/surface/concave_hull.h>
 #include <pcl/visualization/cloud_viewer.h>
+#include <pcl/visualization/pcl_plotter.h>
 #include <plog/Log.h>
 
 #include <QObject>
@@ -25,6 +26,8 @@
 #include <boost/graph/connected_components.hpp>
 #include <iostream>
 #include <memory>
+
+#include "src/utils/common/CommonFunc.h"
 
 class WeldSeamInfo;
 

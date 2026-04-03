@@ -172,8 +172,7 @@ void WeldingMainWindow::whenGetSeamInfo(std::vector<std::shared_ptr<WeldSeamInfo
                 *visualCloud = *visualCloud + *(info->weldAreaPointCloudInRobot);
             }
 
-            if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr &&
-                info->weldEndPointsInRobot->size() == 2) {
+            if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() >= 2) {
                 ui->systemMirrorWidget->displayLines(info->weldEndPointsInRobot, {1.0, 0.0, 0.0});  // 在系统镜像中显示焊缝
             }
         }
@@ -245,9 +244,9 @@ void WeldingMainWindow::on_comboBox_currentTextChanged(const QString& arg1) {
     }
 }
 void WeldingMainWindow::on_btnRobotMoveL_clicked() {
-    robotPose p(ui->lineEditRobotTargetX->text().toDouble(), ui->lineEditRobotTargetY->text().toDouble(),
-                ui->lineEditRobotTargetZ->text().toDouble(), ui->lineEditRobotTargetA->text().toDouble(),
-                ui->lineEditRobotTargetB->text().toDouble(), ui->lineEditRobotTargetC->text().toDouble());
+    robotPose p(ui->lineEditRobotTargetX->text().toDouble(), ui->lineEditRobotTargetY->text().toDouble(), ui->lineEditRobotTargetZ->text().toDouble(),
+                ui->lineEditRobotTargetA->text().toDouble(), ui->lineEditRobotTargetB->text().toDouble(),
+                ui->lineEditRobotTargetC->text().toDouble());
 
     this->railWeldingSystem->whenGetRobotMoveLData(p, SettingPara::getInstance().Value_MoveSpeed);
 }

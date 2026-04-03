@@ -25,7 +25,7 @@ WeldSeamInfo& WeldSeamInfo::operator=(const WeldSeamInfo& other) noexcept {
         // PCL成员, 增加引用计数
         weldAreaPointCloudInCamera = other.weldAreaPointCloudInCamera;
         weldAreaPointCloudInRobot = other.weldAreaPointCloudInRobot;
-        weldPlane = other.weldPlane;
+        weldCoeff = other.weldCoeff;
         seamsLineToVal = other.seamsLineToVal;
 
         // 共享智能指针, 增加引用计数
@@ -34,9 +34,9 @@ WeldSeamInfo& WeldSeamInfo::operator=(const WeldSeamInfo& other) noexcept {
         weldEndPointsFromSeg = other.weldEndPointsFromSeg;
         swingReferencePoints = other.swingReferencePoints;
         rectPtr = other.rectPtr;
-        //
         otherSurface = other.otherSurface;
         robotWeldPose = other.robotWeldPose;
+        // cloudFuture = other.cloudFuture;
     }
     return *this;
 }
@@ -84,8 +84,8 @@ std::shared_ptr<WeldSeamInfo> WeldSeamInfo::clone() const {
         pcl::copyPointCloud(*weldAreaPointCloudInRobot, *copy->weldAreaPointCloudInRobot);
     }
 
-    if (weldPlane) {  // 平面参数深拷贝
-        copy->weldPlane = pcl::ModelCoefficients::Ptr(new pcl::ModelCoefficients(*weldPlane));
+    if (weldCoeff) {  // 平面参数深拷贝
+        copy->weldCoeff = pcl::ModelCoefficients::Ptr(new pcl::ModelCoefficients(*weldCoeff));
     }
 
     if (seamsLineToVal) {  // 验证直线深拷贝

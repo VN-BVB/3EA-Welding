@@ -38,7 +38,7 @@ private:
     int Ransac_plane_Iterations = 1000;  // Ransac拟合平面的迭代数
     double Ransac_plane_Dth = 1.0;       // ransac拟合平面的距离阈值
 
-    double resolution = 1.0;                  // 腐蚀膨胀中二维栅格大小
+    double resolution = 1.0;                  // 二维栅格大小
     int Statistic_NeighPoints = 20;           // 统计滤波近邻点数
     double Statistic_sigma = 3.0;             // 统计滤波系数
     double extendCylinderInPlaneArea = 10.0;  // 选取焊缝区域衍生

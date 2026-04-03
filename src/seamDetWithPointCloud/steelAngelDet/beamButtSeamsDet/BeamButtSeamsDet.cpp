@@ -67,7 +67,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> BeamButtSeamsDet::solveSeamsEndPoints
         if (bool_IdentifySeam == true) {
             tempWeldSeamsInfo[i]->weldEndPointsInCamera.reset(
                 new std::vector<pcl::PointXYZ>(std::move(beamButtSeams)));  // 检测结果
-            tempWeldSeamsInfo[i]->weldPlane = planeCoeffsWithWeldSeam;      // 焊缝所在平面
+            tempWeldSeamsInfo[i]->weldCoeff = planeCoeffsWithWeldSeam;      // 焊缝所在平面
             if (seamSide == SEAM_SIDE::BACK) {                              // 焊缝类型
                 tempWeldSeamsInfo[i]->weldType = WELD_TYPE::BACK_BEAM_BUTT;
             } else if (seamSide == SEAM_SIDE::FRONT) {

@@ -145,7 +145,8 @@ void SeamDetWithSeg::whenDetSeamWithSeg(std::vector<std::shared_ptr<WeldSeamInfo
 
             // 将当前焊缝的分割计算放入线程池
             threadPool->addTask([this, info]() { return this->detectSignalSeamWithSeg(info); });
-        } else if (info->weldType == TubeSide_Plate_F_H || info->weldType == Plate_Plate_Fillet_V || info->weldType == Plate_Plate_Fillet_H) {
+        } else if (info->weldType == TubeSide_Plate_F_H || info->weldType == Plate_Plate_Fillet_V || info->weldType == Plate_Plate_Fillet_H ||
+                   info->weldType == Tube_Tube_F) {
             PLOGD << "龙门支架目前未使用分割算法";
         }
     }
@@ -279,7 +280,8 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
                     }
                 }
             }
-        } else if (info->weldType == TubeSide_Plate_F_H || info->weldType == Plate_Plate_Fillet_V || info->weldType == Plate_Plate_Fillet_H) {
+        } else if (info->weldType == TubeSide_Plate_F_H || info->weldType == Plate_Plate_Fillet_V || info->weldType == Plate_Plate_Fillet_H ||
+                   info->weldType == Tube_Plate_Fillet) {
             PLOGD << "龙门支架目前不需要融合";
         }
     }
@@ -289,7 +291,7 @@ void SeamDetWithSeg::fusionPointCloudAndSegRes(std::vector<std::shared_ptr<WeldS
 void SeamDetWithSeg::detectSignalSeamWithSeg(std::shared_ptr<WeldSeamInfo> seamInfo) {
     PLOGD << "分割方法计算 " << MyToolFunc::getWeldTypeString(seamInfo->weldType) << " 类型焊缝";
 
-    if (seamInfo->weldPlane == nullptr || seamInfo->weldPlane->values.size() != 4) {
+    if (seamInfo->weldCoeff == nullptr || seamInfo->weldCoeff->values.size() != 4) {
         PLOGE << "焊缝所在平面异常, 无法使用分割方法计算焊缝";
         pcl::PointXYZ p;
         std::vector<pcl::PointXYZ> endOfOneSeam;
@@ -335,9 +337,9 @@ void SeamDetWithSeg::detectSignalSeamWithSeg(std::shared_ptr<WeldSeamInfo> seamI
     PLOGD << "用于宽度计算的白色像素提取成功, 像素数量: " << whitePixelsForWidth.size();
 
     // ****************** 二维像素映射到三维点 ******************
-    Plane p(seamInfo->weldPlane->values[0] / ((-1) * seamInfo->weldPlane->values[3]),
-            seamInfo->weldPlane->values[1] / ((-1) * seamInfo->weldPlane->values[3]),
-            seamInfo->weldPlane->values[2] / ((-1) * seamInfo->weldPlane->values[3]));
+    Plane p(seamInfo->weldCoeff->values[0] / ((-1) * seamInfo->weldCoeff->values[3]),
+            seamInfo->weldCoeff->values[1] / ((-1) * seamInfo->weldCoeff->values[3]),
+            seamInfo->weldCoeff->values[2] / ((-1) * seamInfo->weldCoeff->values[3]));
     pcl::PointCloud<pcl::PointXYZ>::Ptr weldSeamPointClouds(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr weldSeamPointCloudsForWidth(new pcl::PointCloud<pcl::PointXYZ>);
     bool res2dTo3d = point2dTo3d(whitePixels, weldSeamPointClouds, p);

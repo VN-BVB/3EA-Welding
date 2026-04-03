@@ -280,8 +280,8 @@ void GantrayFrameTrajectoryPlanning::normalizeSurfaceDirectionInCamera(std::vect
         if (!info || !info->detectSuccFlag) continue;
 
         // ================= weldPlane =================
-        if (info->weldPlane) {
-            auto& v = info->weldPlane->values;
+        if (info->weldCoeff) {
+            auto& v = info->weldCoeff->values;
 
             // ---------- 平面 ----------
             if (v.size() == 4) {
@@ -405,13 +405,13 @@ void GantrayFrameTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr
         // ---------- 2.2 转换焊缝母材系数 -----------
         pcl::ModelCoefficients::Ptr plane_base_trans;
         pcl::ModelCoefficients::Ptr cylinder_base_trans;
-        if (info->weldPlane) {
-            if (info->weldPlane->values.size() == 4) {
-                plane_base_trans = MyToolFunc::transformPlane(info->weldPlane, T_cam2base);
-                info->weldPlane = plane_base_trans;
-            } else if (info->weldPlane->values.size() == 7) {
-                cylinder_base_trans = MyToolFunc::transformCylinder(info->weldPlane, T_cam2base);
-                info->weldPlane = cylinder_base_trans;
+        if (info->weldCoeff) {
+            if (info->weldCoeff->values.size() == 4) {
+                plane_base_trans = MyToolFunc::transformPlane(info->weldCoeff, T_cam2base);
+                info->weldCoeff = plane_base_trans;
+            } else if (info->weldCoeff->values.size() == 7) {
+                cylinder_base_trans = MyToolFunc::transformCylinder(info->weldCoeff, T_cam2base);
+                info->weldCoeff = cylinder_base_trans;
             } else {
                 PLOGD << "转换失败，焊缝母材系数数量错误 ";
             }
@@ -521,12 +521,11 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
         double b;
         double c;
         robotPose pose_start, pose_end;
-        bool allWrite = true;
         if (!info || !info->detectSuccFlag) continue;
 
         if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) continue;
         if (info->weldType == TubeSide_Plate_F_H) {
-            if (!info->weldPlane || info->weldPlane->values.size() != 4) continue;
+            if (!info->weldCoeff || info->weldCoeff->values.size() != 4) continue;
 
             if (info->otherSurface.empty()) continue;
 
@@ -538,7 +537,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             Eigen::Vector3f mid = 0.5f * (P0 + P1);
 
             // ================= 2. 平面法向 =================
-            Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            Eigen::Vector3f n1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
             n1.normalize();
 
             // ================= 3. 圆柱法向 =================
@@ -607,6 +606,24 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             a = targetABC[0];
             b = targetABC[1];
             c = targetABC[2];
+            // 起点
+            pose_start.x_ = P0.x();
+            pose_start.y_ = P0.y();
+            pose_start.z_ = P0.z();
+            pose_start.a_ = a;
+            pose_start.b_ = b;
+            pose_start.c_ = c;
+
+            // 终点
+            pose_end.x_ = P1.x();
+            pose_end.y_ = P1.y();
+            pose_end.z_ = P1.z();
+            pose_end.a_ = a;
+            pose_end.b_ = b;
+            pose_end.c_ = c;
+            info->robotWeldPose.clear();
+            info->robotWeldPose.push_back(pose_start);
+            info->robotWeldPose.push_back(pose_end);
         } else if (info->weldType == Plate_Plate_Fillet_H) {
             if (info->otherSurface.size() < 1) continue;
 
@@ -616,7 +633,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             P1 = Eigen::Vector3f(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
 
             // ===== 2. 两个平面法向 =====
-            Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            Eigen::Vector3f n1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
             n1.normalize();
 
             Eigen::Vector3f n2(0, 0, 0);
@@ -727,10 +744,11 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 pose_end.b_ = abc[1];
                 pose_end.c_ = abc[2];
             }
-
-            allWrite = false;
+            info->robotWeldPose.clear();
+            info->robotWeldPose.push_back(pose_start);
+            info->robotWeldPose.push_back(pose_end);
         } else if (info->weldType == Plate_Plate_Fillet_V) {
-            if (!info->weldPlane || info->weldPlane->values.size() != 4) continue;
+            if (!info->weldCoeff || info->weldCoeff->values.size() != 4) continue;
             if (info->otherSurface.empty()) continue;
 
             // ===== 1. 端点 =====
@@ -741,7 +759,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             Eigen::Vector3f seamDir = (P0 - P1).normalized();
 
             // ===== 2. 主平面法向 =====
-            Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            Eigen::Vector3f n1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
             n1.normalize();
 
             // ===== 3. otherSurface 法向 =====
@@ -810,9 +828,6 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             a = targetABC[0];
             b = targetABC[1];
             c = targetABC[2];
-        }
-        // ================= 10. 写入两个点 =================
-        if (allWrite) {
             // 起点
             pose_start.x_ = P0.x();
             pose_start.y_ = P0.y();
@@ -828,10 +843,12 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             pose_end.a_ = a;
             pose_end.b_ = b;
             pose_end.c_ = c;
+            info->robotWeldPose.clear();
+            info->robotWeldPose.push_back(pose_start);
+            info->robotWeldPose.push_back(pose_end);
+        } else if (info->weldType == Tube_Plate_Fillet) {
+            if (!info->weldCoeff || info->otherSurface.empty()) continue;
         }
-        info->robotWeldPose.clear();
-        info->robotWeldPose.push_back(pose_start);
-        info->robotWeldPose.push_back(pose_end);
 
         // static int idx1 = 0;
 
@@ -987,7 +1004,7 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
         if (!info || !info->detectSuccFlag) continue;
         if (info->weldType == TubeSide_Plate_F_H) {
             if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
-            if (!info->weldPlane || info->weldPlane->values.size() < 4) continue;
+            if (!info->weldCoeff || info->weldCoeff->values.size() < 4) continue;
 
             auto& pts = *(info->weldEndPointsInRobot);
 
@@ -1000,7 +1017,7 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
 
             Eigen::Vector3f xAxis = (P1 - P0).normalized();
 
-            Eigen::Vector3f zAxis(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            Eigen::Vector3f zAxis(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
             zAxis.normalize();
 
             Eigen::Vector3f yAxis = zAxis.cross(xAxis).normalized();
@@ -1040,7 +1057,7 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
             pts[1].z = p1_new.z();
         } else if (info->weldType == Plate_Plate_Fillet_H || info->weldType == Plate_Plate_Fillet_V) {
             if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
-            if (!info->weldPlane || info->weldPlane->values.size() < 4) continue;
+            if (!info->weldCoeff || info->weldCoeff->values.size() < 4) continue;
 
             auto& pts = *(info->weldEndPointsInRobot);
 
@@ -1053,7 +1070,7 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
             Eigen::Vector3f seamDir = (P0 - P1).normalized();
 
             // ===== 主平面法向 =====
-            Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+            Eigen::Vector3f n1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
             n1.normalize();
 
             // ===== 次平面法向 =====
@@ -1159,6 +1176,7 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
             pts[1].x = p1_new.x();
             pts[1].y = p1_new.y();
             pts[1].z = p1_new.z();
+        } else if (info->weldType == Tube_Plate_Fillet) {
         }
     }
 }
@@ -1332,7 +1350,7 @@ bool GantrayFrameTrajectoryPlanning::computePlatePlateFilletVerticalSwingPoints(
                                                                                 std::vector<double>& swingPoints) {
     swingPoints.clear();
     if (info->weldType == Plate_Plate_Fillet_V) {
-        if (!info || !info->weldPlane || info->weldPlane->values.size() != 4) return false;
+        if (!info || !info->weldCoeff || info->weldCoeff->values.size() != 4) return false;
 
         if (info->otherSurface.empty()) return false;
 
@@ -1346,7 +1364,7 @@ bool GantrayFrameTrajectoryPlanning::computePlatePlateFilletVerticalSwingPoints(
         Eigen::Vector3f seamDir = (P0 - P1).normalized();
 
         // ===== 2. 主平面法向 n1 =====
-        Eigen::Vector3f n1(info->weldPlane->values[0], info->weldPlane->values[1], info->weldPlane->values[2]);
+        Eigen::Vector3f n1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
         n1.normalize();
 
         // ===== 3. 第二平面法向 n2 =====

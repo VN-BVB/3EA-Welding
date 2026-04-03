@@ -369,9 +369,11 @@ void MyToolFunc::myFastMaxCluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, dou
     clusters.resize(num_components);  // 调整聚类容器大小
 
     for (int index = 0; index < cloud->size(); index++) {
-        auto label = labels.at(index);                    // 获取点的原始标签
-        auto new_label = label_map.at(label);             // 获取合并后的新标签
-        clusters.at(new_label).indices.push_back(index);  // 将点索引加入对应聚类
+        auto label = labels.at(index);  // 获取点的原始标签
+        if (label != -1) {
+            auto new_label = label_map.at(label);             // 获取合并后的新标签
+            clusters.at(new_label).indices.push_back(index);  // 将点索引加入对应聚类
+        }
     }
 
     // 过滤小聚类和过大聚类
@@ -521,6 +523,46 @@ void MyToolFunc::projectCloudToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_c
     output_cloud->swap(*tmp);
 }
 
+void MyToolFunc::projectCloudToCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
+                                        pcl::ModelCoefficients::Ptr cylinder_coeffs) {
+    if (!input_cloud || input_cloud->empty() || !output_cloud || !cylinder_coeffs || cylinder_coeffs->values.size() != 7) {
+        std::cerr << "projectCloudToCylinder: 参数错误" << std::endl;
+        return;
+    }
+
+    // 如果输入输出是同一个对象，先拷贝
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_src = input_cloud;
+
+    if (input_cloud == output_cloud) {
+        cloud_src.reset(new pcl::PointCloud<pcl::PointXYZ>(*input_cloud));
+    }
+    // ---------- 解析参数 ----------
+    Eigen::Vector3f C(cylinder_coeffs->values[0], cylinder_coeffs->values[1], cylinder_coeffs->values[2]);
+
+    Eigen::Vector3f d(cylinder_coeffs->values[3], cylinder_coeffs->values[4], cylinder_coeffs->values[5]);
+
+    float r = cylinder_coeffs->values[6];
+    d.normalize();
+
+    output_cloud->clear();
+    output_cloud->reserve(cloud_src->size());
+
+    for (const auto& pt : cloud_src->points) {
+        Eigen::Vector3f P(pt.x, pt.y, pt.z);
+
+        float t = (P - C).dot(d);
+        Eigen::Vector3f P_axis = C + t * d;
+
+        Eigen::Vector3f v = P - P_axis;
+        float norm_v = v.norm();
+
+        if (norm_v < 1e-6) continue;
+
+        Eigen::Vector3f P_proj = P_axis + v / norm_v * r;
+
+        output_cloud->points.emplace_back(P_proj.x(), P_proj.y(), P_proj.z());
+    }
+}
 // 构造圆柱点云（理论点云）
 pcl::PointCloud<pcl::PointXYZ>::Ptr MyToolFunc::generateCylinderCloud(pcl::ModelCoefficients::Ptr cylinder) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);

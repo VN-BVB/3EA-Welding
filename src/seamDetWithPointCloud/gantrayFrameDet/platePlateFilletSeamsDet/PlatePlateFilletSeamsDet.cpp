@@ -101,7 +101,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> PlatePlateFilletSeamsDet::solveSeamsE
         tempWeldSeamsInfo[i]->detectSuccFlag = detectSuccFlag;
         if (detectSuccFlag) {
             tempWeldSeamsInfo[i]->weldEndPointsInCamera.reset(new std::vector<pcl::PointXYZ>(std::move(filletSeamsTSP)));  // 检测结果
-            tempWeldSeamsInfo[i]->weldPlane = planeCoeffsWithWeldSeam;
+            tempWeldSeamsInfo[i]->weldCoeff = planeCoeffsWithWeldSeam;
             tempWeldSeamsInfo[i]->otherSurface.emplace_back(otherPlaneCoeffsInWeldArea);
             tempWeldSeamsInfo[i]->weldType = weldType;
             tempWeldSeamsInfo[i]->seamsLineToVal = lineCoeffsWithWeldSeam2Val;

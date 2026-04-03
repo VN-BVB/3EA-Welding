@@ -48,7 +48,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> CornerButtSeamsDet::solveSeamsEndPoin
         if (bool_IdentifySeam == true) {
             tempWeldSeamsInfo[i]->weldEndPointsInCamera.reset(
                 new std::vector<pcl::PointXYZ>(std::move(cornerButtSeams)));  // 检测结果
-            tempWeldSeamsInfo[i]->weldPlane = planeCoeffsWithWeldSeam;        // 焊缝所在平面
+            tempWeldSeamsInfo[i]->weldCoeff = planeCoeffsWithWeldSeam;        // 焊缝所在平面
             if (tempWeldSeamsInfo[i]->weldAreaType == WELD_AREA_TYPE::BACK_CORNER) {
                 tempWeldSeamsInfo[i]->weldType = WELD_TYPE::BACK_CORNER_BUTT;  // 焊缝类型
             } else if (tempWeldSeamsInfo[i]->weldAreaType == WELD_AREA_TYPE::FRONT_CORNER) {

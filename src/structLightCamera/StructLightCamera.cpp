@@ -12,8 +12,7 @@
 StructLightCamera::StructLightCamera(QObject *parent) { (void)parent; }
 
 // 带抽象工厂参数的构造函数
-StructLightCamera::StructLightCamera(std::shared_ptr<AbstractCameraFactory> camFac,
-                                     std::shared_ptr<AbstractProjectorFactory> projFac)
+StructLightCamera::StructLightCamera(std::shared_ptr<AbstractCameraFactory> camFac, std::shared_ptr<AbstractProjectorFactory> projFac)
     : cameraFactory(camFac), projectorFactory(projFac) {
     this->initConfig();                    // 初始化配置信息 (此处各个模块初始化的顺序不能变)
     this->initCamerasAndProjector();       // 初始化相机和投影仪
