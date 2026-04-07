@@ -106,7 +106,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubePlateFilletSeamsDet::solveSeamsEn
         }
         {
             // ScopedTimer t("myFastMaxCluster");
-            MyToolFunc::myFastMaxCluster(axisRangeCloud, 2);
+            MyToolFunc::myFastMaxCluster(axisRangeCloud, 3);
             if (saveFlag) {
                 axisRangeCloud->height = 1;
                 axisRangeCloud->width = static_cast<uint32_t>(axisRangeCloud->size());
@@ -561,7 +561,7 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
     // ================= 7. 构造 ordered（仅用于采样） =================
     std::vector<PtTheta> ordered = pts;
 
-    // 👉 可选：只有跨π才做重排（推荐）
+    //  可选：只有跨π才做重排（推荐）
     float max_gap = 0;
     int split_idx = 0;
 
@@ -582,25 +582,43 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
         for (int i = 0; i < split_idx; ++i) ordered.push_back(pts[i]);
     }
 
-    // ================= 8. 端点（不用 ordered） =================
-    const pcl::PointXYZ& start_pt = pts.front().pt;
-    const pcl::PointXYZ& end_pt = pts.back().pt;
-
-    filletSeamsTP.clear();
-    filletSeamsTP.push_back(start_pt);
-
-    // ================= 9. 均匀采样（用 ordered） =================
+    // ================= 8. 三个关键点 =================
     int total = ordered.size();
 
-    for (int i = 1; i < sample_num - 1; ++i) {
-        float ratio = static_cast<float>(i) / (sample_num - 1);
-        int idx = static_cast<int>(ratio * (total - 1));
+    int mid_idx = total / 2;
 
-        idx = std::min(std::max(idx, 0), total - 1);
+    const pcl::PointXYZ& start_pt = ordered.front().pt;
+    const pcl::PointXYZ& mid_pt = ordered[mid_idx].pt;
+    const pcl::PointXYZ& end_pt = ordered.back().pt;
+
+    filletSeamsTP.clear();
+
+    // ================= 9. 第一段采样（start → mid） =================
+    filletSeamsTP.push_back(start_pt);
+
+    for (int i = 1; i < sample_num; ++i) {
+        float ratio = static_cast<float>(i) / sample_num;
+
+        int idx = static_cast<int>(ratio * mid_idx);
+        idx = std::min(std::max(idx, 0), mid_idx);
 
         filletSeamsTP.push_back(ordered[idx].pt);
     }
 
+    // 加入中点
+    filletSeamsTP.push_back(mid_pt);
+
+    // ================= 10. 第二段采样（mid → end） =================
+    for (int i = 1; i < sample_num; ++i) {
+        float ratio = static_cast<float>(i) / sample_num;
+
+        int idx = mid_idx + static_cast<int>(ratio * (total - 1 - mid_idx));
+        idx = std::min(std::max(idx, mid_idx), total - 1);
+
+        filletSeamsTP.push_back(ordered[idx].pt);
+    }
+
+    // 加入终点
     filletSeamsTP.push_back(end_pt);
 
     // ================= 10. 保存 =================

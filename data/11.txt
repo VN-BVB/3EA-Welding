@@ -1,0 +1,571 @@
+15:36:02: Starting D:\Code\3EA-Welding\3EA-Welding\release\3ea_robot_welding.exe...
+=>LOG :  : SetGenICamLogConfig(path) not called, and environment variable GENICAM_LOG_CONFIG_V3_1 not found. Using default logging configuration.
+=>LOG :  : Cannot open logger parameter file 'D:/Basler/pylon7/log/config/DefaultLogging.properties'
+=>LOG :  : Default logger parameter file '$(GENICAM_ROOT)/log/config/DefaultLogging.properties' not found
+2026-04-06 15:36:02.779 DEBUG [124864] [StructLightCamera::readConfig@48] 结构光相机配置文件读取成功
+2026-04-06 15:36:02.781 DEBUG [124864] [StructLightCamera::initCamerasAndProjector@71] 主相机初始化成功
+2026-04-06 15:36:02.781 DEBUG [124864] [StructLightCamera::initCamerasAndProjector@92] 投影仪初始化成功
+2026-04-06 15:36:02.801 DEBUG [124864] [SettingPara::loadSetting@264] QSetting配置数据读取成功
+2026-04-06 15:36:03.197 DEBUG [124864] [RailWeldingSystem::initStructLightCamera@44] 结构光相机类初始化成功
+2026-04-06 15:36:03.198 DEBUG [124864] [RailWeldingSystem::initSeamDetWithPointCloud@61] 点云方法焊缝检测类初始化成功
+2026-04-06 15:36:03.382 ERROR [124864] [SeamDetWithSeg::SeamDetWithSeg@30] 创建文件夹失败: ./data/seamDetWithSeg/20260406
+2026-04-06 15:36:03.382 DEBUG [124864] [RailWeldingSystem::initSeamDetWithSeg@77] 分割方法焊缝检测类初始化成功
+2026-04-06 15:36:03.384 DEBUG [124864] [AbstractTrajectoryPlanning::readConfig@36] 轨迹规划配置文件读取成功
+2026-04-06 15:36:03.384 DEBUG [124864] [GantrayFrameTrajectoryPlanning::GantrayFrameTrajectoryPlanning@10] 龙门支架轨迹规划类初始化
+2026-04-06 15:36:03.384 DEBUG [124864] [RailWeldingSystem::initTrajectoryPlanning@97] 轨迹规划类初始化成功
+2026-04-06 15:36:03.384 DEBUG [124864] [RailWeldingSystem::initRobot@172] 机器人类初始化成功
+2026-04-06 15:36:04.557 DEBUG [124864] [SeamWidget::initPositionSystem@64] 精定位系统类初始化成功
+2026-04-06 15:36:04.838 DEBUG [124864] [WeldingMainWindow::initRailWeldingSystem@112] 地轨焊接系统类初始化成功
+2026-04-06 15:36:04.838 DEBUG [124864] [WeldingMainWindow::WeldingMainWindow@26] 三轴焊接系统软件启动成功
+2026-04-06 15:44:08.279 DEBUG [109324] [RailWeldingSystem::whenConnectingStructLight@181] 连接结构光相机...
+2026-04-06 15:44:08.579 ERROR [109324] [BaslerCamera::open@39] 未找到任何Basler相机, 请检查相机连接情况
+2026-04-06 15:44:23.624 DEBUG [109324] [TengJuProjector::open@18] 已连接腾聚投影仪
+PRJSEND:Len[13]:MA 2 20 1 0
+
+2026-04-06 15:44:23.625 DEBUG [109324] [TengJuProjector::sendCmd@169] 腾聚投影仪命令发送成功
+PRJSEND:Len[4]:MS
+
+2026-04-06 15:44:23.625 DEBUG [109324] [TengJuProjector::sendCmd@169] 腾聚投影仪命令发送成功
+2026-04-06 15:44:23.626 DEBUG [109324] [TengJuProjector::setPara@156] 腾聚投影仪参数: fps = 20 设置成功
+PRJSEND:Len[13]:MA 2 20 1 0
+
+2026-04-06 15:44:23.626 DEBUG [109324] [TengJuProjector::sendCmd@169] 腾聚投影仪命令发送成功
+PRJSEND:Len[4]:MS
+
+2026-04-06 15:44:23.626 DEBUG [109324] [TengJuProjector::sendCmd@169] 腾聚投影仪命令发送成功
+2026-04-06 15:44:23.626 DEBUG [109324] [TengJuProjector::setPara@156] 腾聚投影仪参数: projNum = 21 设置成功
+PRJSEND:Len[4]:LC
+
+2026-04-06 15:44:23.626 DEBUG [109324] [TengJuProjector::setPara@156] 腾聚投影仪参数: color = 3 设置成功
+PRJSEND:Len[8]:LA 100
+
+2026-04-06 15:44:23.680 DEBUG [109324] [TengJuProjector::setPara@156] 腾聚投影仪参数: brightness = 100 设置成功
+2026-04-06 15:44:23.681 ERROR [109324] [RailWeldingSystem::whenConnectingStructLight@187] 主相机连接失败
+2026-04-06 15:44:23.681 DEBUG [109324] [RailWeldingSystem::whenConnectingStructLight@199] 投影仪连接成功
+2026-04-06 15:44:23.681 DEBUG [109324] [RailWeldingSystem::whenDisconnectingStructLight@211] 断开结构光相机...
+2026-04-06 15:44:23.681 DEBUG [109324] [BaslerCamera::close@135] 已关闭Basler相机
+2026-04-06 15:44:23.681 ERROR [111196] [BaslerCamera::start@113] Basler相机无法开始采图, 可能未初始化, 或未连接, 或已在采图中
+2026-04-06 15:44:24.192 DEBUG [109324] [TengJuProjector::close@37] 已关闭腾聚投影仪
+2026-04-06 15:44:24.192 DEBUG [109324] [RailWeldingSystem::whenConnectingStructLight@181] 连接结构光相机...
+2026-04-06 15:44:24.909 DEBUG [109324] [BaslerCamera::open@52] 已连接Basler相机, 序列号: 21939630
+2026-04-06 15:44:24.909 DEBUG [109324] [BaslerCamera::setPara@217] Basler相机参数: TriggerSelector = FrameStart 设置成功
+2026-04-06 15:44:24.918 DEBUG [109324] [BaslerCamera::setPara@217] Basler相机参数: TriggerMode = On 设置成功
+2026-04-06 15:44:24.920 DEBUG [109324] [BaslerCamera::setPara@217] Basler相机参数: TriggerSource = Line1 设置成功
+2026-04-06 15:44:24.920 DEBUG [109324] [BaslerCamera::setWorkMode@13] 设置Basler相机为硬件触发模式
+2026-04-06 15:44:24.927 DEBUG [109324] [BaslerCamera::setPara@198] Basler相机参数: ExposureTimeRaw = 30000 设置成功
+2026-04-06 15:44:24.928 DEBUG [109324] [TengJuProjector::open@18] 已连接腾聚投影仪
+PRJSEND:Len[13]:MA 2 20 1 0
+
+2026-04-06 15:44:24.929 DEBUG [109324] [TengJuProjector::sendCmd@169] 腾聚投影仪命令发送成功
+PRJSEND:Len[4]:MS
+
+2026-04-06 15:44:24.929 DEBUG [109324] [TengJuProjector::sendCmd@169] 腾聚投影仪命令发送成功
+2026-04-06 15:44:24.929 DEBUG [109324] [TengJuProjector::setPara@156] 腾聚投影仪参数: fps = 20 设置成功
+PRJSEND:Len[13]:MA 2 20 1 0
+
+2026-04-06 15:44:24.929 DEBUG [109324] [TengJuProjector::sendCmd@169] 腾聚投影仪命令发送成功
+PRJSEND:Len[4]:MS
+
+2026-04-06 15:44:24.929 DEBUG [109324] [TengJuProjector::sendCmd@169] 腾聚投影仪命令发送成功
+2026-04-06 15:44:24.929 DEBUG [109324] [TengJuProjector::setPara@156] 腾聚投影仪参数: projNum = 21 设置成功
+PRJSEND:Len[4]:LC
+
+2026-04-06 15:44:24.929 DEBUG [109324] [TengJuProjector::setPara@156] 腾聚投影仪参数: color = 3 设置成功
+PRJSEND:Len[8]:LA 100
+
+threadID 131132 PRJRECV:Len[16]:LED Current 100
+
+threadID 131132 PRJRECV:Len[6]:MA OK
+
+threadID 131132 PRJRECV:Len[10]:LED White
+
+threadID 131132 PRJRECV:Len[16]:LED Current 100
+
+2026-04-06 15:44:24.990 DEBUG [109324] [TengJuProjector::setPara@156] 腾聚投影仪参数: brightness = 100 设置成功
+2026-04-06 15:44:24.990 DEBUG [109324] [RailWeldingSystem::whenConnectingStructLight@185] 主相机连接成功
+2026-04-06 15:44:24.990 DEBUG [109324] [RailWeldingSystem::whenConnectingStructLight@199] 投影仪连接成功
+2026-04-06 15:44:25.014 DEBUG [111196] [BaslerCamera::start@82] Basler相机开始采图
+q_command=  "1004"
+PRJSEND:Len[4]:LN
+
+2026-04-06 15:44:52.868 DEBUG [127200] [TengJuProjector::openLed@50] 腾聚投影仪LED灯打开成功
+PRJSEND:Len[3]:T
+
+2026-04-06 15:44:52.869 DEBUG [127200] [TengJuProjector::triggerProj@81] 腾聚投影仪连续投影成功
+threadID 131132 PRJRECV:Len[9]:LED ON 1
+
+threadID 131132 PRJRECV:Len[64]:Trigger OK
+主相机获取到图像: 1
+主相机获取到图像: 2
+主相机获取到图像: 3
+主相机获取到图像: 4
+主相机获取到图像: 5
+主相机获取到图像: 6
+主相机获取到图像: 7
+主相机获取到图像: 8
+主相机获取到图像: 9
+主相机获取到图像: 10
+主相机获取到图像: 11
+主相机获取到图像: 12
+主相机获取到图像: 13
+主相机获取到图像: 14
+主相机获取到图像: 15
+主相机获取到图像: 16
+主相机获取到图像: 17
+主相机获取到图像: 18
+主相机获取到图像: 19
+主相机获取到图像: 20
+主相机获取到图像: 21
+PRJSEND:Len[4]:LL
+
+2026-04-06 15:44:54.090 DEBUG [133044] [TengJuProjector::closeLed@65] 腾聚投影仪LED灯关闭成功
+2026-04-06 15:44:54.091 DEBUG [133044] [StructLightCamera::whenGetPrimaryCameraImage@237] 采集到一组图像, 进行重建...
+2026-04-06 15:44:54.091 DEBUG [133044] [StructLightCamera::whenGetPrimaryCameraImage@253] 重建三轴工件
+2026-04-06 15:44:54.091 DEBUG [133044] [PointCloudReconstruction::weldAreaReconstructToGF@138] 重建三轴工件点云
+threadID 131132 PRJRECV:Len[10]:LED OFF 1
+
+2026-04-06 15:44:54.157 DEBUG [133044] [PointCloudReconstruction::makeMaskForSeamsDetToGF@287] 计算背景以及焊缝区域的mask
+2026-04-06 15:44:54.203 WARN  [133044] [PointCloudReconstruction::makeMaskForSeamsDetToGF@299] 检测结果为空，使用默认ROI
+2026-04-06 15:44:54.203 DEBUG [133044] [PointCloudReconstruction::makeMaskForSeamsDetToGF@315] detRes->size()1
+2026-04-06 15:44:54.203 DEBUG [133044] [PointCloudReconstruction::makeMaskForSeamsDetToGF@332] 焊缝粗定位0结果: 2, 1, 175, 364, 1156, 630
+2026-04-06 15:44:54.205 DEBUG [133044] [PointCloudReconstruction::solveWrapPhase@364] 相移法求包裹相位
+2026-04-06 15:44:54.245 DEBUG [133044] [PointCloudReconstruction::decodeGrayCode@399] 解码格雷码
+2026-04-06 15:44:54.356 DEBUG [133044] [PointCloudReconstruction::phaseUnwrap@448] 相位展开, 求绝对相位
+2026-04-06 15:44:54.363 DEBUG [133044] [PointCloudReconstruction::reconstructForWorkbench@653] 背景平面的三维重建, 拟合背景平面参数...
+2026-04-06 15:44:54.363 DEBUG [133044] [PointCloudReconstruction::reconstructForWorkbench@660] step0 init time: 0 ms
+2026-04-06 15:44:54.453 DEBUG [133044] [PointCloudReconstruction::reconstructForWorkbench@665] step1 cameraProjectMatch time: 90 ms
+1878143
+2026-04-06 15:44:55.055 DEBUG [133044] [PointCloudReconstruction::reconstructForWorkbench@670] step2 calcPointCloud time: 601 ms
+2026-04-06 15:44:55.815 DEBUG [133044] [PointCloudReconstruction::reconstructForWorkbench@675] step3 pointCloudPostProcess time: 759 ms
+2026-04-06 15:44:56.229 DEBUG [133044] [PointCloudReconstruction::reconstructForWorkbench@688] step4 RANSAC plane time: 414 ms
+2026-04-06 15:44:56.229 DEBUG [133044] [PointCloudReconstruction::reconstructForWorkbench@691] bool_save_model: 0
+2026-04-06 15:44:56.239 DEBUG [133044] [PointCloudReconstruction::reconstructForWorkbench@724] 重建完成
+2026-04-06 15:44:56.298 DEBUG [133044] [PointCloudReconstruction::solveWrapPhase@364] 相移法求包裹相位
+2026-04-06 15:44:56.319 DEBUG [133044] [PointCloudReconstruction::decodeGrayCode@399] 解码格雷码
+2026-04-06 15:44:56.378 DEBUG [133044] [PointCloudReconstruction::phaseUnwrap@448] 相位展开, 求绝对相位
+2026-04-06 15:44:56.381 DEBUG [133044] [PointCloudReconstruction::reconstructForSeamArea@731] 焊缝区域三维重建, 剔除背景点云...
+259700
+2026-04-06 15:44:56.768 DEBUG [133044] [PointCloudReconstruction::weldAreaReconstructToGF@163] 点云放缩平移... ...
+2026-04-06 15:44:56.770 DEBUG [133044] [PointCloudReconstruction::weldAreaReconstructToGF@167] 焊缝区域点云重建完成
+2026-04-06 15:44:56.772 DEBUG [45548] [SeamDetWithPointCloud::whenDetSeamWithPointCloudGF@56] 管板角接焊缝
+2026-04-06 15:44:58.213 DEBUG [23444] [TubePlateFilletSeamsDet::solveSeamsEndPoints@98] axisRangeCloud25680
+2026-04-06 15:44:58.303 ERROR [23444] [TubePlateFilletSeamsDet::solveSeamsEndPoints@137] return tempWeldSeamsInfo;
+2026-04-06 15:44:58.324 DEBUG [45548] [SeamDetWithPointCloud::whenDetSeamWithPointCloudGF@77] 发出焊缝数量2
+2026-04-06 15:44:58.324 DEBUG [45548] [SeamDetWithPointCloud::whenDetSeamWithPointCloudGF@82] 共计算出2个焊缝信息, 具体信息: 
+2026-04-06 15:44:58.324 DEBUG [45548] [SeamDetWithPointCloud::whenDetSeamWithPointCloudGF@84] 区域编号: 0, 焊缝类型: 103, 检测是否成功: 1
+2026-04-06 15:44:58.324 DEBUG [45548] [SeamDetWithPointCloud::whenDetSeamWithPointCloudGF@86]    焊缝端点坐标: (33.0423 -29.3567 479.703) (26.8121 -32.6117 466.826)
+2026-04-06 15:44:58.324 DEBUG [45548] [SeamDetWithPointCloud::whenDetSeamWithPointCloudGF@84] 区域编号: 0, 焊缝类型: 103, 检测是否成功: 1
+2026-04-06 15:44:58.324 DEBUG [1476] [SeamDetWithSeg::whenDetSeamWithSeg@109] 分割方法找焊缝类 收到焊缝数量: 2
+2026-04-06 15:44:58.324 DEBUG [45548] [SeamDetWithPointCloud::whenDetSeamWithPointCloudGF@86]    焊缝端点坐标: (-23.9298 -39.4606 440.557) (-28.8372 -39.4074 440.878)
+2026-04-06 15:44:58.325 DEBUG [1476] [SeamDetWithSeg::whenDetSeamWithSeg@150] 龙门支架目前未使用分割算法
+2026-04-06 15:44:58.325 DEBUG [1476] [SeamDetWithSeg::whenDetSeamWithSeg@150] 龙门支架目前未使用分割算法
+2026-04-06 15:44:58.325 DEBUG [1476] [SeamDetWithSeg::whenDetSeamWithSeg@155] 分割方法找焊缝计算结束
+2026-04-06 15:44:58.325 DEBUG [1476] [SeamDetWithSeg::fusionPointCloudAndSegRes@285] 龙门支架目前不需要融合
+2026-04-06 15:44:58.325 DEBUG [1476] [SeamDetWithSeg::fusionPointCloudAndSegRes@285] 龙门支架目前不需要融合
+2026-04-06 15:44:58.326 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@14] 龙门支架轨迹规划类 收到焊缝数量: 2
+2026-04-06 15:44:58.327 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@28] 转到机器人基坐标系下后的焊缝点: 
+2026-04-06 15:44:58.327 DEBUG [111336] [GantrayFrameTrajectoryPlanning::determineWorkpieceOri@523] 当前在焊接的工件方位判断为左侧
+2026-04-06 15:44:58.327 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@40] 工件位于机器人左面
+2026-04-06 15:44:58.327 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@47] 修改焊缝方向后的焊缝点: 
+2026-04-06 15:44:58.328 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -166.182, -43.824, -10.307
+  sol[1]: 13.8179, -136.176, 169.693
+2026-04-06 15:44:58.328 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.328 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 5747.64
+  cost[1] = 84027.3
+Selected index: 0
+Selected Euler: -166.182, -43.824, -10.307
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -159.748, -42.7459, -14.741
+  sol[1]: 20.2521, -137.254, 165.259
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 5919.91
+  cost[1] = 80804.5
+Selected index: 0
+Selected Euler: -159.748, -42.7459, -14.741
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -153.552, -41.3052, -18.9388
+  sol[1]: 26.4478, -138.695, 161.061
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 6143.1
+  cost[1] = 77977.6
+Selected index: 0
+Selected Euler: -153.552, -41.3052, -18.9388
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -147.54, -39.5029, -22.8853
+  sol[1]: 32.46, -140.497, 157.115
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 6408.55
+  cost[1] = 75523
+Selected index: 0
+Selected Euler: -147.54, -39.5029, -22.8853
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -141.745, -37.3471, -26.5497
+  sol[1]: 38.2546, -142.653, 153.45
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 6704.43
+  cost[1] = 73448.5
+Selected index: 0
+Selected Euler: -141.745, -37.3471, -26.5497
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -136.107, -34.7949, -29.9718
+  sol[1]: 43.8927, -145.205, 150.028
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 7023.76
+  cost[1] = 71731.2
+Selected index: 0
+Selected Euler: -136.107, -34.7949, -29.9718
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -130.506, -31.7982, -33.1488
+  sol[1]: 49.4941, -148.202, 146.851
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 7368.02
+  cost[1] = 70353.7
+Selected index: 0
+Selected Euler: -130.506, -31.7982, -33.1488
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -124.933, -28.2621, -36.0955
+  sol[1]: 55.0667, -151.738, 143.904
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 7730.19
+  cost[1] = 68092.8
+Selected index: 0
+Selected Euler: -124.933, -28.2621, -36.0955
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -119.166, -23.977, -38.8375
+  sol[1]: 60.8345, -156.023, 141.163
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.329 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 8123.16
+  cost[1] = 64393.9
+Selected index: 0
+Selected Euler: -119.166, -23.977, -38.8375
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -113, -18.5584, -41.3696
+  sol[1]: 66.9997, -161.442, 138.63
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 8558.77
+  cost[1] = 60398
+Selected index: 0
+Selected Euler: -113, -18.5584, -41.3696
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -105.918, -10.4939, -43.7973
+  sol[1]: 74.0823, -169.506, 136.203
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 9046.56
+  cost[1] = 55526.7
+Selected index: 0
+Selected Euler: -105.918, -10.4939, -43.7973
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -95.7682, -10.4935, -43.7949
+  sol[1]: 84.2318, -169.507, 136.205
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 10653.1
+  cost[1] = 53480.3
+Selected index: 0
+Selected Euler: -95.7682, -10.4935, -43.7949
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -169.425, -44.5454, -5.655
+  sol[1]: 10.5746, -135.455, 174.345
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 5701.3
+  cost[1] = 86476.9
+Selected index: 0
+Selected Euler: -169.425, -44.5454, -5.655
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: -176.315, -44.863, -0.703712
+  sol[1]: 3.68498, -135.137, 179.296
+2026-04-06 15:44:58.330 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 5619.01
+  cost[1] = 90504.9
+Selected index: 0
+Selected Euler: -176.315, -44.863, -0.703712
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: 175.92, -44.6979, 5.15723
+  sol[1]: -4.07995, -135.302, -174.843
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 5623.47
+  cost[1] = 88844.1
+Selected index: 0
+Selected Euler: 175.92, -44.6979, 5.15723
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: 166.856, -43.7991, 11.459
+  sol[1]: -13.1437, -136.201, -168.541
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 5750.79
+  cost[1] = 83871.3
+Selected index: 0
+Selected Euler: 166.856, -43.7991, 11.459
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: 158.512, -42.316, 17.0638
+  sol[1]: -21.4884, -137.684, -162.936
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 5982.92
+  cost[1] = 79793.5
+Selected index: 0
+Selected Euler: 158.512, -42.316, 17.0638
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: 150.642, 40.6949, -21.222
+  sol[1]: -29.3579, 139.305, 158.778
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 1426.56
+  cost[1] = 59850.5
+Selected index: 0
+Selected Euler: 150.642, 40.6949, -21.222
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: 142.562, 37.7451, -26.5625
+  sol[1]: -37.4382, 142.255, 153.438
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 2167.1
+  cost[1] = 56467.4
+Selected index: 0
+Selected Euler: 142.562, 37.7451, -26.5625
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: 133.926, 33.4009, -32.0468
+  sol[1]: -46.0739, 146.599, 147.953
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 3161.32
+  cost[1] = 53421
+Selected index: 0
+Selected Euler: 133.926, 33.4009, -32.0468
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: 123.607, 24.9957, -38.895
+  sol[1]: -56.393, 155.004, 141.105
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 4718.03
+  cost[1] = 50814.6
+Selected index: 0
+Selected Euler: 123.607, 24.9957, -38.895
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@205] 旋转矩阵求解欧拉角所有解
+  sol[0]: 110.109, 25.0222, -38.9526
+  sol[1]: -69.8908, 154.978, 141.047
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@213]  当前姿态打印，筛选欧拉角解
+2026-04-06 15:44:58.331 DEBUG [111336] [MyToolFunc::extractEulerZYX@214] Current Euler (deg): [179.999, 30.0031, 0.0006]
+  cost[0] = 6426.79
+  cost[1] = 47637.1
+Selected index: 0
+Selected Euler: 110.109, 25.0222, -38.9526
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@62] ================ 焊接轨迹（robotWeldPose） ================
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@68] ---- seam index: 0
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 0] x=948.068, y=-7.72043, z=31.7258, a=-166.182, b=-43.824, c=-10.307
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 1] x=948.117, y=-12.5284, z=30.7802, a=-159.748, b=-42.7459, c=-14.741
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 2] x=948.162, y=-17.2294, z=29.4384, a=-153.552, b=-41.3052, c=-18.9388
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 3] x=948.205, y=-21.8944, z=27.6687, a=-147.54, b=-39.5029, c=-22.8853
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 4] x=948.246, y=-26.4729, z=25.4636, a=-141.745, b=-37.3471, c=-26.5497
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 5] x=948.284, y=-30.9717, z=22.7841, a=-136.107, b=-34.7949, c=-29.9718
+2026-04-06 15:44:58.331 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 6] x=948.319, y=-35.4779, z=19.5002, a=-130.506, b=-31.7982, c=-33.1488
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 7] x=948.351, y=-39.8997, z=15.5572, a=-124.933, b=-28.2621, c=-36.0955
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 8] x=948.379, y=-44.3238, z=10.6667, a=-119.166, b=-23.977, c=-38.8375
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 9] x=948.402, y=-48.6947, z=4.46454, a=-113, b=-18.5584, c=-41.3696
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 10] x=948.414, y=-52.9234, z=-3.88715, a=-105.918, b=-10.4939, c=-43.7973
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 11] x=948.398, y=-56.7317, z=-18.0549, a=-95.7682, b=-10.4935, c=-43.7949
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@68] ---- seam index: 1
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 0] x=948.068, y=-7.72043, z=31.7258, a=-169.425, b=-44.5454, c=-5.655
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 1] x=948.018, y=-2.83233, z=32.2664, a=-176.315, b=-44.863, c=-0.703712
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 2] x=947.962, y=2.41352, z=32.3876, a=175.92, b=-44.6979, c=5.15723
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 3] x=947.887, y=9.12257, z=31.8533, a=166.856, b=-43.7991, c=11.459
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 4] x=947.813, y=15.5158, z=30.6045, a=158.512, b=-42.316, c=17.0638
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 5] x=947.743, y=21.2701, z=28.8228, a=150.642, b=40.6949, c=-21.222
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 6] x=947.665, y=27.4858, z=26.1219, a=142.562, b=37.7451, c=-26.5625
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 7] x=947.576, y=34.2357, z=22.12, a=133.926, b=33.4009, c=-32.0468
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 8] x=947.467, y=41.9945, z=15.7357, a=123.607, b=24.9957, c=-38.895
+2026-04-06 15:44:58.332 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@78] [pose 9] x=947.28, y=53.4249, z=0.0296326, a=110.109, b=25.0222, c=-38.9526
+2026-04-06 15:44:58.405 DEBUG [111336] [GantrayFrameTrajectoryPlanning::whenPlanningTrajectory@93] 已发送
+2026-04-06 15:44:58.407 DEBUG [109324] [GantrayFrameTrajectoryPlanning::write2File@112] 开始写入焊缝数据数量: 2
+2026-04-06 15:44:58.407 DEBUG [109324] [GantrayFrameTrajectoryPlanning::write2File@317] 轨迹规划焊缝写入文件成功
+2026-04-06 15:44:58.407 DEBUG [109324] [RailWeldingSystem::whenTrajectoryPlanOver@359] 机器人轨迹规划完成
+2026-04-06 15:44:58.408 DEBUG [124864] [WeldingMainWindow::whenGetSeamInfo@159] 显示焊缝... ...
+2026-04-06 15:44:58.445 DEBUG [124864] [handleWeldAreaInfo2Display@83] 【调试】开始画框，weldAreaInfo.size()=2
+2026-04-06 15:44:58.445 DEBUG [124864] [handleWeldAreaInfo2Display@88] 【调试】处理区域 areaNum=0, rectPtr=有效
+2026-04-06 15:44:58.445 DEBUG [124864] [handleWeldAreaInfo2Display@92] 【调试】检查该区域是否有检测成功的焊缝...
+2026-04-06 15:44:58.445 DEBUG [124864] [handleWeldAreaInfo2Display@95]   检查焊缝: detectSuccFlag=1
+2026-04-06 15:44:58.445 DEBUG [124864] [handleWeldAreaInfo2Display@98]   找到检测成功的焊缝，currAreaSeams=true
+2026-04-06 15:44:58.445 DEBUG [124864] [handleWeldAreaInfo2Display@109] 【调试】画成功框，weldAreaType=102
+2026-04-06 15:44:58.447 DEBUG [124864] [handleWeldAreaInfo2Display@140] 【调试】画框完成
+2026-04-06 15:45:03.729 DEBUG [42600] [AnChuanRobot::welding@123] 共读取到 34 个路点, 开始发送数据... ...
+2026-04-06 15:45:03.729 DEBUG [42600] [AnChuanRobot::welding@138] update_timer->isActive(): 1
+2026-04-06 15:45:03.729 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1004"
+2026-04-06 15:45:04.029 DEBUG [42600] [AnChuanRobot::welding@155] 开始焊接... ...
+q_command=  "1001"
+2026-04-06 15:45:04.429 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:04.729 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:04.729 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 74
+2026-04-06 15:45:04.729 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 820000$$0$$150000$$-1.8e+06$$0$$0$$200$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:05.929 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:06.229 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:06.229 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 98
+2026-04-06 15:45:06.229 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 933983$$-10013.9$$65737.6$$-1.66182e+06$$-438240$$-103070$$200$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:17.629 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:17.929 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:17.929 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 97
+2026-04-06 15:45:17.929 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944547$$-8293.8$$35228.8$$-1.66182e+06$$-438240$$-103070$$200$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+PRJSEND:Len[6]:pr 0
+
+threadID 131132 PRJRECV:Len[4]:255
+
+2026-04-06 15:45:24.829 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:25.129 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:25.129 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 93
+2026-04-06 15:45:25.129 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944597$$-13392$$34225$$-1.59748e+06$$-427459$$-147410$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+QByteArray command_temp "1001"
+2026-04-06 15:45:26.529 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+2026-04-06 15:45:26.829 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:26.829 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 97
+2026-04-06 15:45:26.829 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944644$$-18376.7$$32801.4$$-1.53552e+06$$-413052$$-189388$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+QByteArray command_temp "1001"
+2026-04-06 15:45:27.629 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+2026-04-06 15:45:27.929 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:27.929 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 96
+2026-04-06 15:45:27.929 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944689$$-23323.1$$30923.9$$-1.4754e+06$$-395029$$-228853$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:28.829 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:29.129 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:29.129 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 97
+2026-04-06 15:45:29.129 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944731$$-28177.6$$28584.9$$-1.41745e+06$$-373471$$-265497$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:30.029 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:30.329 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:30.329 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 97
+2026-04-06 15:45:30.329 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944771$$-32947.5$$25743.1$$-1.36107e+06$$-347949$$-299718$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:31.130 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:31.430 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:31.430 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 97
+2026-04-06 15:45:31.430 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944808$$-37725.2$$22260.4$$-1.30506e+06$$-317982$$-331488$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+QByteArray command_temp "1001"
+2026-04-06 15:45:32.330 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+2026-04-06 15:45:32.630 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:32.630 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 95
+2026-04-06 15:45:32.630 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944841$$-42413.3$$18079$$-1.24933e+06$$-282621$$-360955$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:33.530 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:33.830 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:33.830 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 97
+2026-04-06 15:45:33.830 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944870$$-47103.7$$12893.1$$-1.19166e+06$$-239770$$-388375$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+QByteArray command_temp "1001"
+2026-04-06 15:45:34.830 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+2026-04-06 15:45:35.130 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:35.130 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 94
+2026-04-06 15:45:35.130 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944893$$-51737.7$$6316.62$$-1.13e+06$$-185584$$-413696$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:36.230 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:36.530 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:36.530 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 97
+2026-04-06 15:45:36.530 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944906$$-56221.1$$-2538.8$$-1.05918e+06$$-104939$$-437973$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:38.031 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:38.331 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:38.331 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 93
+2026-04-06 15:45:38.331 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944889$$-60259.2$$-17560.8$$-957682$$-104935$$-437949$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:40.131 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:40.431 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:40.431 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 93
+2026-04-06 15:45:40.431 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 930853$$-74369.2$$4415.69$$-957682$$-104935$$-437949$$200$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+QByteArray command_temp "1001"
+2026-04-06 15:45:43.333 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+2026-04-06 15:45:43.633 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:43.634 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 74
+2026-04-06 15:45:43.634 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 820000$$0$$150000$$-1.8e+06$$0$$0$$200$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:45:44.833 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:45.133 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:45.133 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 83
+2026-04-06 15:45:45.133 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 600000$$-55000$$130000$$1.8e+06$$300000$$0$$200$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+PRJSEND:Len[6]:pr 0
+
+threadID 131132 PRJRECV:Len[4]:255
+
+2026-04-06 15:45:55.033 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:45:55.333 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:45:55.333 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 97
+2026-04-06 15:45:55.333 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 933983$$-10013.9$$65737.6$$-1.69425e+06$$-445454$$-56550$$200$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:46:06.644 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:46:06.944 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:46:06.944 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 96
+2026-04-06 15:46:06.944 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944547$$-8293.8$$35228.8$$-1.69425e+06$$-445454$$-56550$$200$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:46:23.946 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+PRJSEND:Len[6]:pr 0
+
+threadID 131132 PRJRECV:Len[4]:255
+
+2026-04-06 15:46:24.246 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:46:24.246 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 98
+2026-04-06 15:46:24.246 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944494$$-3110.43$$35803.1$$-1.76315e+06$$-448630$$-7037.12$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:46:25.546 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:46:25.847 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:46:25.847 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 93
+2026-04-06 15:46:25.847 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944436$$2452.5$$35932.8$$1.7592e+06$$-446979$$51572.3$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:46:26.748 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:46:27.047 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:46:27.047 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 94
+2026-04-06 15:46:27.047 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944358$$9567.37$$35367.6$$1.66856e+06$$-437991$$114590$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:46:27.947 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:46:28.247 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:46:28.247 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 94
+2026-04-06 15:46:28.247 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 944281$$16347.6$$34044.8$$1.58512e+06$$-423160$$170638$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:46:29.547 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:46:29.847 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:46:29.847 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 94
+2026-04-06 15:46:29.847 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 951280$$22526.6$$32126.9$$1.50642e+06$$406949$$-212220$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$
+q_command=  "1001"
+2026-04-06 15:46:30.947 DEBUG [42600] [AnChuanRobot::welding@143] q_command.size(): 1
+QByteArray command_temp "1001"
+2026-04-06 15:46:31.247 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@349] 开始写入数据... ...
+2026-04-06 15:46:31.247 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@363] 94
+2026-04-06 15:46:31.247 DEBUG [42600] [AnChuanRobot::Btn_Send_loop@364] 951198$$29117.8$$29261.2$$1.42562e+06$$377451$$-265625$$50$$0$$0$$160$$250$$0$$0$$0$$0$$0$$0$$

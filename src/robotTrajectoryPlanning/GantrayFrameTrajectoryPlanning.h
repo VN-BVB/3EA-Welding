@@ -51,6 +51,8 @@ private:
     float platePlateFillettiltW_H = 0.5f;        // 板板水平角接靠近焊缝权重（变大--靠近焊缝，1为45）
     float platePlateFilletPlanePoseW_V = 0.5f;   // 板板垂直角接靠近立板法向量权重（变大-靠近侧壁）
     float platePlateFilletWeldPoseW_V = 0.45f;   // 板板垂直角接靠近焊缝方向向量权重 （变大-靠近Z，增大与地面角度）
+    float tubePlateFilletPlanePoseW = 0.5f;      // 管板角接焊缝母材方向权重（变大，靠近圆柱，即朝着平面法向量偏）
+    float tubePlateFilletWeldPoseW = 1.0f;       // 管板角接焊缝焊缝方向权重（为1时不偏，越小越向焊接方向偏移）
 
     double moveSpeed = 170 * 60;           // 过渡运动速度
     double weldingSpeedDefault = 5 * 60;   // 焊接速度(默认速度，宽度检测失败时用这个速度)

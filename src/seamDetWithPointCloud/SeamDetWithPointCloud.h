@@ -76,6 +76,7 @@ private:
     ThreadPool* threadPool = new ThreadPool(4);  // 线程池
 private:
     std::shared_ptr<AbstractSeamDet> createSeamDet(WELD_AREA_TYPE type);
+    void splitWeldSeamsInPlace(std::vector<std::shared_ptr<WeldSeamInfo> > &infos);
 };
 
 #endif  // SEAMDETWITHPOINTCLOUD_H

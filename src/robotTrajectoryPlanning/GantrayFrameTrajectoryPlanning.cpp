@@ -249,6 +249,51 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             applyWeldGunWithdraw(endTransition, 20.0);
             writeWeldPoint(outfile, endTransition.x_, endTransition.y_, endTransition.z_ + 20.0, endTransition.a_, endTransition.b_, endTransition.c_,
                            moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
+        } else if (info->weldType == Tube_Plate_Fillet) {
+            if (info->robotWeldPose.size() < 2) continue;
+
+            int N = info->robotWeldPose.size();
+
+            // ================= 1. 起点过渡 =================
+            robotPose startTransition = info->robotWeldPose[0];
+            applyWeldGunWithdraw(startTransition, 20.0);
+
+            writeWeldPoint(outfile, startTransition.x_, startTransition.y_, startTransition.z_ + 20.0, startTransition.a_, startTransition.b_,
+                           startTransition.c_, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
+
+            // ================= 2. 起弧点 =================
+            robotPose startWeld = info->robotWeldPose[0];
+            applyWeldGunWithdraw(startWeld, 5.0);
+
+            writeWeldPoint(outfile, startWeld.x_, startWeld.y_, startWeld.z_, startWeld.a_, startWeld.b_, startWeld.c_, moveSpeed, ARC_START,
+                           LINE_WELD, weldingCurrent, weldingVoltage);
+
+            // ================= 3. 中间轨迹点 =================
+            for (int i = 1; i < N - 1; i++) {
+                robotPose midPose = info->robotWeldPose[i];
+
+                applyWeldGunWithdraw(midPose, 5.0);
+
+                writeWeldPoint(outfile, midPose.x_, midPose.y_, midPose.z_, midPose.a_, midPose.b_, midPose.c_, weldingSpeedDefault, ARC_START,
+                               LINE_WELD, weldingCurrent, weldingVoltage);
+            }
+
+            // ================= 4. 终点 =================
+            robotPose endWeld = info->robotWeldPose[N - 1];
+            applyWeldGunWithdraw(endWeld, 5.0);
+
+            writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP, LINE_WELD,
+                           weldingCurrent, weldingVoltage);
+
+            // ================= 5. 终点过渡 =================
+            robotPose endTransition = endWeld;
+            applyWeldGunWithdraw(endTransition, 20.0);
+
+            writeWeldPoint(outfile, endTransition.x_, endTransition.y_, endTransition.z_ + 20.0, endTransition.a_, endTransition.b_, endTransition.c_,
+                           moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
+            if (info->areaNum != weldSeamInfo.size()) {
+                writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
+            }
         }
     }
     // ########################### 眼在手上写入拍照点, 眼在手外写入零过渡点 ###########################
@@ -488,29 +533,46 @@ void GantrayFrameTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<W
     Eigen::Vector3f ref(trajectoryConfig.matrixEnd2Base(0, 3), trajectoryConfig.matrixEnd2Base(1, 3), trajectoryConfig.matrixEnd2Base(2, 3));
     if (weldSeamInfo.empty()) return;
     // Eigen::Vector3f ref(0.0f, 0.0f, 0.0f);  // 基座
-
-    for (auto& info : weldSeamInfo) {
-        if (!info || !info->detectSuccFlag) continue;
-
-        if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
-
-        auto& pts = *(info->weldEndPointsInRobot);
-
-        Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
-        Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
-
-        float d0 = (P0 - ref).squaredNorm();
-        float d1 = (P1 - ref).squaredNorm();
-
-        // 如果P0更远 → 交换
-        if (d0 > d1) {
-            std::swap(pts[0], pts[1]);
-        }
-    }
-    // =====是否存在 Plate_Plate_F =====
     if (std::any_of(weldSeamInfo.begin(), weldSeamInfo.end(),
-                    [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == Plate_Plate_F; })) {
+                    [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == TubeSide_Plate_F; })) {
+        for (auto& info : weldSeamInfo) {
+            if (!info || !info->detectSuccFlag) continue;
+
+            if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
+
+            auto& pts = *(info->weldEndPointsInRobot);
+
+            Eigen::Vector3f P0(pts[0].x, pts[0].y, pts[0].z);
+            Eigen::Vector3f P1(pts[1].x, pts[1].y, pts[1].z);
+
+            float d0 = (P0 - ref).squaredNorm();
+            float d1 = (P1 - ref).squaredNorm();
+
+            // 如果P0更远 → 交换
+            if (d0 > d1) {
+                std::swap(pts[0], pts[1]);
+            }
+        }
+    } else if (std::any_of(weldSeamInfo.begin(), weldSeamInfo.end(),
+                           [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == Plate_Plate_F; })) {
         planPlatePlateFilletSeamOrientation(weldSeamInfo);
+    } else if (std::any_of(weldSeamInfo.begin(), weldSeamInfo.end(),
+                           [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == Tube_Plate_F; })) {
+        for (auto& info : weldSeamInfo) {
+            if (!info || !info->detectSuccFlag) continue;
+
+            if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) continue;
+
+            auto& pts = *(info->weldEndPointsInRobot);
+
+            const auto& start = pts.front();
+            const auto& end = pts.back();
+
+            // TODO--如果是倒装会不一样，Z大的应该是起点
+            if (start.z < end.z) {
+                std::reverse(pts.begin(), pts.end());
+            }
+        }
     }
 }
 void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
@@ -751,18 +813,18 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             if (!info->weldCoeff || info->weldCoeff->values.size() != 4) continue;
             if (info->otherSurface.empty()) continue;
 
-            // ===== 1. 端点 =====
+            //  1. 端点
             P0 = Eigen::Vector3f(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
 
             P1 = Eigen::Vector3f(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
 
             Eigen::Vector3f seamDir = (P0 - P1).normalized();
 
-            // ===== 2. 主平面法向 =====
+            //  2. 主平面法向
             Eigen::Vector3f n1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
             n1.normalize();
 
-            // ===== 3. otherSurface 法向 =====
+            //  3. otherSurface 法向
             Eigen::Vector3f n2(0, 0, 0);
             for (auto& surf : info->otherSurface) {
                 if (!surf || surf->values.size() != 4) continue;
@@ -776,18 +838,18 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             // PLOGD << "区域" << info->areaNum << "焊缝向量系数为:" << seamDir;
             if (n2.norm() < 1e-6) n2 = n1;
 
-            // ===== 4. 第一层融合（平面角平分）=====
+            //  4. 第一层融合（平面角平分）
 
             Eigen::Vector3f N_mid = (platePlateFilletPlanePoseW_V * n1 + (1.0f - platePlateFilletPlanePoseW_V) * n2).normalized();
 
-            // ===== 5. 第二层融合（加入焊缝方向）=====
+            //  5. 第二层融合（加入焊缝方向）
 
             Eigen::Vector3f Z = (platePlateFilletWeldPoseW_V * seamDir + (1.0f - platePlateFilletWeldPoseW_V) * N_mid).normalized();
 
-            // ===== 6. Z方向约束（朝下）=====
+            //  6. Z方向约束（朝下）
             if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
 
-            // ===== 7. Y轴（用立板方向 n2）=====
+            //  7. Y轴（用立板方向 n2）
             Eigen::Vector3f Y = n2;
 
             // 投影到垂直于Z
@@ -802,7 +864,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             // Y与机器人基座坐标系反向
             if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
 
-            // ===== 8. X轴 =====
+            //  8. X轴
             Eigen::Vector3f X = Y.cross(Z).normalized();
 
             // X正向
@@ -811,10 +873,10 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 Y = -Y;
             }
 
-            // ===== 9. 重正交 =====
+            //  9. 重正交
             Z = X.cross(Y).normalized();
 
-            // ===== 10. 旋转矩阵 =====
+            //  10. 旋转矩阵
             Eigen::Matrix3f R_ref;
             R_ref.col(0) = X;
             R_ref.col(1) = Y;
@@ -847,7 +909,127 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             info->robotWeldPose.push_back(pose_start);
             info->robotWeldPose.push_back(pose_end);
         } else if (info->weldType == Tube_Plate_Fillet) {
-            if (!info->weldCoeff || info->otherSurface.empty()) continue;
+            if (!info->weldCoeff || info->weldEndPointsInRobot->empty() || info->otherSurface.size() == 0) continue;
+
+            int N = info->weldEndPointsInRobot->size();
+
+            // ===== 平面法向 =====
+            Eigen::Vector3f n_plane(info->otherSurface[0]->values[0], info->otherSurface[0]->values[1], info->otherSurface[0]->values[2]);
+            n_plane.normalize();
+            // ===== 强制指向世界 -X =====
+            if (n_plane.dot(Eigen::Vector3f(-1, 0, 0)) < 0) n_plane = -n_plane;
+            info->robotWeldPose.clear();
+
+            for (int i = 0; i < N; i++) {
+                // ===== 当前点 =====
+                Eigen::Vector3f P(info->weldEndPointsInRobot->at(i).x, info->weldEndPointsInRobot->at(i).y, info->weldEndPointsInRobot->at(i).z);
+
+                // ===== 1. 切向 t =====
+                Eigen::Vector3f t;
+                if (i < N - 1) {
+                    t = Eigen::Vector3f(info->weldEndPointsInRobot->at(i + 1).x, info->weldEndPointsInRobot->at(i + 1).y,
+                                        info->weldEndPointsInRobot->at(i + 1).z) -
+                        P;
+                } else {
+                    t = P - Eigen::Vector3f(info->weldEndPointsInRobot->at(i - 1).x, info->weldEndPointsInRobot->at(i - 1).y,
+                                            info->weldEndPointsInRobot->at(i - 1).z);
+                }
+                t.normalize();
+
+                // ===== 2. 圆柱法向（展开写）=====
+                Eigen::Vector3f n_cyl(0, 0, 1);  // 默认值，防崩
+
+                if (!info->weldCoeff || info->weldCoeff->values.size() < 6) {
+                    // fallback：没有圆柱参数，直接用平面法向
+                    n_cyl = n_plane;
+                } else {
+                    // 圆柱轴上一点 C
+                    Eigen::Vector3f C(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
+
+                    // 圆柱轴方向 axis
+                    Eigen::Vector3f axis(info->weldCoeff->values[3], info->weldCoeff->values[4], info->weldCoeff->values[5]);
+
+                    if (axis.norm() < 1e-6) {
+                        n_cyl = n_plane;  // fallback
+                    } else {
+                        axis.normalize();
+
+                        // ===== 关键：点到轴的径向向量 =====
+                        Eigen::Vector3f CP = P - C;
+
+                        // 投影到轴上
+                        Eigen::Vector3f proj = CP.dot(axis) * axis;
+
+                        // 去掉轴向分量 → 得到径向
+                        n_cyl = CP - proj;
+
+                        if (n_cyl.norm() < 1e-6) {
+                            n_cyl = n_plane;  // 极端情况 fallback
+                        } else {
+                            n_cyl.normalize();
+                        }
+                    }
+                }
+
+                // 保证方向一致（关键），角度小于90度，指向焊缝
+                if (n_cyl.dot(n_plane) < 0) n_cyl = -n_cyl;
+
+                // ===== 3. 第一层角平分（平面 + 圆柱）=====
+                Eigen::Vector3f N_mid = (tubePlateFilletPlanePoseW * n_plane + (1.0f - tubePlateFilletPlanePoseW) * n_cyl).normalized();
+                // ===== 4. 第二层（你要求先不参与）=====
+                Eigen::Vector3f Z = (tubePlateFilletWeldPoseW * N_mid + (1.0f - tubePlateFilletWeldPoseW) * t).normalized();
+
+                // ===== 5. Z轴约束：必须向下 =====
+                if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+
+                // ===== 6. Y轴：沿切向，但与世界Y反向 =====
+                Eigen::Vector3f Y = t;
+
+                // 去掉Z分量（保证垂直）
+                Y = Y - Y.dot(Z) * Z;
+
+                if (Y.norm() < 1e-6) Y = Eigen::Vector3f(0, -1, 0);  // fallback
+
+                Y.normalize();
+
+                // 强制与世界Y反向
+                if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
+
+                // ===== 7. X轴：强制与世界X同向 =====
+                Eigen::Vector3f X = Y.cross(Z).normalized();
+
+                // 强制X与世界X同向
+                if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0) {
+                    X = -X;
+                    Y = -Y;  // 保持右手系
+                }
+
+                // ===== 8. 重正交（防止数值误差）=====
+                Z = X.cross(Y).normalized();
+
+                // ===== 9. 构造旋转矩阵 =====
+                Eigen::Matrix3f R;
+                R.col(0) = X;
+                R.col(1) = Y;
+                R.col(2) = Z;
+
+                // ===== 10. 转欧拉角 =====
+                std::vector<double> currentABC = {trajectoryConfig.currentRobotPose.a_, trajectoryConfig.currentRobotPose.b_,
+                                                  trajectoryConfig.currentRobotPose.c_};
+
+                std::vector<double> targetABC = MyToolFunc::extractEulerZYX(R, currentABC);
+
+                // ===== 11. 写入pose =====
+                robotPose pose;
+                pose.x_ = P.x();
+                pose.y_ = P.y();
+                pose.z_ = P.z();
+                pose.a_ = targetABC[0];
+                pose.b_ = targetABC[1];
+                pose.c_ = targetABC[2];
+
+                info->robotWeldPose.push_back(pose);
+            }
         }
 
         // static int idx1 = 0;
@@ -872,17 +1054,17 @@ void GantrayFrameTrajectoryPlanning::saveToMatlabFull(const std::string& filenam
     std::ofstream ofs(filename);
     if (!ofs.is_open()) return;
 
-    // ================= 基本设置 =================
+    // == 基本设置 ==
     ofs << "figure; hold on; grid on; axis equal;\n";
     ofs << "view(3); rotate3d on;\n";
     ofs << "daspect([1 1 1]); axis auto;\n";
 
-    // ================= 基坐标系 =================
+    // == 基坐标系 ==
     ofs << "quiver3(0,0,0,100,0,0,'r','LineWidth',2);\n";
     ofs << "quiver3(0,0,0,0,100,0,'g','LineWidth',2);\n";
     ofs << "quiver3(0,0,0,0,0,100,'b','LineWidth',2);\n";
 
-    // ================= 点 =================
+    // == 点 ==
     ofs << "P0=[" << P0.x() << "," << P0.y() << "," << P0.z() << "];\n";
     ofs << "P1=[" << P1.x() << "," << P1.y() << "," << P1.z() << "];\n";
     ofs << "mid=[" << mid.x() << "," << mid.y() << "," << mid.z() << "];\n";
@@ -891,7 +1073,7 @@ void GantrayFrameTrajectoryPlanning::saveToMatlabFull(const std::string& filenam
     ofs << "scatter3(P0(1),P0(2),P0(3),80,'filled');\n";
     ofs << "scatter3(P1(1),P1(2),P1(3),80,'filled');\n";
 
-    // ================= 工具坐标系 =================
+    // == 工具坐标系 ==
     float s = 80.0f;
     ofs << "X=[" << X.x() << "," << X.y() << "," << X.z() << "];\n";
     ofs << "Y=[" << Y.x() << "," << Y.y() << "," << Y.z() << "];\n";
@@ -901,7 +1083,7 @@ void GantrayFrameTrajectoryPlanning::saveToMatlabFull(const std::string& filenam
     ofs << "quiver3(mid(1),mid(2),mid(3),Y(1),Y(2),Y(3)," << s << ",'g','LineWidth',3);\n";
     ofs << "quiver3(mid(1),mid(2),mid(3),Z(1),Z(2),Z(3)," << s << ",'b','LineWidth',3);\n";
 
-    // ================= 平面 =================
+    // == 平面 ==
     if (plane && plane->values.size() == 4) {
         float a = plane->values[0];
         float b = plane->values[1];
@@ -913,7 +1095,7 @@ void GantrayFrameTrajectoryPlanning::saveToMatlabFull(const std::string& filenam
         ofs << "surf(xx,yy,zz,'FaceAlpha',0.3,'EdgeColor','none','FaceColor',[0.8 0.8 1]);\n";
     }
 
-    // ================= 圆柱（任意方向） =================
+    // == 圆柱（任意方向） ==
     if (cylinder && cylinder->values.size() == 7) {
         float x0 = cylinder->values[0];
         float y0 = cylinder->values[1];
@@ -953,7 +1135,7 @@ void GantrayFrameTrajectoryPlanning::saveToMatlabFull(const std::string& filenam
         ofs << "surf(Xr,Yr,Zr,'FaceAlpha',0.3,'EdgeColor','none','FaceColor',[1 0.7 0.7]);\n";
     }
 
-    // ================= 光照 =================
+    // == 光照 ==
     ofs << "camlight;\n";
     ofs << "lighting gouraud;\n";
 
@@ -1247,7 +1429,7 @@ void GantrayFrameTrajectoryPlanning::planPlatePlateFilletSeamOrientation(std::ve
                 float d0 = fabs(plane.head<3>().dot(V0) + plane[3]);
                 float d1 = fabs(plane.head<3>().dot(V1) + plane[3]);
 
-                // 👉 起点要远 → 如果P0更近，就交换
+                //  起点要远 → 如果P0更近，就交换
                 if (d0 < d1) {
                     std::swap(ptsV[0], ptsV[1]);
                 }

@@ -304,8 +304,8 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
         // detRes->emplace_back(0, 1.0f, 289, 786, 420, 880);
         // detRes->emplace_back(0, 1.0f, 533, 758, 1100, 800);
         // detRes->emplace_back(0, 1.0f, 1170, 750, 1238, 865); //板板角接
-        detRes->emplace_back(2, 1.0f, 642, 329, 1125, 461);  // 板管角接
-        // detRes->emplace_back(2, 1.0f, 361, 503, 1324, 617);  // 板管角接
+        // detRes->emplace_back(2, 1.0f, 598, 456, 1090, 580);  // 板管角接
+        detRes->emplace_back(2, 1.0f, 225, 414, 1106, 580);  // 板管角接
     }
     // 如果检测到大于4个, 按照置信度排序, 并取前4个
     if (detRes->size() > 4) {

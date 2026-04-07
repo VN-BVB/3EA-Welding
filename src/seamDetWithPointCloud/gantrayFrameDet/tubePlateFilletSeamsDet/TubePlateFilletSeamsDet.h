@@ -42,12 +42,12 @@ private:
     double Ransac_cylinder_Dth = 1.5;        // ransac拟合圆柱面的距离阈值
 
     int Statistic_NeighPoints = 20;           // 统计滤波近邻点数
-    double Statistic_sigma = 5.0;             // 统计滤波系数
+    double Statistic_sigma = 6.0;             // 统计滤波系数
     double extendCylinderInPlaneArea = 15.0;  // 选取焊缝区域衍生
     float t_step = 2.0f;                      // 轴向分辨率（mm）
     float theta_step = 2.0f * M_PI / 180.0f;  // n°一格
-    int sample_num = 10;                      // 交线采样点数量
     double widthThreshRatio = 0.75;           // 筛选残留点云宽度阈值比例
+    int sample_num = 10;                      // 交线采样点数量
 
     std::vector<pcl::PointXYZ> filletSeamsTP;                // 焊缝的端点
     pcl::ModelCoefficients::Ptr cylinderCoeffsWithWeldSeam;  // 焊缝所在母材系数
