@@ -333,7 +333,7 @@ void socketRecv_Task(void) {  // 套接字接收
         float prevTarget[COORD_NUM + 1];  // 存放上一个目标点，用于生成摆焊上个点以及摆焊参考点
         float swingRefTarget[COORD_NUM + 1];  // 存放摆焊参考点
         float swingPrevTarget[COORD_NUM + 1];  // 存放摆焊所需的上一点
-        int CURR_SWING_METHOD = LINE_WELD;  // 当前摆焊方式, 默认不摆焊
+        int CURR_SWING_METHOD = LINE_WELD;  // 当前摆焊方式, 默认直线焊接
 
         SetBVar(3, 1);
 

@@ -198,7 +198,7 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             if (!computePlatePlateFilletVerticalSwingPoints(info, startWeld, v)) {
                 v.clear();
             }
-            SWING_WELD_ACTION CURR_SWING_METHOD = GANTRAY_FRAME_SWING_WELD;
+            SWING_WELD_ACTION CURR_SWING_METHOD = GANTRAY_FRAME_LINE_SWING_WELD;
             if (v.size() != 6) {
                 CURR_SWING_METHOD = LINE_WELD;
             }
@@ -269,18 +269,18 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
                            LINE_WELD, weldingCurrent, weldingVoltage);
 
             // ================= 3. 中间轨迹点 =================
-            for (int i = 1; i < N - 1; i++) {
+            for (int i = 0; i < N; i++) {
                 robotPose midPose = info->robotWeldPose[i];
 
                 applyWeldGunWithdraw(midPose, 5.0);
 
                 writeWeldPoint(outfile, midPose.x_, midPose.y_, midPose.z_, midPose.a_, midPose.b_, midPose.c_, weldingSpeedDefault, ARC_START,
-                               LINE_WELD, weldingCurrent, weldingVoltage);
+                               GANTRAY_FRAME_CURVE_SWING_WELD, weldingCurrent, weldingVoltage);
             }
 
             // ================= 4. 终点 =================
             robotPose endWeld = info->robotWeldPose[N - 1];
-            applyWeldGunWithdraw(endWeld, 5.0);
+            applyWeldGunWithdraw(endWeld, 6.0);
 
             writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP, LINE_WELD,
                            weldingCurrent, weldingVoltage);
@@ -916,8 +916,8 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             // ===== 平面法向 =====
             Eigen::Vector3f n_plane(info->otherSurface[0]->values[0], info->otherSurface[0]->values[1], info->otherSurface[0]->values[2]);
             n_plane.normalize();
-            // ===== 强制指向世界 -X =====
-            if (n_plane.dot(Eigen::Vector3f(-1, 0, 0)) < 0) n_plane = -n_plane;
+            // // ===== 强制指向世界 -X =====
+            // if (n_plane.dot(Eigen::Vector3f(-1, 0, 0)) < 0) n_plane = -n_plane;
             info->robotWeldPose.clear();
 
             for (int i = 0; i < N; i++) {

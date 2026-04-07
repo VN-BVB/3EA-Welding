@@ -47,7 +47,7 @@ private:
     float t_step = 2.0f;                      // 轴向分辨率（mm）
     float theta_step = 2.0f * M_PI / 180.0f;  // n°一格
     double widthThreshRatio = 0.75;           // 筛选残留点云宽度阈值比例
-    int sample_num = 10;                      // 交线采样点数量
+    int sample_num = 5;                       // 交线采样点数量
 
     std::vector<pcl::PointXYZ> filletSeamsTP;                // 焊缝的端点
     pcl::ModelCoefficients::Ptr cylinderCoeffsWithWeldSeam;  // 焊缝所在母材系数
