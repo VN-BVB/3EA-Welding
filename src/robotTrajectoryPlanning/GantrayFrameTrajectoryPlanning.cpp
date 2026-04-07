@@ -971,9 +971,6 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                     }
                 }
 
-                // 保证方向一致（关键），角度小于90度，指向焊缝
-                if (n_cyl.dot(n_plane) < 0) n_cyl = -n_cyl;
-
                 // ===== 3. 第一层角平分（平面 + 圆柱）=====
                 Eigen::Vector3f N_mid = (tubePlateFilletPlanePoseW * n_plane + (1.0f - tubePlateFilletPlanePoseW) * n_cyl).normalized();
                 // ===== 4. 第二层（你要求先不参与）=====
