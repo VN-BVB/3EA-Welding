@@ -269,7 +269,7 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
                            LINE_WELD, weldingCurrent, weldingVoltage);
 
             // ================= 3. 中间轨迹点 =================
-            for (int i = 0; i < N; i++) {
+            for (int i = 0; i < N - 1; i++) {
                 robotPose midPose = info->robotWeldPose[i];
 
                 applyWeldGunWithdraw(midPose, 5.0);
@@ -277,9 +277,12 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
                 writeWeldPoint(outfile, midPose.x_, midPose.y_, midPose.z_, midPose.a_, midPose.b_, midPose.c_, weldingSpeedDefault, ARC_START,
                                GANTRAY_FRAME_CURVE_SWING_WELD, weldingCurrent, weldingVoltage);
             }
-
-            // ================= 4. 终点 =================
             robotPose endWeld = info->robotWeldPose[N - 1];
+            applyWeldGunWithdraw(endWeld, 5.0);
+            // 轨迹终点
+            writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_START, LINE_WELD,
+                           weldingCurrent, weldingVoltage);
+            // ================= 4. 熄弧终点 =================
             applyWeldGunWithdraw(endWeld, 6.0);
 
             writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP, LINE_WELD,

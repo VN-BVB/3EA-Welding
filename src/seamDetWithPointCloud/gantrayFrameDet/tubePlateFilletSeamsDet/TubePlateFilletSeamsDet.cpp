@@ -581,45 +581,81 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
         for (int i = split_idx; i < pts.size(); ++i) ordered.push_back(pts[i]);
         for (int i = 0; i < split_idx; ++i) ordered.push_back(pts[i]);
     }
-
     // ================= 8. 三个关键点 =================
     int total = ordered.size();
-
-    int mid_idx = total / 2;
-
-    const pcl::PointXYZ& start_pt = ordered.front().pt;
-    const pcl::PointXYZ& mid_pt = ordered[mid_idx].pt;
-    const pcl::PointXYZ& end_pt = ordered.back().pt;
+    if (total < 2) return false;
 
     filletSeamsTP.clear();
 
-    // ================= 9. 第一段采样（start → mid） =================
-    filletSeamsTP.push_back(start_pt);
+    // ================= 9. 计算累计弧长 =================
+    std::vector<float> arc_len(total, 0.0f);
 
-    for (int i = 1; i < sample_num; ++i) {
-        float ratio = static_cast<float>(i) / sample_num;
+    for (int i = 1; i < total; ++i) {
+        const auto& p0 = ordered[i - 1].pt;
+        const auto& p1 = ordered[i].pt;
 
-        int idx = static_cast<int>(ratio * mid_idx);
-        idx = std::min(std::max(idx, 0), mid_idx);
+        float dx = p1.x - p0.x;
+        float dy = p1.y - p0.y;
+        float dz = p1.z - p0.z;
 
-        filletSeamsTP.push_back(ordered[idx].pt);
+        float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+        arc_len[i] = arc_len[i - 1] + dist;
     }
 
-    // 加入中点
-    filletSeamsTP.push_back(mid_pt);
+    float total_len = arc_len.back();
+    if (total_len < 1e-6f) return false;
 
-    // ================= 10. 第二段采样（mid → end） =================
-    for (int i = 1; i < sample_num; ++i) {
-        float ratio = static_cast<float>(i) / sample_num;
+    // ================= 10. 均匀采样 =================
+    int N = sample_num;  // 你想要的采样点数（包含首尾）
+    filletSeamsTP.reserve(N);
 
-        int idx = mid_idx + static_cast<int>(ratio * (total - 1 - mid_idx));
-        idx = std::min(std::max(idx, mid_idx), total - 1);
+    // 步长
+    float step = total_len / (N - 1);
 
-        filletSeamsTP.push_back(ordered[idx].pt);
+    // 起点
+    filletSeamsTP.push_back(ordered.front().pt);
+
+    int curr_idx = 1;
+
+    for (int i = 1; i < N - 1; ++i) {
+        float target_len = i * step;
+
+        // 找到 target 所在区间
+        while (curr_idx < total && arc_len[curr_idx] < target_len) {
+            curr_idx++;
+        }
+
+        if (curr_idx >= total) {
+            filletSeamsTP.push_back(ordered.back().pt);
+            continue;
+        }
+
+        // 区间两端点
+        int idx1 = curr_idx - 1;
+        int idx2 = curr_idx;
+
+        const auto& p1 = ordered[idx1].pt;
+        const auto& p2 = ordered[idx2].pt;
+
+        float len1 = arc_len[idx1];
+        float len2 = arc_len[idx2];
+
+        float t = 0.0f;
+        if (len2 > len1) {
+            t = (target_len - len1) / (len2 - len1);
+        }
+
+        // 线性插值
+        pcl::PointXYZ interp_pt;
+        interp_pt.x = p1.x + t * (p2.x - p1.x);
+        interp_pt.y = p1.y + t * (p2.y - p1.y);
+        interp_pt.z = p1.z + t * (p2.z - p1.z);
+
+        filletSeamsTP.push_back(interp_pt);
     }
 
-    // 加入终点
-    filletSeamsTP.push_back(end_pt);
+    // 终点
+    filletSeamsTP.push_back(ordered.back().pt);
 
     // ================= 10. 保存 =================
     if (saveFlag && seamEndPoints) {

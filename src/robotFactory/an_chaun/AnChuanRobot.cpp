@@ -164,30 +164,10 @@ bool AnChuanRobot::welding() {
         if (ASK_TO_SEND_DATA == command_temp) {  // 发送数据 1001
             command_temp = BUF_INITIALIZATION;
             Sleep(cirTime.toInt());
-            if (m_i_Pointnum >= data.size()) continue;
-            int swingType = data[m_i_Pointnum][8].toInt();
-
-            if (swingType == 101) {
-                int start = m_i_Pointnum;
-                int end = start;
-                // 找连续101
-                while (end < data.size() && data[end][8].toInt() == 101) {
-                    end++;
-                }
-                int count = end - start;
-                PLOGD << "检测到曲线段，采样点数量: " << count;
-                // // 发送模式头
-                // QString header = QString("MODE_CURVE,%1$$").arg(count);
-                // socket->write(header.toLatin1());
-                for (int i = start; i < end; i++) {
-                    Btn_Send_loop(data[i], cirTime.toInt());
-                }
-                m_i_Pointnum = end;
-            } else {
-                // 把data里的一组数据按cirTime[ms]的周期发送给客户端
-                Btn_Send_loop(data[m_i_Pointnum], cirTime.toInt());
-                m_i_Pointnum++;
-            }
+            // ui->textEdit_Send->append("point " + QString::number(m_i_Pointnum));
+            // 把data里的一组数据按cirTime[ms]的周期发送给客户端
+            Btn_Send_loop(data[m_i_Pointnum], cirTime.toInt());
+            m_i_Pointnum++;
         }
 
         if (m_i_Pointnum == data.size()) {  // 全部发送完毕

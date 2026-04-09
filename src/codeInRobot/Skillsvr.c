@@ -42,7 +42,8 @@ enum SWING_WELD_ACTION {
     LEFT_RIGHT_VERTICAL_SWING_WELD = 4,   // 机器人左方右侧竖直焊缝摆焊
     RIGHT_LEFT_VERTICAL_SWING_WELD = 5,   // 机器人右方左侧竖直焊缝摆焊
     RIGHT_RIGHT_VERTICAL_SWING_WELD = 6,  // 机器人右方右侧竖直焊缝摆焊
-    GANTRAY_FRAME_SWING_WELD = 100
+    GANTRAY_FRAME_LINE_SWING_WELD = 100,  // 龙门支架直线摆焊
+    GANTRAY_FRAME_CURVE_SWING_WELD = 101  // 龙门支架曲线焊接
 };
 
 // 等待来自程序的 skill 指令， 根据指令的内容（cmd）决定执行的处理的任务。
@@ -321,7 +322,11 @@ void hd_GetPosServer() {  // 获取机器人当前正交位姿以及关节角
 }
 
 void socketRecv_Task(void) {  // 套接字接收
-    while (1) {
+
+    while (1) {    //每次txt运行
+        int curveMode = 0;        // 是否进入曲线模式
+        int curveBufIdx = 0;      // 当前曲线缓存索引
+        int curveBufGroup = 0;    // 0:P021~30, 1:P031~40
         int bytesRecv;
         int bytesSend;
         int valRet;
@@ -337,7 +342,7 @@ void socketRecv_Task(void) {  // 套接字接收
 
         SetBVar(3, 1);
 
-        while (1) {
+        while (1) { //txt中的每一行的每一个数据循环，以一行为单位完成循环；
             char buff[BUFF_MAX + 1]; // buff[1023+1]
             memset(buff, 0, sizeof(buff));
             char data[BUFF_MAX + 1];
@@ -391,7 +396,7 @@ void socketRecv_Task(void) {  // 套接字接收
                             } else if (buffNum < 9)  {  // 如果到了9个, 说明当前数据是摆焊指令, 就存到摆焊处
                                 CURR_SWING_METHOD = (int)fbuff;
 
-                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)){ // 也就是prevTarget不为空且为角钢摆焊
+                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)&& (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){ //
                                     int j = 0;
                                     for (j = 0; j < COORD_NUM; j++)
                                     { // 摆焊参考点和上一点以上一次运动目标点为基准
@@ -460,21 +465,70 @@ void socketRecv_Task(void) {  // 套接字接收
                                 buffNum++;
                             }
                             else if (buffNum < 14){ // p1
-                                if ((targetNum != 0) && (CURR_SWING_METHOD == GANTRAY_FRAME_SWING_WELD)){ 
+                                if ((targetNum != 0) && (CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD)){ 
                                     swingRefTarget[buffNum - 11] = fbuff; 
                                 }
                                 buffNum++;
                             }
                             else if (buffNum < 17){ // p2
-                                if ((targetNum != 0) && (CURR_SWING_METHOD == GANTRAY_FRAME_SWING_WELD)){ 
+                                if ((targetNum != 0) && (CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD)){ 
                                     swingPrevTarget[buffNum - 14] = fbuff; 
                                 }
                                 buffNum++;
                             }
 
                             // 数据打包 (第7个数为速度, 第8个数为是否起弧, 第9个数为摆焊类型)
-                            if (buffNum == 17) {
-                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)){
+                            if (buffNum == 17)
+                            {
+                                int handled = 0;  // 是否已处理
+                                // 存储曲线点，targetNum不跟进；
+                                if (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD)
+                                {
+                                    if (curveMode == 0)
+                                    {
+                                        curveMode = 1;
+                                        curveBufIdx = 0;
+                                        curveBufGroup = targetNum % 2;
+                                    }
+                                    int base = (curveBufGroup == 0) ? 21 : 31;
+                                    int index = base + curveBufIdx;
+                                    valRet = setValP(target, index);
+                                    if (valRet < 0)
+                                    {
+                                        SetBVar(2, 0);
+                                        break;
+                                    }
+                                    curveBufIdx++;
+
+                                    int bytesSend = mpSend(sockHandle, "1001$$", 6, 0);
+
+                                    if (bytesSend < 0)
+                                    {
+                                        ask_flag = 0;
+                                        return;
+                                    }
+                                    buffNum = 0;
+                                    continue;
+                                }
+                                // ================= 曲线结束点 =================
+                                if ((targetNum != 0) && (curveMode == 1) && (CURR_SWING_METHOD == LINE_WELD))
+                                {
+
+                                    int base = (curveBufGroup == 0) ? 21 : 31;
+                                    int index = base + curveBufIdx;
+
+                                    setValP(target, index); // 最后一个点
+
+                                    curveMode = 0;
+                                    curveBufIdx = 0;
+                                    // curveBufGroup = 0;
+
+                                    // 通知JBI执行曲线
+                                    SetBVar(20, 1);
+                                    handled = 1;
+                                }
+                                //存储摆焊接参考点
+                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD) && (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){
                                     if (targetNum % 2 == 0){
                                         valRet = setValP(swingRefTarget, 7); // 1，3，5...的摆焊参考点存进P007
                                         if (valRet < 0)
@@ -506,23 +560,27 @@ void socketRecv_Task(void) {  // 套接字接收
                                         SetIVar(4, (int)fbuff); // 2，4，6...的摆焊类型存进I004
                                     }
                                 }
-                                 if (targetNum % 2 == 0) {
-                                    valRet = setValP(target, 1);  // 1，3，5...打包进P001
-                                } else {
-                                    valRet = setValP(target, 2);  // 2，4，6...打包进P002
+                                if (handled == 0)
+                                { 
+                                    if (targetNum % 2 == 0)
+                                    {
+                                        valRet = setValP(target, 1); // 1，3，5...打包进P001
+                                    }
+                                    else
+                                    {
+                                        valRet = setValP(target, 2); // 2，4，6...打包进P002
+                                    }
+
+                                    if (valRet < 0)
+                                    {
+                                        SetBVar(2, 0);
+                                        break;
+                                    }
                                 }
                                 targetNum++;
-
                                 int j = 0;
                                 for (j = 0; j < COORD_NUM; j++) {
                                     prevTarget[j] = target[j];
-                                }
-
-                               
-                                
-                                if (valRet < 0) {
-                                    SetBVar(2, 0);
-                                    break;
                                 }
 
                                 buffNum = 0;

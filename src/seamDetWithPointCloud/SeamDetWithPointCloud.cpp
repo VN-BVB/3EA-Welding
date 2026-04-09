@@ -123,7 +123,7 @@ void SeamDetWithPointCloud::splitWeldSeamsInPlace(std::vector<std::shared_ptr<We
                 }
 
                 // ---------- 2. 判断是否切分 ----------
-                int margin = 2;
+                int margin = 1;
 
                 if (idx_min <= margin || idx_min >= N - 1 - margin) {
                     splitRes.push_back(info);
