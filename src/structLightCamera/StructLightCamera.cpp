@@ -251,7 +251,10 @@ void StructLightCamera::whenGetPrimaryCameraImage(cv::Mat img, CAMERA_WORK_MODE 
                         emit sendWeldAreaInfo(weldAreaInfo);       // 发送焊缝区域点云
                     } else if (workpieceType == WORKPIECE_TYPE::GANTRAY_FRAME) {
                         PLOGD << "重建三轴工件";
-                        weldAreaInfo = pointCloudReconstruction->weldAreaReconstructToGF();   // 焊缝区域点云重建
+                        weldAreaInfo = pointCloudReconstruction->weldAreaReconstructToGF();  // 焊缝区域点云重建
+                        if (pointCloudReconstruction->overlayImg.data != nullptr && !pointCloudReconstruction->overlayImg.empty()) {
+                            emit sendImage((pointCloudReconstruction->overlayImg).clone());
+                        }
                         workbenchPointCloud = pointCloudReconstruction->workbenchPointCloud;  // 获取工作台平面点云
 
                         QString message = QString(QStringLiteral("拟合平面的参数为: %1, %2, %3, %4"))

@@ -7,9 +7,13 @@
 #include "utils/common/WeldSeamInfo.h"
 class TubePlateFilletSeamsDet : public AbstractSeamDet {
 public:
-    explicit TubePlateFilletSeamsDet(QObject *parent = nullptr);
+    explicit TubePlateFilletSeamsDet(QObject* parent = nullptr);
     // 求解焊缝
     std::vector<std::shared_ptr<WeldSeamInfo>> solveSeamsEndPoints(std::vector<std::shared_ptr<WeldSeamInfo>> seamsInfo) override;
+    struct PtTheta {
+        pcl::PointXYZ pt;
+        float theta;
+    };
 
 private:
     void singleSeamReinitialize();
@@ -22,7 +26,7 @@ private:
                                             pcl::ModelCoefficients::Ptr plane_coeff, double thresh_plane);
     void removePlanePoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
     bool solveSeamEndPoints();
-signals:
+    bool moveAlongOrdered(const std::vector<PtTheta>& ordered, float offset, bool from_start, PtTheta& result, int& cut_idx);
 
 private:
     bool saveFlag = false;
@@ -47,7 +51,7 @@ private:
     float t_step = 2.0f;                      // 轴向分辨率（mm）
     float theta_step = 2.0f * M_PI / 180.0f;  // n°一格
     double widthThreshRatio = 0.75;           // 筛选残留点云宽度阈值比例
-    int sample_num = 3 + 2 * 2;               // 交线采样点数量，3是起点中点终点，乘二是中点两边
+    int sample_num = 3 + 3 * 2;               // 交线采样点数量，3是起点中点终点，乘2是中点两边
 
     std::vector<pcl::PointXYZ> filletSeamsTP;                // 焊缝的端点
     pcl::ModelCoefficients::Ptr cylinderCoeffsWithWeldSeam;  // 焊缝所在母材系数

@@ -72,6 +72,7 @@ signals:
     void sendWeldAreaInfoGF(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);    // 发送三轴焊缝区域点云
     void sendMessage2Ui(QString message);                                                // 发送信息到UI界面
     void sendUpdataWorkbenchover();                                                      // 发送背景平面重建完成
+    void sendImage(cv::Mat img);                                                         // 发出图像的信号
 
 public slots:
     // 相机相关
@@ -94,23 +95,21 @@ public slots:
 #endif
 
 private:
-    double normMinU = 0, normMaxU = 1, normMinV = 0, normMaxV = 1;  // 普通模式下重建范围参数
-    std::shared_ptr<AbstractCamera> primaryCamera{nullptr};         // 主相机
-    std::shared_ptr<AbstractCamera> secondaryCamera{nullptr};       // 次相机
-    std::shared_ptr<AbstractProjector> projector{nullptr};          // 投影仪
-    QThread *primaryCameraThread = new QThread;                     // 主相机线程
-    QThread *secondaryCameraThread = new QThread;                   // 次相机线程
-    QThread *projectorThread = new QThread;                         // 投影仪线程
-    std::shared_ptr<AbstractCameraFactory> cameraFactory{nullptr};  // 抽象相机工厂 (由外部通过依赖注入的方式注入)
+    double normMinU = 0, normMaxU = 1, normMinV = 0, normMaxV = 1;        // 普通模式下重建范围参数
+    std::shared_ptr<AbstractCamera> primaryCamera{nullptr};               // 主相机
+    std::shared_ptr<AbstractCamera> secondaryCamera{nullptr};             // 次相机
+    std::shared_ptr<AbstractProjector> projector{nullptr};                // 投影仪
+    QThread *primaryCameraThread = new QThread;                           // 主相机线程
+    QThread *secondaryCameraThread = new QThread;                         // 次相机线程
+    QThread *projectorThread = new QThread;                               // 投影仪线程
+    std::shared_ptr<AbstractCameraFactory> cameraFactory{nullptr};        // 抽象相机工厂 (由外部通过依赖注入的方式注入)
     std::shared_ptr<AbstractProjectorFactory> projectorFactory{nullptr};  // 抽象投影仪工厂 (由外部通过依赖注入的方式注入)
     std::shared_ptr<PointCloudReconstruction> pointCloudReconstruction{nullptr};  // 点云重建类
 
     uint8_t deviceStatus = 0x00;              // 三个硬件设备的连接状态
     uint8_t cameraImagCapturedStatus = 0x00;  // 两个相机的采图数量状态 (是否采集到对应数量)
-    std::shared_ptr<std::vector<cv::Mat>> primaryCameraCapturedImg =
-        std::make_shared<std::vector<cv::Mat>>();  // 主相机采集到的图像
-    std::shared_ptr<std::vector<cv::Mat>> secondaryCameraCapturedImg =
-        std::make_shared<std::vector<cv::Mat>>();  // 主相机采集到的图像
+    std::shared_ptr<std::vector<cv::Mat>> primaryCameraCapturedImg = std::make_shared<std::vector<cv::Mat>>();    // 主相机采集到的图像
+    std::shared_ptr<std::vector<cv::Mat>> secondaryCameraCapturedImg = std::make_shared<std::vector<cv::Mat>>();  // 主相机采集到的图像
 
     WORKPIECE_TYPE workpieceType = WORKPIECE_TYPE::GANTRAY_FRAME;
     RECONSTRUCTION_MODE reconstructionMode = RECONSTRUCTION_MODE::WORKPIECE;  // 重建模式

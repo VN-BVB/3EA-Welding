@@ -19,10 +19,14 @@
 #include <iostream>
 #include <memory>
 #include <opencv2/opencv.hpp>
+
+#include "deepLearning/segment/AbstractSegment.h"
+
 class StructLightConfig;
 class WeldSeamInfo;
 class AbstractObjectDetect;
 class DetResult;
+class AbstractSegment;
 
 class PointCloudReconstruction {
 public:
@@ -58,7 +62,7 @@ private:
 
     // 初始化函数
     void initPara();          // 初始化需要用到的参数
-    void initObjectDetect();  // 初始化目标检测类
+    void initVisionModels();  // 初始化目标检测类
     void initWorkspaceContext();
     void reInitialize();  //  变量重新初始化
 
@@ -139,6 +143,7 @@ private:
     // 模型路径
 #if defined(ROM_CONFIG) || defined(LI_CONFIG)
     const std::string objDetEnginePath = "./data/DL_models/objDec/objDecRom.engine";
+    const std::string segEnginePath = "./data/DL_models/segment/segment2GantrayFrame.engine";
 #elif GONG_RAIL_CONFIG
     const std::string objDetEnginePath = "./data/DL_models/objDec/objDecRail.engine";
 #elif A17_CONFIG
@@ -146,6 +151,7 @@ private:
 #endif
     // 类别名称和颜色
     std::vector<std::string> classNames = {"BackCorner", "FrontCorner", "FrontDownBeam", "BackBeam", "FrontUpBeam"};
+    std::vector<std::string> classNameGF = {"Plate_Plate_F", "TubeSide_Plate_F", "Tube_Plate_F", "Tube_Tube_F"};
     std::vector<std::vector<unsigned int>> colors = {
         {0,   114, 189},
         {217, 83,  25 },
@@ -163,8 +169,10 @@ private:
     // 计算过程需要用到的工具类
     std::shared_ptr<AbstractObjectDetect> weldsCoarsePosition{nullptr};  // 目标检测算法类
     std::shared_ptr<std::vector<DetResult>> detRes{nullptr};             // 目标检测结果
+    std::shared_ptr<AbstractSegment> weldsSegmentation{nullptr};         // 分割算法类
+    std::shared_ptr<std::vector<SegResult>> segRes{nullptr};             // 分割结果
+    cv::Mat overlayImg;
 #endif
-
     friend class StructLightCamera;
 };
 

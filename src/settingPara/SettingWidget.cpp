@@ -87,6 +87,8 @@ void SettingWidget::renewSetting() {
     ui->lineEdit_PPFVEnd_Y_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalEnd_Y));
     ui->lineEdit_PPFVEnd_Z_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalEnd_Z));
     ui->lineEdit_PPFVWeld_WithdrawDistance->setText(QString::number(settingPara->PlatePlateFilletVerticalWithdrawDistance));
+    ui->lineEdit_TPFStartOffset->setText(QString::number(settingPara->TubePlatFilletStartOffset));
+    ui->lineEdit_TPFEndOffset->setText(QString::number(settingPara->TubePlatFilletEndOffset));
     // 工件正面, 焊缝延长
     ui->lineEdit_FrontLeft_ExtendStart->setText(QString::number(settingPara->FrontLeft_ExtendStart));
     ui->lineEdit_FrontLeft_ExtendEnd->setText(QString::number(settingPara->FrontLeft_ExtendEnd));
@@ -1206,7 +1208,8 @@ void SettingWidget::on_lineEdit_PPFHEnd_Z_Shift_editingFinished() {
 
 void SettingWidget::on_lineEdit_PPFHWeld_WithdrawDistance_editingFinished() {
     settingPara->PlatePlateFilletHorizontalWithdrawDistance = ui->lineEdit_PPFHWeld_WithdrawDistance->text().toDouble();
-    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalWithdrawDistance", settingPara->PlatePlateFilletHorizontalWithdrawDistance);
+    settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletHorizontalWithdrawDistance",
+                                    settingPara->PlatePlateFilletHorizontalWithdrawDistance);
     PLOGD << "PlatePlateFilletHorizontalWithdrawDistance: " << settingPara->PlatePlateFilletHorizontalWithdrawDistance;
 }
 
@@ -1215,13 +1218,13 @@ void SettingWidget::on_lineEdit_PPFVStart_X_Shift_editingFinished() {
     settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalStart_X", settingPara->PlatePlateFilletVerticalStart_X);
     PLOGD << "PlatePlateFilletVerticalStart_X: " << settingPara->PlatePlateFilletVerticalStart_X;
 }
-        
+
 void SettingWidget::on_lineEdit_PPFVStart_Y_Shift_editingFinished() {
     settingPara->PlatePlateFilletVerticalStart_Y = ui->lineEdit_PPFVStart_Y_Shift->text().toDouble();
     settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalStart_Y", settingPara->PlatePlateFilletVerticalStart_Y);
     PLOGD << "PlatePlateFilletVerticalStart_Y: " << settingPara->PlatePlateFilletVerticalStart_Y;
 }
-        
+
 void SettingWidget::on_lineEdit_PPFVStart_Z_Shift_editingFinished() {
     settingPara->PlatePlateFilletVerticalStart_Z = ui->lineEdit_PPFVStart_Z_Shift->text().toDouble();
     settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalStart_Z", settingPara->PlatePlateFilletVerticalStart_Z);
@@ -1250,4 +1253,16 @@ void SettingWidget::on_lineEdit_PPFVWeld_WithdrawDistance_editingFinished() {
     settingPara->PlatePlateFilletVerticalWithdrawDistance = ui->lineEdit_PPFVWeld_WithdrawDistance->text().toDouble();
     settingPara->qSetting->setValue("GFSeamPosition/PlatePlateFilletVerticalWithdrawDistance", settingPara->PlatePlateFilletVerticalWithdrawDistance);
     PLOGD << "PlatePlateFilletVerticalWithdrawDistance: " << settingPara->PlatePlateFilletVerticalWithdrawDistance;
+}
+
+void SettingWidget::on_lineEdit_TPFStartOffset_editingFinished() {
+    settingPara->TubePlatFilletStartOffset = ui->lineEdit_TPFStartOffset->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubePlatFilletStartOffset", settingPara->TubePlatFilletStartOffset);
+    PLOGD << "TubePlatFilletStartOffset: " << settingPara->TubePlatFilletStartOffset;
+}
+
+void SettingWidget::on_lineEdit_TPFEndOffset_editingFinished() {
+    settingPara->TubePlatFilletEndOffset = ui->lineEdit_TPFEndOffset->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubePlatFilletEndOffset", settingPara->TubePlatFilletEndOffset);
+    PLOGD << "TubePlatFilletEndOffset: " << settingPara->TubePlatFilletEndOffset;
 }

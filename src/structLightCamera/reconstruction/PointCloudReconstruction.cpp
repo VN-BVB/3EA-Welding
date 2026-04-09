@@ -7,13 +7,14 @@
 #ifdef SMART_CAMERA
 #include "deepLearning/objectDetect/AbstractObjectDetect.h"
 #include "deepLearning/objectDetect/yolo11/yolo11objdetInference.h"
+#include "deepLearning/segment/yolo11/Yolo11SegInference.h"
 #include "utils/common/WeldSeamInfo.h"
 #endif
 
 PointCloudReconstruction::PointCloudReconstruction() : structLightConfig(StructLightConfig::getInstance()) {
     initPara();  // 初始化需要用到的参数
 #ifdef SMART_CAMERA
-    initObjectDetect();  // 初始化目标检测类
+    initVisionModels();  // 初始化目标检测类
 #endif
 }
 
@@ -63,8 +64,7 @@ void PointCloudReconstruction::initDistortionMap() {
     }
 }
 // 初始化目标检测类
-#ifdef SMART_CAMERA
-void PointCloudReconstruction::initObjectDetect() {
+void PointCloudReconstruction::initVisionModels() {
     weldsCoarsePosition = std::make_shared<Yolo11ObjDetInference>();
 
     weldsCoarsePosition->setEngine_path(objDetEnginePath);
@@ -76,8 +76,18 @@ void PointCloudReconstruction::initObjectDetect() {
     weldsCoarsePosition->setSize(cv::Size{imgSize, imgSize});
 
     weldsCoarsePosition->initialization();  // 完成类的初始化 (读取模型文件, 移入显卡等)
+
+    weldsSegmentation = std::make_shared<Yolo11SegInference>();
+    weldsSegmentation->setEngine_path(segEnginePath);
+    weldsSegmentation->setClassNames(classNameGF);
+    weldsSegmentation->setColors(colors);
+    weldsSegmentation->setScore_thres(scoreThreshold);
+    weldsSegmentation->setIou_thres(iouThreshold);
+    weldsSegmentation->setSeg_channels(32);  // 要与onnx在实力分割检测头的32通道相对应
+    weldsSegmentation->setSize(cv::Size(imgSize, imgSize));
+
+    weldsSegmentation->initialization();  // 完成类的初始化 (读取模型文件, 移入显卡等)
 }
-#endif
 
 // 局部点云重建
 pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudReconstruction::localReconstruct(int minU, int maxU, int minV, int maxV) {
@@ -178,6 +188,7 @@ void PointCloudReconstruction::initWorkspaceContext() {
     weldAreaInfo.clear();                                                   // 清空焊缝区域信息
     workbenchCoeff = Eigen::VectorXf::Zero(4);                              // 工作台平面系数
     skipWorkbenchFilter = false;                                            // 跳过筛选工作台
+    overlayImg = cv::Mat();                                                 // 推理图像
 }
 
 //  点云重建变量重新初始化
@@ -185,6 +196,7 @@ void PointCloudReconstruction::reInitialize() {
     pointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);  // 重置点云
 #ifdef SMART_CAMERA
     detRes = std::make_shared<std::vector<DetResult>>();  // 清空目标检测结果
+    segRes = std::make_shared<std::vector<SegResult>>();
 #endif
 
     sinSum = cv::Mat::zeros(cameraHeight, cameraWidth, CV_64FC1);                     // sin和
@@ -294,54 +306,77 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
     cv::cvtColor(afterDistortCorrect, afterDistortCorrect, cv::COLOR_GRAY2RGB);                       // 转为彩色图
 
     // weldsCoarsePosition->inference(afterDistortCorrect, *(detRes.get()));  // 深度学习推理
+    weldsSegmentation->inference(afterDistortCorrect, *(segRes.get()));  // 深度学习推理
+    if (segRes->empty()) {
+        PLOGW << "分割结果为空";
+        return;
+    }
+    overlayImg = (*segRes)[0].segRes;
+    // cv::imshow("segRes_", (*segRes)[0].segRes);
+    // cv::waitKey(0);
 
-    if (detRes->size() == 0) {
-        PLOGW << "检测结果为空，使用默认ROI";
-        // detRes->emplace_back(1, 1.0f, 91, 237, 1500, 600);//管侧与三角肘板
-        // detRes->emplace_back(0, 1.0f, 414, 343, 498, 438);
-        // detRes->emplace_back(0, 1.0f, 596, 419, 1090, 469);
-        // detRes->emplace_back(0, 1.0f, 1170, 285, 1207, 391); //板板角接
-        // detRes->emplace_back(0, 1.0f, 289, 786, 420, 880);
-        // detRes->emplace_back(0, 1.0f, 533, 758, 1100, 800);
-        // detRes->emplace_back(0, 1.0f, 1170, 750, 1238, 865); //板板角接
-        // detRes->emplace_back(2, 1.0f, 598, 456, 1090, 580);  // 板管角接
-        detRes->emplace_back(2, 1.0f, 225, 414, 1106, 580);  // 板管角接
+    //   按类别分组
+    std::map<int, std::vector<SegResult>> classGroups;
+
+    for (size_t i = 0; i < segRes->size(); ++i) {
+        const SegResult& seg = (*segRes)[i];
+        classGroups[seg.classId].push_back(seg);
     }
-    // 如果检测到大于4个, 按照置信度排序, 并取前4个
-    if (detRes->size() > 4) {
-        std::sort(detRes->begin(), detRes->end(), [](const DetResult& a, const DetResult& b) { return a.score > b.score; });
-        detRes->resize(4);  // 仅保留置信度最高的4个
+
+    //  多类别 - 选最优类别
+    if (classGroups.size() > 1) {
+        int bestClass = -1;
+        float bestScore = -1.0f;
+
+        for (std::map<int, std::vector<SegResult>>::const_iterator it = classGroups.begin(); it != classGroups.end(); ++it) {
+            int classId = it->first;
+            const std::vector<SegResult>& segList = it->second;
+
+            float maxScore = 0.f;
+            for (size_t i = 0; i < segList.size(); ++i) {
+                if (segList[i].score > maxScore) maxScore = segList[i].score;
+            }
+
+            if (maxScore > bestScore) {
+                bestScore = maxScore;
+                bestClass = classId;
+            }
+        }
+
+        // 用 swap 避免拷贝
+        segRes->swap(classGroups[bestClass]);
     }
-    PLOGD << "detRes->size()" << detRes->size();
+
+    PLOGD << "segRes size = " << segRes->size();
     // 遍历每个结果
-    for (int i = 0; i < detRes->size(); ++i) {
+    for (int i = 0; i < segRes->size(); ++i) {
         /* ===== ROI扩张 + 边界限制 ===== */
 
-        auto& det = (*detRes)[i];
+        auto& seg = (*segRes)[i];
 
-        int x1 = std::max(0, static_cast<int>(det.topLeftX - pclRectExtend));
-        int y1 = std::max(0, static_cast<int>(det.topLeftY - pclRectExtend));
-        int x2 = std::min(cameraWidth - 1, static_cast<int>(det.bottomRightX + pclRectExtend));
-        int y2 = std::min(cameraHeight - 1, static_cast<int>(det.bottomRightY + pclRectExtend));
+        int x1 = std::max(0, static_cast<int>(seg.topLeftX - pclRectExtend));
+        int y1 = std::max(0, static_cast<int>(seg.topLeftY - pclRectExtend));
+        int x2 = std::min(cameraWidth - 1, static_cast<int>(seg.bottomRightX + pclRectExtend));
+        int y2 = std::min(cameraHeight - 1, static_cast<int>(seg.bottomRightY + pclRectExtend));
 
-        det.topLeftX = x1;
-        det.topLeftY = y1;
-        det.bottomRightX = x2;
-        det.bottomRightY = y2;
+        seg.topLeftX = x1;
+        seg.topLeftY = y1;
+        seg.bottomRightX = x2;
+        seg.bottomRightY = y2;
 
-        PLOGD << "焊缝粗定位" << i << "结果: " << (*detRes.get())[i].classId << ", " << (*detRes.get())[i].score << ", "
-              << (*detRes.get())[i].topLeftX << ", " << (*detRes.get())[i].topLeftY << ", " << (*detRes.get())[i].bottomRightX << ", "
-              << (*detRes.get())[i].bottomRightY;
+        PLOGD << "焊缝粗定位" << i << "结果: " << (*segRes.get())[i].classId << ", " << (*segRes.get())[i].score << ", "
+              << (*segRes.get())[i].topLeftX << ", " << (*segRes.get())[i].topLeftY << ", " << (*segRes.get())[i].bottomRightX << ", "
+              << (*segRes.get())[i].bottomRightY;
 
         // 创建焊缝区域信息对象
         std::shared_ptr<WeldSeamInfo> seamInfo = std::make_shared<WeldSeamInfo>();
         seamInfo->areaNum = i;
         seamInfo->originalImg = afterDistortCorrect;  // 保存原始图像
-        seamInfo->rectPtr = std::make_shared<cv::Rect_<float>>((*detRes.get())[i].topLeftX, (*detRes.get())[i].topLeftY,
-                                                               (*detRes.get())[i].bottomRightX - (*detRes.get())[i].topLeftX,
-                                                               (*detRes.get())[i].bottomRightY - (*detRes.get())[i].topLeftY);  // 保存目标框
+        seamInfo->rectPtr = std::make_shared<cv::Rect_<float>>((*segRes.get())[i].topLeftX, (*segRes.get())[i].topLeftY,
+                                                               (*segRes.get())[i].bottomRightX - (*segRes.get())[i].topLeftX,
+                                                               (*segRes.get())[i].bottomRightY - (*segRes.get())[i].topLeftY);  // 保存目标框
         seamInfo->weldAreaImg = afterDistortCorrect(*(seamInfo->rectPtr)).clone();               // 保存目标框内的图像
-        seamInfo->weldAreaType = MyToolFunc::getWeldAreaType((*detRes.get())[i].classId + 100);  // 保存焊缝类型
+        seamInfo->weldAreaType = MyToolFunc::getWeldAreaType((*segRes.get())[i].classId + 100);  // 保存焊缝类型
         weldAreaInfo.push_back(seamInfo);                                                        // 将焊缝区域信息添加到列表中
 
         // 更新mask

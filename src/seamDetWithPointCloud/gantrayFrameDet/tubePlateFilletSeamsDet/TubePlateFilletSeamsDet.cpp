@@ -468,6 +468,73 @@ void TubePlateFilletSeamsDet::removePlanePoints(pcl::PointCloud<pcl::PointXYZ>::
         plotter.plot();
     }
 }
+bool TubePlateFilletSeamsDet::moveAlongOrdered(const std::vector<PtTheta>& ordered, float offset, bool from_start, PtTheta& result, int& cut_idx) {
+    if (ordered.size() < 2) return false;
+
+    float remain = offset;
+
+    if (from_start) {
+        for (size_t i = 1; i < ordered.size(); ++i) {
+            const auto& p0 = ordered[i - 1];
+            const auto& p1 = ordered[i];
+
+            float dx = p1.pt.x - p0.pt.x;
+            float dy = p1.pt.y - p0.pt.y;
+            float dz = p1.pt.z - p0.pt.z;
+
+            float len = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (remain <= len) {
+                float t = (len > 1e-6f) ? remain / len : 0.0f;
+
+                result.pt.x = p0.pt.x + t * dx;
+                result.pt.y = p0.pt.y + t * dy;
+                result.pt.z = p0.pt.z + t * dz;
+
+                result.theta = p0.theta + t * (p1.theta - p0.theta);
+
+                cut_idx = (int)i;  // 切在 i-1 和 i 之间
+                return true;
+            }
+
+            remain -= len;
+        }
+
+        result = ordered.back();
+        cut_idx = (int)ordered.size() - 1;
+        return true;
+    } else {
+        for (int i = (int)ordered.size() - 1; i > 0; --i) {
+            const auto& p0 = ordered[i];
+            const auto& p1 = ordered[i - 1];
+
+            float dx = p1.pt.x - p0.pt.x;
+            float dy = p1.pt.y - p0.pt.y;
+            float dz = p1.pt.z - p0.pt.z;
+
+            float len = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (remain <= len) {
+                float t = (len > 1e-6f) ? remain / len : 0.0f;
+
+                result.pt.x = p0.pt.x + t * dx;
+                result.pt.y = p0.pt.y + t * dy;
+                result.pt.z = p0.pt.z + t * dz;
+
+                result.theta = p0.theta + t * (p1.theta - p0.theta);
+
+                cut_idx = i - 1;  // 切在 i 和 i-1 之间
+                return true;
+            }
+
+            remain -= len;
+        }
+
+        result = ordered.front();
+        cut_idx = 0;
+        return true;
+    }
+}
 bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
     if (!cloudCylinderInWeldAreaWithSeam || cloudCylinderInWeldAreaWithSeam->empty() || !planeCoeffsInWeldArea || !cylinderCoeffsWithWeldSeam) {
         PLOGE << "SolveSeamEndPoints: 输入参数无效";
@@ -514,11 +581,6 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
     };
 
     // ================= 5. 点云投影到交线 =================
-    struct PtTheta {
-        pcl::PointXYZ pt;
-        float theta;
-    };
-
     std::vector<PtTheta> pts;
     pts.reserve(axisRangeCloud->size());
 
@@ -581,7 +643,57 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
         for (int i = split_idx; i < pts.size(); ++i) ordered.push_back(pts[i]);
         for (int i = 0; i < split_idx; ++i) ordered.push_back(pts[i]);
     }
+
     // ================= 8. 三个关键点 =================
+    // =================  收缩并裁剪曲线 =================
+    PtTheta new_start, new_end;
+
+    float start_offset = SettingPara::getInstance().TubePlatFilletStartOffset;
+    float end_offset = SettingPara::getInstance().TubePlatFilletEndOffset;
+
+    // 防止非法
+    if (start_offset < 0) start_offset = 0;
+    if (end_offset < 0) end_offset = 0;
+
+    // 计算总长度（用于保护）
+    float total_len_check = 0.0f;
+    for (int i = 1; i < ordered.size(); ++i) {
+        float dx = ordered[i].pt.x - ordered[i - 1].pt.x;
+        float dy = ordered[i].pt.y - ordered[i - 1].pt.y;
+        float dz = ordered[i].pt.z - ordered[i - 1].pt.z;
+        total_len_check += std::sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    if (start_offset + end_offset >= total_len_check) {
+        PLOGE << "收缩过大，超过焊缝长度";
+        return false;
+    }
+
+    //  获取切割位置
+    int start_idx = 0;
+    int end_idx = 0;
+
+    moveAlongOrdered(ordered, start_offset, true, new_start, start_idx);
+    moveAlongOrdered(ordered, end_offset, false, new_end, end_idx);
+
+    // ================= 真正裁剪 =================
+    std::vector<PtTheta> trimmed;
+    trimmed.reserve(ordered.size());
+
+    // 起点
+    trimmed.push_back(new_start);
+
+    // 中间段
+    for (int i = start_idx; i <= end_idx; ++i) {
+        trimmed.push_back(ordered[i]);
+    }
+
+    // 终点
+    trimmed.push_back(new_end);
+
+    // 替换
+    ordered.swap(trimmed);
+
     int total = ordered.size();
     if (total < 2) return false;
 

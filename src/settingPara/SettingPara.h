@@ -51,6 +51,8 @@ public:
     double PlatePlateFilletVerticalEnd_Y = 0;
     double PlatePlateFilletVerticalEnd_Z = 0;
     double PlatePlateFilletVerticalWithdrawDistance = 0;
+    double TubePlatFilletStartOffset = 0;
+    double TubePlatFilletEndOffset = 0;
     /*------------------------------角钢------------------------------*/
     // 工件正面的焊缝起点和终点延长
     double FrontLeft_ExtendStart = -5;   // 正面左焊缝起点(内点)

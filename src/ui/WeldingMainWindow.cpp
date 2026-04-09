@@ -8,6 +8,7 @@
 #include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
 #include "settingPara/SettingPara.h"
 #include "structLightCamera/StructLightCamera.h"
+#include "structLightCamera/reconstruction/PointCloudReconstruction.h"
 #include "ui/SystemMirrorWidget.h"
 #include "utils/common/WeldSeamInfo.h"
 #include "utils/stateLight/StateLight.h"
@@ -79,6 +80,7 @@ void WeldingMainWindow::initRailWeldingSystem() {
 
         // 获取到『点云或图像』信号槽
         connect(railWeldingSystem->structLightCamera.get(), &StructLightCamera::sendPointCloud, this, &WeldingMainWindow::whenGetWorkbenchPointCloud);
+        connect(railWeldingSystem->structLightCamera.get(), &StructLightCamera::sendImage, this, &WeldingMainWindow::whenGetImg2Ui);
         connect(railWeldingSystem->structLightCamera->primaryCamera.get(), &AbstractCamera::sendImage, this, &WeldingMainWindow::whenGetImg2Ui);
         connect(railWeldingSystem.get(), &RailWeldingSystem::sendFinalSeams, this, &WeldingMainWindow::whenGetSeamInfo);
 

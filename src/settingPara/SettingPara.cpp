@@ -66,6 +66,8 @@ void SettingPara::loadSetting() {
         PlatePlateFilletVerticalEnd_Z = qSetting->value("GFSeamPosition/PlatePlateFilletVerticalEnd_Z", PlatePlateFilletVerticalEnd_Z).toDouble();
         PlatePlateFilletVerticalWithdrawDistance =
             qSetting->value("GFSeamPosition/PlatePlateFilletVerticalWithdrawDistance", PlatePlateFilletVerticalWithdrawDistance).toDouble();
+        TubePlatFilletStartOffset = qSetting->value("GFSeamPosition/TubePlatFilletStartOffset", TubePlatFilletStartOffset).toDouble();
+        TubePlatFilletEndOffset = qSetting->value("GFSeamPosition/TubePlatFilletEndOffset", TubePlatFilletEndOffset).toDouble();
 
         // ----------------------------------------------------角钢-------------------------------------------------------------
         // 正面边角延长

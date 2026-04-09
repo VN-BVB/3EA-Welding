@@ -221,6 +221,10 @@ private slots:
 
     void on_lineEdit_PPFVWeld_WithdrawDistance_editingFinished();
 
+    void on_lineEdit_TPFStartOffset_editingFinished();
+
+    void on_lineEdit_TPFEndOffset_editingFinished();
+
 private:
     Ui::SettingWidget *ui;
 
