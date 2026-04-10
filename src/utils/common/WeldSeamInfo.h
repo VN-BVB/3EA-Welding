@@ -63,6 +63,16 @@ enum ARC_ACTION {
     ARC_START = 1,  // 起弧
     ARC_STOP = 0    // 熄弧
 };
+struct CollisionResult {
+    bool isIntersect = false;
+    float distPlane = std::numeric_limits<float>::quiet_NaN();
+    float distCyl = std::numeric_limits<float>::quiet_NaN();
+    Eigen::Vector3f planeHit = Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
+    Eigen::Vector3f cylHit = Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
+    double safeOffset = std::numeric_limits<double>::quiet_NaN();
+    double extraOffset = 0.0;
+};
+
 namespace MyToolFunc {
 
 WELD_AREA_TYPE getWeldAreaType(int areaNum);                     // 获取焊缝区域类型
@@ -103,8 +113,9 @@ public:
     double width = 1.5;                                                // 焊缝宽度
 
     // 机器人位姿
-    std::vector<robotPose> robotWeldPose;      // 机器人位姿
-    std::vector<double> swingReferencePoints;  // 摆焊参考点
+    std::vector<robotPose> robotWeldPose;              // 机器人位姿
+    std::vector<double> swingReferencePoints;          // 摆焊参考点
+    std::vector<CollisionResult> weldCollisionResult;  // 碰撞检测结果
 };
 
 #endif  // WELDSEAMINFO_H

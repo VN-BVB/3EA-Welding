@@ -53,6 +53,7 @@ public:
     double PlatePlateFilletVerticalWithdrawDistance = 0;
     double TubePlatFilletStartOffset = 0;
     double TubePlatFilletEndOffset = 0;
+    double TubePlatFilletWithdrawDistance = 0;
     /*------------------------------角钢------------------------------*/
     // 工件正面的焊缝起点和终点延长
     double FrontLeft_ExtendStart = -5;   // 正面左焊缝起点(内点)
@@ -140,7 +141,9 @@ public:
     double Value_WeldingVoltage = 24;            // 焊接电压(默认焊接电压)
     double Value_WeldingVoltage_Vertical = 18;   // 焊接电压(竖直焊缝用这个电压)
 
-    bool weldingVerticalWeld = 0;  // 是否焊接竖直焊缝
+    bool weldingVerticalWeld = 0;         // 是否焊接竖直焊缝
+    double wireCalibrationOffset = 10.0;  // 标定时焊丝距离
+    double toolRadius = 10.0;             // 焊枪半径
 
     // 点云预处理参数
     double passthrough_Min = 0, passthrough_Max = 1000;  // 直通滤波参数

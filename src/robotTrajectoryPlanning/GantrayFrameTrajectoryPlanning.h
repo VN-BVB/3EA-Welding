@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "AbstractTrajectoryPlanning.h"
+#include "src/robotTrajectoryPlanning/utils/debugcollisioncheck.h"
 #include "utils/common/WeldSeamInfo.h"
-
 class GantrayFrameTrajectoryPlanning : public AbstractTrajectoryPlanning {
     Q_OBJECT
 public:
@@ -28,23 +28,20 @@ private:
     void determineWorkpieceOri(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
     void transSeamsOri(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
     void generateWeldPose(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
-    void saveToMatlabFull(const std::string &filename, const Eigen::Vector3f &P0, const Eigen::Vector3f &P1, const Eigen::Vector3f &mid,
-                          const Eigen::Vector3f &X, const Eigen::Vector3f &Y, const Eigen::Vector3f &Z, const pcl::ModelCoefficients::Ptr &plane,
-                          const pcl::ModelCoefficients::Ptr &cylinder);
+    void debugWeldingCollisionCheck(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
     Eigen::Vector3d abcToDirection(double a, double b, double c);
     void applyWeldGunWithdraw(robotPose &pose, double withdrawDistance);
     void compensateSeams(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
     void planPlatePlateFilletSeamOrientation(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
     bool computePlatePlateFilletVerticalSwingPoints(const std::shared_ptr<WeldSeamInfo> &info, const robotPose &refPose,
                                                     std::vector<double> &swingPoints);  // 计算摆焊点
-    bool checkCylinderPlaneCollision(const Eigen::Vector3d &center, const Eigen::Vector3d &axis, double radius, const Eigen::Vector4f &plane);
-    bool checkCylinderCylinderCollision(const Eigen::Vector3d &p1, const Eigen::Vector3d &d1, double r1, const Eigen::Matrix<float, 7, 1> &cyl);
 
 private:
     WORKPIECE_SIDE_OF_ROBOT workpieceSide = WORKPIECE_SIDE_OF_ROBOT::FRONT;  // 当前工件位于机器人基座的方向pi
     // txt存储点
     std::fstream outfile;  // 读取存在mask坐标的txt文件
     std::string outfile_name = "./data/SeamCoordinate.txt";
+    debugCollisionCheck checker;
 
     float tubeSidePlateFilletPlanePoseW = 0.7f;  // 管侧与板角接焊缝靠近三角肘板平面法向量权重
     float platePlateFilletPlanePoseW_H = 0.5f;   // 板板水平角接靠近立板法向量权重（变大--靠近底）

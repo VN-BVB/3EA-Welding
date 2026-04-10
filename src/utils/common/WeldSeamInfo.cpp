@@ -36,6 +36,7 @@ WeldSeamInfo& WeldSeamInfo::operator=(const WeldSeamInfo& other) noexcept {
         rectPtr = other.rectPtr;
         otherSurface = other.otherSurface;
         robotWeldPose = other.robotWeldPose;
+        weldCollisionResult = other.weldCollisionResult;
         // cloudFuture = other.cloudFuture;
     }
     return *this;
@@ -103,6 +104,7 @@ std::shared_ptr<WeldSeamInfo> WeldSeamInfo::clone() const {
     // 机器人位姿深拷贝
     copy->robotWeldPose = robotWeldPose;
     copy->swingReferencePoints = swingReferencePoints;
+    copy->weldCollisionResult = weldCollisionResult;
 
     return copy;
 }

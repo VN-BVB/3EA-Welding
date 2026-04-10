@@ -68,6 +68,10 @@ void SettingPara::loadSetting() {
             qSetting->value("GFSeamPosition/PlatePlateFilletVerticalWithdrawDistance", PlatePlateFilletVerticalWithdrawDistance).toDouble();
         TubePlatFilletStartOffset = qSetting->value("GFSeamPosition/TubePlatFilletStartOffset", TubePlatFilletStartOffset).toDouble();
         TubePlatFilletEndOffset = qSetting->value("GFSeamPosition/TubePlatFilletEndOffset", TubePlatFilletEndOffset).toDouble();
+        TubePlatFilletWithdrawDistance = qSetting->value("GFSeamPosition/TubePlatFilletWithdrawDistance", TubePlatFilletWithdrawDistance).toDouble();
+
+        wireCalibrationOffset = qSetting->value("Welding/wireCalibrationOffset", wireCalibrationOffset).toDouble();
+        toolRadius = qSetting->value("Welding/toolRadius", toolRadius).toDouble();
 
         // ----------------------------------------------------角钢-------------------------------------------------------------
         // 正面边角延长

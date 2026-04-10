@@ -225,6 +225,12 @@ private slots:
 
     void on_lineEdit_TPFEndOffset_editingFinished();
 
+    void on_lineEdit_TPFWeld_WithdrawDistance_editingFinished();
+
+    void on_lineEdit_WireCalibrationOffset_editingFinished();
+
+    void on_lineEdit_ToolRadius_editingFinished();
+
 private:
     Ui::SettingWidget *ui;
 

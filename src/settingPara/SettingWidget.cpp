@@ -89,6 +89,11 @@ void SettingWidget::renewSetting() {
     ui->lineEdit_PPFVWeld_WithdrawDistance->setText(QString::number(settingPara->PlatePlateFilletVerticalWithdrawDistance));
     ui->lineEdit_TPFStartOffset->setText(QString::number(settingPara->TubePlatFilletStartOffset));
     ui->lineEdit_TPFEndOffset->setText(QString::number(settingPara->TubePlatFilletEndOffset));
+    ui->lineEdit_TPFWeld_WithdrawDistance->setText(QString::number(settingPara->TubePlatFilletWithdrawDistance));
+
+    ui->lineEdit_WireCalibrationOffset->setText(QString::number(settingPara->wireCalibrationOffset));
+    ui->lineEdit_ToolRadius->setText(QString::number(settingPara->toolRadius));
+
     // 工件正面, 焊缝延长
     ui->lineEdit_FrontLeft_ExtendStart->setText(QString::number(settingPara->FrontLeft_ExtendStart));
     ui->lineEdit_FrontLeft_ExtendEnd->setText(QString::number(settingPara->FrontLeft_ExtendEnd));
@@ -1265,4 +1270,22 @@ void SettingWidget::on_lineEdit_TPFEndOffset_editingFinished() {
     settingPara->TubePlatFilletEndOffset = ui->lineEdit_TPFEndOffset->text().toDouble();
     settingPara->qSetting->setValue("GFSeamPosition/TubePlatFilletEndOffset", settingPara->TubePlatFilletEndOffset);
     PLOGD << "TubePlatFilletEndOffset: " << settingPara->TubePlatFilletEndOffset;
+}
+
+void SettingWidget::on_lineEdit_TPFWeld_WithdrawDistance_editingFinished() {
+    settingPara->TubePlatFilletWithdrawDistance = ui->lineEdit_TPFWeld_WithdrawDistance->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubePlatFilletWithdrawDistance", settingPara->TubePlatFilletWithdrawDistance);
+    PLOGD << "TubePlatFilletWithdrawDistance: " << settingPara->TubePlatFilletWithdrawDistance;
+}
+
+void SettingWidget::on_lineEdit_WireCalibrationOffset_editingFinished() {
+    settingPara->wireCalibrationOffset = ui->lineEdit_WireCalibrationOffset->text().toDouble();
+    settingPara->qSetting->setValue("Welding/wireCalibrationOffset", settingPara->wireCalibrationOffset);
+    PLOGD << "wireCalibrationOffset: " << settingPara->wireCalibrationOffset;
+}
+
+void SettingWidget::on_lineEdit_ToolRadius_editingFinished() {
+    settingPara->toolRadius = ui->lineEdit_ToolRadius->text().toDouble();
+    settingPara->qSetting->setValue("Welding/toolRadius", settingPara->toolRadius);
+    PLOGD << "toolRadius: " << settingPara->toolRadius;
 }
