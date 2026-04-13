@@ -983,7 +983,19 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 Eigen::Vector3f Z = (tubePlateFilletWeldPoseW * N_mid + (1.0f - tubePlateFilletWeldPoseW) * t).normalized();
 
                 // ===== 5. Z轴约束：必须向下 =====
-                if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+                // if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+                // ===== DEBUG：打印Z轴方向 =====
+                qDebug() << "idx =" << i << "P =" << P.x() << P.y() << P.z() << "t =" << t.x() << t.y() << t.z() << "n_plane =" << n_plane.x()
+                         << n_plane.y() << n_plane.z() << "n_cyl =" << n_cyl.x() << n_cyl.y() << n_cyl.z() << "Z(before check) =" << Z.x() << Z.y()
+                         << Z.z();
+
+                // ===== 5. Z轴约束：必须向下 =====
+                if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) {
+                    qDebug() << "Z flipped!";
+                    Z = -Z;
+                }
+
+                qDebug() << "Z(final) =" << Z.x() << Z.y() << Z.z();
 
                 // ===== 6. Y轴：沿切向，但与世界Y反向 =====
                 Eigen::Vector3f Y = t;

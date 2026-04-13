@@ -570,11 +570,19 @@ void socketRecv_Task(void) {  // 套接字接收
                                     {
                                         valRet = setValP(target, 2); // 2，4，6...打包进P002
                                     }
-
                                     if (valRet < 0)
                                     {
                                         SetBVar(2, 0);
                                         break;
+                                    }                                    
+                                    if ((int)target[0] == 820*1000 &&
+                                        (int)target[1] == 0*1000 &&
+                                        (int)target[2] == 150*1000 &&
+                                        (int)target[3] == -180*10000 &&
+                                        (int)target[4] == 0*10000 &&
+                                        (int)target[5] == 0*10000)
+                                    {
+                                        SetBVar(16, 1); //回原标志位
                                     }
                                 }
                                 targetNum++;

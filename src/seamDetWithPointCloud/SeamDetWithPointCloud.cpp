@@ -183,6 +183,36 @@ void SeamDetWithPointCloud::splitWeldSeamsInPlace(std::vector<std::shared_ptr<We
         newInfos.push_back(info2);
     }
 
+    // ===== 按每个 info 最后一个点的 x 值降序排列（x小的在前）=====
+    std::sort(newInfos.begin(), newInfos.end(), [](const std::shared_ptr<WeldSeamInfo>& a, const std::shared_ptr<WeldSeamInfo>& b) {
+        if (!a || !a->weldEndPointsInCamera || a->weldEndPointsInCamera->empty()) return false;
+
+        if (!b || !b->weldEndPointsInCamera || b->weldEndPointsInCamera->empty()) return true;
+
+        const pcl::PointXYZ& pa = a->weldEndPointsInCamera->back();
+        const pcl::PointXYZ& pb = b->weldEndPointsInCamera->back();
+
+        return pa.x < pb.x;
+    });
+    // // ===== DEBUG：只保留第二个 info 的起点和终点 =====
+    // if (newInfos.size() >= 2) {
+    //     std::vector<std::shared_ptr<WeldSeamInfo>> debugInfos;
+
+    //     auto info2 = newInfos[1];
+    //     if (info2 && info2->weldEndPointsInCamera && info2->weldEndPointsInCamera->size() >= 2) {
+    //         auto debugInfo = info2->clone();
+
+    //         const auto& pts = *(info2->weldEndPointsInCamera);
+    //         debugInfo->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>();
+
+    //         debugInfo->weldEndPointsInCamera->push_back(pts.front());  // 起点
+    //         debugInfo->weldEndPointsInCamera->push_back(pts.back());   // 终点
+
+    //         debugInfos.push_back(debugInfo);
+    //     }
+    //     infos.swap(debugInfos);
+    // }
+
     infos.swap(newInfos);
 }
 // 求解焊缝
