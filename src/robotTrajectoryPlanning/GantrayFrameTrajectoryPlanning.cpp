@@ -979,23 +979,27 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
 
                 // ===== 3. 第一层角平分（平面 + 圆柱）=====
                 Eigen::Vector3f N_mid = (tubePlateFilletPlanePoseW * n_plane + (1.0f - tubePlateFilletPlanePoseW) * n_cyl).normalized();
-                // ===== 4. 第二层（你要求先不参与）=====
+                // ===== 4. 第二层（先不参与）=====
                 Eigen::Vector3f Z = (tubePlateFilletWeldPoseW * N_mid + (1.0f - tubePlateFilletWeldPoseW) * t).normalized();
 
                 // ===== 5. Z轴约束：必须向下 =====
                 // if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
-                // ===== DEBUG：打印Z轴方向 =====
-                qDebug() << "idx =" << i << "P =" << P.x() << P.y() << P.z() << "t =" << t.x() << t.y() << t.z() << "n_plane =" << n_plane.x()
-                         << n_plane.y() << n_plane.z() << "n_cyl =" << n_cyl.x() << n_cyl.y() << n_cyl.z() << "Z(before check) =" << Z.x() << Z.y()
-                         << Z.z();
 
-                // ===== 5. Z轴约束：必须向下 =====
-                if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) {
-                    qDebug() << "Z flipped!";
-                    Z = -Z;
+                Eigen::Vector3f worldZ(0, 0, 1);
+
+                // 当前焊点位于圆柱上/下半圆
+                float hemi = n_cyl.dot(worldZ);
+                // 正常情况下，在规定了母材方向后，这里就不用0, 0, 1硬约束了，直接反向径向就行；
+                if (hemi > 0.0f) {
+                    // 上半圆：焊枪朝下
+                    if (Z.dot(worldZ) > 0) Z = -Z;
+                } else if (hemi > 0.0f) {
+                    // 下半圆：焊枪朝上
+                    if (Z.dot(worldZ) < 0) Z = -Z;
+                } else {
+                    // 与径向相反（朝向圆柱）
+                    if (Z.dot(n_cyl) > 0) Z = -Z;
                 }
-
-                qDebug() << "Z(final) =" << Z.x() << Z.y() << Z.z();
 
                 // ===== 6. Y轴：沿切向，但与世界Y反向 =====
                 Eigen::Vector3f Y = t;

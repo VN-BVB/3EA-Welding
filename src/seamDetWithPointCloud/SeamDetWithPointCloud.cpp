@@ -194,24 +194,24 @@ void SeamDetWithPointCloud::splitWeldSeamsInPlace(std::vector<std::shared_ptr<We
 
         return pa.x < pb.x;
     });
-    // // ===== DEBUG：只保留第二个 info 的起点和终点 =====
-    // if (newInfos.size() >= 2) {
-    //     std::vector<std::shared_ptr<WeldSeamInfo>> debugInfos;
+    // ===== DEBUG：只保留第二个 info 的起点和终点 =====
+    if (newInfos.size() >= 2) {
+        std::vector<std::shared_ptr<WeldSeamInfo>> debugInfos;
 
-    //     auto info2 = newInfos[1];
-    //     if (info2 && info2->weldEndPointsInCamera && info2->weldEndPointsInCamera->size() >= 2) {
-    //         auto debugInfo = info2->clone();
+        auto info2 = newInfos[1];
+        if (info2 && info2->weldEndPointsInCamera && info2->weldEndPointsInCamera->size() >= 2) {
+            auto debugInfo = info2->clone();
 
-    //         const auto& pts = *(info2->weldEndPointsInCamera);
-    //         debugInfo->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>();
+            const auto& pts = *(info2->weldEndPointsInCamera);
+            debugInfo->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>();
 
-    //         debugInfo->weldEndPointsInCamera->push_back(pts.front());  // 起点
-    //         debugInfo->weldEndPointsInCamera->push_back(pts.back());   // 终点
+            debugInfo->weldEndPointsInCamera->push_back(pts.front());  // 起点
+            debugInfo->weldEndPointsInCamera->push_back(pts.back());   // 终点
 
-    //         debugInfos.push_back(debugInfo);
-    //     }
-    //     infos.swap(debugInfos);
-    // }
+            debugInfos.push_back(debugInfo);
+        }
+        infos.swap(debugInfos);
+    }
 
     infos.swap(newInfos);
 }
