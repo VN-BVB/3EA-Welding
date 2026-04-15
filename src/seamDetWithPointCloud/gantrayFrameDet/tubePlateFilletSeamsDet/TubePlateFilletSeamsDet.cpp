@@ -806,7 +806,8 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
     filletSeamsActualTP = filletSeamsTheoryTP;
 
     // 理论求实际
-    if (0) {
+    /*if (1)*/
+    {
         // #define debugBeforeProjectionCloud
         if (!axisRangeCloud || axisRangeCloud->empty()) {
             PLOGE << "refineTheoryPointsToActualPoints: axisRangeCloud 为空";
