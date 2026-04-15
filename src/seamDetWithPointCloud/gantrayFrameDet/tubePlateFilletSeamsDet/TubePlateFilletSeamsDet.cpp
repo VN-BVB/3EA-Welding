@@ -3,6 +3,7 @@
 #include "seamDetWithPointCloud/QhullLock.h"
 #include "settingPara/SettingPara.h"
 #include "utils/pointCloud/PointCloudFunc.h"
+#include "utils/pointCloud/SeamConcavityExtractor.h"
 TubePlateFilletSeamsDet::TubePlateFilletSeamsDet(QObject* parent) : AbstractSeamDet{parent} {}
 
 std::vector<std::shared_ptr<WeldSeamInfo>> TubePlateFilletSeamsDet::solveSeamsEndPoints(std::vector<std::shared_ptr<WeldSeamInfo>> seamsInfo) {
@@ -57,6 +58,14 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubePlateFilletSeamsDet::solveSeamsEn
                 continue;
             }
         }
+        removePointsNearPlane(cloudCylinderInWeldAreaWithSeam, planeCoeffsInWeldArea, Ransac_plane_Dth);
+        if (saveFlag) {
+            cloudCylinderInWeldAreaWithSeam->height = 1;
+            cloudCylinderInWeldAreaWithSeam->width = static_cast<uint32_t>(cloudCylinderInWeldAreaWithSeam->size());
+            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubePlateFilletSeamsDet/removePointsNearPlane_" +
+                                     std::to_string(tempWeldSeamsInfo[i]->areaNum) + ".pcd",
+                                 *cloudCylinderInWeldAreaWithSeam);
+        }
         {
             // ScopedTimer t("projectCloudToCylinder");
             MyToolFunc::projectCloudToCylinder(cloudCylinderInWeldAreaWithSeam, cloudCylinderInWeldAreaWithSeam, cylinderCoeffsWithWeldSeam);
@@ -68,6 +77,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubePlateFilletSeamsDet::solveSeamsEn
                                      *cloudCylinderInWeldAreaWithSeam);
             }
         }
+
         {
             // ScopedTimer t("extractSeamPointsFromCylinderPlane");
             extractSeamPointsFromCylinderPlane(cloudCylinderInWeldAreaWithSeam, axisRangeCloud, planeCoeffsInWeldArea, extendCylinderInPlaneArea);
@@ -116,6 +126,24 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubePlateFilletSeamsDet::solveSeamsEn
             }
         }
         detectSuccFlag = solveSeamEndPoints();
+        // if (detectSuccFlag) {
+        //     pcl::PointCloud<pcl::PointXYZ>::Ptr seamLocalRegionCloud(new pcl::PointCloud<pcl::PointXYZ>());
+        //     bool ok = extractLocalVoxelRegionAroundSeamSamples(cloudInWeldArea, filletSeamsTP, seamLocalRegionCloud);
+        //     if (!ok) {
+        //         PLOGW << "局部区域提取失败";
+        //     }
+        //     if (saveFlag && seamLocalRegionCloud && !seamLocalRegionCloud->empty()) {
+        //         seamLocalRegionCloud->height = 1;
+        //         seamLocalRegionCloud->width = static_cast<uint32_t>(seamLocalRegionCloud->size());
+
+        //         std::string savePath = "./data/seamDetWithPointCloud/tubePlateFilletSeamsDet/seamLocalRegionCloud_" +
+        //                                std::to_string(tempWeldSeamsInfo[i]->areaNum) + ".pcd";
+
+        //         pcl::io::savePCDFile(savePath, *seamLocalRegionCloud);
+
+        //         PLOGD << "局部点云已保存: " << savePath;
+        //     }
+        // }
         if (saveFlag) {
             seamEndPoints->height = 1;
             seamEndPoints->width = static_cast<uint32_t>(seamEndPoints->size());
@@ -540,7 +568,9 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
         PLOGE << "SolveSeamEndPoints: 输入参数无效";
         return false;
     }
-
+    std::vector<pcl::PointXYZ> filletSeamsTheoryTP;
+    std::vector<pcl::PointXYZ> filletSeamsActualTP;
+    filletSeamsTheoryTP.clear();
     filletSeamsTP.clear();
 
     // ================= 1. 圆柱参数 =================
@@ -697,8 +727,6 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
     int total = ordered.size();
     if (total < 2) return false;
 
-    filletSeamsTP.clear();
-
     // ================= 9. 计算累计弧长 =================
     std::vector<float> arc_len(total, 0.0f);
 
@@ -719,13 +747,13 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
 
     // ================= 10. 均匀采样 =================
     int N = sample_num;  // 你想要的采样点数（包含首尾）
-    filletSeamsTP.reserve(N);
+    filletSeamsTheoryTP.reserve(N);
 
     // 步长
     float step = total_len / (N - 1);
 
     // 起点
-    filletSeamsTP.push_back(ordered.front().pt);
+    filletSeamsTheoryTP.push_back(ordered.front().pt);
 
     int curr_idx = 1;
 
@@ -738,7 +766,7 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
         }
 
         if (curr_idx >= total) {
-            filletSeamsTP.push_back(ordered.back().pt);
+            filletSeamsTheoryTP.push_back(ordered.back().pt);
             continue;
         }
 
@@ -763,16 +791,279 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
         interp_pt.y = p1.y + t * (p2.y - p1.y);
         interp_pt.z = p1.z + t * (p2.z - p1.z);
 
-        filletSeamsTP.push_back(interp_pt);
+        filletSeamsTheoryTP.push_back(interp_pt);
     }
 
     // 终点
-    filletSeamsTP.push_back(ordered.back().pt);
-
-    // ================= 10. 保存 =================
+    filletSeamsTheoryTP.push_back(ordered.back().pt);
     if (saveFlag && seamEndPoints) {
+        seamEndPoints->clear();
+        seamEndPoints->points.assign(filletSeamsTheoryTP.begin(), filletSeamsTheoryTP.end());
+        seamEndPoints->height = 1;
+        seamEndPoints->width = static_cast<uint32_t>(seamEndPoints->size());
+        pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubePlateFilletSeamsDet/filletSeamsTheoryTP.pcd", *seamEndPoints);
+    }
+    filletSeamsActualTP = filletSeamsTheoryTP;
+
+    // 理论求实际
+    if (0) {
+        // #define debugBeforeProjectionCloud
+        if (!axisRangeCloud || axisRangeCloud->empty()) {
+            PLOGE << "refineTheoryPointsToActualPoints: axisRangeCloud 为空";
+            return false;
+        }
+
+        if (filletSeamsTheoryTP.empty()) {
+            PLOGE << "refineTheoryPointsToActualPoints: filletSeamsTheoryTP 为空";
+            return false;
+        }
+
+        if (!planeCoeffsInWeldArea || planeCoeffsInWeldArea->values.size() < 4) {
+            PLOGE << "refineTheoryPointsToActualPoints: planeCoeffsInWeldArea 无效";
+            return false;
+        }
+
+        if (!cylinderCoeffsWithWeldSeam || cylinderCoeffsWithWeldSeam->values.size() < 7) {
+            PLOGE << "refineTheoryPointsToActualPoints: cylinderCoeffsWithWeldSeam 无效";
+            return false;
+        }
+
+        filletSeamsActualTP.clear();
+        filletSeamsActualTP.reserve(filletSeamsTheoryTP.size());
+
+        // ===== 平面参数 =====
+        float n_norm = n.norm();
+        if (n_norm < 1e-6f) {
+            PLOGE << "refineTheoryPointsToActualPoints: 平面法向无效";
+            return false;
+        }
+        n.normalize();
+#ifdef debugBeforeProjectionCloud
+        // ======================== 临时调试保存区：投影前点云 ========================
+        pcl::PointCloud<pcl::PointXYZ>::Ptr beforeProjectionCloud(new pcl::PointCloud<pcl::PointXYZ>());
+        beforeProjectionCloud->clear();
+        beforeProjectionCloud->reserve(filletSeamsTheoryTP.size());
+        // ======================================================================
+#endif
+        Eigen::Vector3f refDir = n;  // 想沿平面找
+        // Eigen::Vector3f refDir = axis;  // 想沿轴向找
+        for (const auto& theoryPt : filletSeamsTheoryTP) {
+            Eigen::Vector3f T(theoryPt.x, theoryPt.y, theoryPt.z);
+
+            bool found = false;
+            float bestScore = std::numeric_limits<float>::max();
+            Eigen::Vector3f bestRealPoint = T;
+
+            for (const auto& p : axisRangeCloud->points) {
+                Eigen::Vector3f P(p.x, p.y, p.z);
+
+                Eigen::Vector3f diff = P - T;
+
+                // ===== 沿平面法向的偏移 =====
+                float dirOffset = diff.dot(refDir);
+                if (std::fabs(dirOffset) > maxNormalOffset) {
+                    continue;
+                }
+
+                // ===== 到“过理论点 T、方向 n 的直线”的横向距离 =====
+                Eigen::Vector3f perpVec = diff - dirOffset * refDir;
+                float perpDist = perpVec.norm();
+                if (perpDist > maxTangentialDist) {
+                    continue;
+                }
+
+                // ===== 欧氏距离兜底 =====
+                float euclidDist = diff.norm();
+                if (euclidDist > maxEuclidDist) {
+                    continue;
+                }
+
+                // ===== 评分：优先横向接近，再兼顾法向偏移 =====
+                float score = perpDist + 0.2f * std::fabs(dirOffset);
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestRealPoint = P;
+                    found = true;
+                }
+            }
+
+            if (!found) {
+#ifdef debugBeforeProjectionCloud
+                pcl::PointXYZ debugPt;
+                debugPt.x = T.x();
+                debugPt.y = T.y();
+                debugPt.z = T.z();
+                beforeProjectionCloud->push_back(debugPt);
+#endif
+
+                // 找不到则退化为理论点直接投影到平面
+                float signedDist = n.dot(T) + d;
+                Eigen::Vector3f proj = T - signedDist * n;
+
+                pcl::PointXYZ actualPt;
+                actualPt.x = proj.x();
+                actualPt.y = proj.y();
+                actualPt.z = proj.z();
+
+                filletSeamsActualTP.push_back(actualPt);
+                continue;
+
+            }
+#ifdef debugBeforeProjectionCloud
+            else
+            // ======================== 临时调试保存区：保存投影前点 ========================
+            {
+                pcl::PointXYZ debugPt;
+                debugPt.x = bestRealPoint.x();
+                debugPt.y = bestRealPoint.y();
+                debugPt.z = bestRealPoint.z();
+                beforeProjectionCloud->push_back(debugPt);
+            }
+#endif
+            // ===== 将找到的真实点沿平面法向投影回平面，作为最终焊点 =====
+            float signedDist = n.dot(bestRealPoint) + d;
+            Eigen::Vector3f proj = bestRealPoint - signedDist * n;
+
+            pcl::PointXYZ actualPt;
+            actualPt.x = proj.x();
+            actualPt.y = proj.y();
+            actualPt.z = proj.z();
+
+            filletSeamsActualTP.push_back(actualPt);
+        }
+#ifdef debugBeforeProjectionCloud
+        // ======================== 临时调试保存区：保存投影前点云到 PCD ========================
+        if (!beforeProjectionCloud->empty()) {
+            beforeProjectionCloud->width = static_cast<uint32_t>(beforeProjectionCloud->size());
+            beforeProjectionCloud->height = 1;
+            beforeProjectionCloud->is_dense = false;
+
+            pcl::io::savePCDFileBinary("./data/seamDetWithPointCloud/tubePlateFilletSeamsDet/beforeProjectionCloud.pcd", *beforeProjectionCloud);
+        }
+#endif
+    }
+    filletSeamsTP = filletSeamsActualTP;
+    // ================= 保存 =================
+    if (saveFlag && seamEndPoints) {
+        seamEndPoints->clear();
         seamEndPoints->points.assign(filletSeamsTP.begin(), filletSeamsTP.end());
     }
 
     return true;
+}
+bool TubePlateFilletSeamsDet::extractLocalVoxelRegionAroundSeamSamples(const pcl::PointCloud<pcl::PointXYZ>::Ptr& srcCloud,
+                                                                       const std::vector<pcl::PointXYZ>& seamSamples,
+                                                                       pcl::PointCloud<pcl::PointXYZ>::Ptr& outCloud) {
+    if (!srcCloud || srcCloud->empty()) {
+        PLOGE << "srcCloud 为空";
+        return false;
+    }
+
+    if (seamSamples.empty()) {
+        PLOGE << "seamSamples 为空";
+        return false;
+    }
+    Eigen::Vector3f axis(cylinderCoeffsWithWeldSeam->values[3], cylinderCoeffsWithWeldSeam->values[4], cylinderCoeffsWithWeldSeam->values[5]);
+    axis.normalize();
+
+    float axialHalfLen = 10.0f;  // 轴向 ±10mm
+    float radialRadius = 10.0f;  // 径向 10mm
+
+    if (!outCloud) {
+        outCloud.reset(new pcl::PointCloud<pcl::PointXYZ>());
+    }
+    outCloud->clear();
+
+    std::vector<char> selected(srcCloud->size(), 0);
+
+    for (const auto& seamPt : seamSamples) {
+        Eigen::Vector3f S(seamPt.x, seamPt.y, seamPt.z);
+        // ===== 当前局部区域点云 =====
+        pcl::PointCloud<pcl::PointXYZ>::Ptr localCloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        for (size_t i = 0; i < srcCloud->size(); ++i) {
+            if (selected[i]) continue;
+
+            const auto& p = srcCloud->points[i];
+            Eigen::Vector3f P(p.x, p.y, p.z);
+
+            Eigen::Vector3f d = P - S;
+
+            // 轴向
+            float axialDist = d.dot(axis);
+            if (std::abs(axialDist) > axialHalfLen) continue;
+
+            // 径向
+            Eigen::Vector3f radialVec = d - axialDist * axis;
+            if (radialVec.squaredNorm() > radialRadius * radialRadius) continue;
+
+            selected[i] = 1;
+            outCloud->points.push_back(p);  // 用于总体保存
+            localCloud->points.push_back(p);
+        }
+        // ===== 2. 调用凹凸提取（DEBUG阶段）=====
+        if (!localCloud->empty()) {
+            SeamConcavityExtractor extractor;
+            extractor.setInputCloud(localCloud);
+            extractor.setQueryPoints(localCloud);
+            extractor.setNeighborRadius(3.0f);  // 直接固定半径
+            extractor.setDebug(true);           // 开debug
+
+            // bool ok = extractor.run();
+        } else {
+            PLOGW << "局部区域为空 idx=";
+        }
+    }
+
+    outCloud->width = static_cast<uint32_t>(outCloud->size());
+    outCloud->height = 1;
+
+    PLOGD << "局部点数: " << outCloud->size();
+
+    return !outCloud->empty();
+}
+void TubePlateFilletSeamsDet::removePointsNearPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, const pcl::ModelCoefficients::Ptr& planeCoeffs,
+                                                    float distThresh) {
+    if (!cloud || cloud->empty()) {
+        PLOGW << "removePointsNearPlane: cloud 为空";
+        return;
+    }
+
+    if (!planeCoeffs || planeCoeffs->values.size() < 4) {
+        PLOGE << "removePointsNearPlane: planeCoeffs 无效";
+        return;
+    }
+
+    // 平面参数
+    float A = planeCoeffs->values[0];
+    float B = planeCoeffs->values[1];
+    float C = planeCoeffs->values[2];
+    float D = planeCoeffs->values[3];
+
+    float norm = std::sqrt(A * A + B * B + C * C);
+    if (norm < 1e-6f) {
+        PLOGE << "removePointsNearPlane: 法向无效";
+        return;
+    }
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered(new pcl::PointCloud<pcl::PointXYZ>());
+    filtered->reserve(cloud->size());
+
+    for (const auto& p : cloud->points) {
+        float dist = std::fabs(A * p.x + B * p.y + C * p.z + D) / norm;
+
+        // 只保留远离平面的点
+        if (dist > distThresh) {
+            filtered->points.push_back(p);
+        }
+    }
+
+    filtered->width = static_cast<uint32_t>(filtered->size());
+    filtered->height = 1;
+    filtered->is_dense = false;
+
+    PLOGD << "removePointsNearPlane: 原始点数 = " << cloud->size() << ", 过滤后 = " << filtered->size();
+
+    cloud.swap(filtered);
 }

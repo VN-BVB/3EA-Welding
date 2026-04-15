@@ -27,6 +27,9 @@ private:
     void removePlanePoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
     bool solveSeamEndPoints();
     bool moveAlongOrdered(const std::vector<PtTheta>& ordered, float offset, bool from_start, PtTheta& result, int& cut_idx);
+    bool extractLocalVoxelRegionAroundSeamSamples(const pcl::PointCloud<pcl::PointXYZ>::Ptr& srcCloud, const std::vector<pcl::PointXYZ>& seamSamples,
+                                                  pcl::PointCloud<pcl::PointXYZ>::Ptr& outCloud);
+    void removePointsNearPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, const pcl::ModelCoefficients::Ptr& planeCoeffs, float distThresh);
 
 private:
     bool saveFlag = false;
@@ -42,7 +45,7 @@ private:
     double Max_cluster_radius = 8;           // 欧式聚类提取最大点集半径
     int Ransac_plane_Iterations = 10000;     // Ransac拟合平面的迭代数
     int Ransac_cylinder_Iterations = 10000;  // Ransac拟合圆柱的迭代数
-    double Ransac_plane_Dth = 1.0;           // ransac拟合平面的距离阈值
+    double Ransac_plane_Dth = 0.5;           // ransac拟合平面的距离阈值
     double Ransac_cylinder_Dth = 1.5;        // ransac拟合圆柱面的距离阈值
 
     int Statistic_NeighPoints = 20;           // 统计滤波近邻点数
@@ -52,6 +55,10 @@ private:
     float theta_step = 2.0f * M_PI / 180.0f;  // n°一格
     double widthThreshRatio = 0.75;           // 筛选残留点云宽度阈值比例
     int sample_num = 3 + 3 * 2;               // 交线采样点数量，3是起点中点终点，乘2是中点两边
+    // ===== 搜索阈值 =====
+    const float maxNormalOffset = 10.0f;   // 允许沿平面法向前后 10mm
+    const float maxTangentialDist = 5.0f;  // 到“过理论点 T、方向 n 的直线”的最大横向距离
+    const float maxEuclidDist = 5.0f;      // 兜底欧式距离阈值
 
     std::vector<pcl::PointXYZ> filletSeamsTP;                // 焊缝的端点
     pcl::ModelCoefficients::Ptr cylinderCoeffsWithWeldSeam;  // 焊缝所在母材系数
