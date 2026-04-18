@@ -894,7 +894,6 @@ bool TubePlateFilletSeamsDet::extractLocalVoxelRegionAroundSeamSamples(const pcl
                                                                        const std::vector<pcl::PointXYZ>& seamSamples,
                                                                        pcl::PointCloud<pcl::PointXYZI>::Ptr& outCloud) {
     ScopedTimer t("extractLocalVoxelRegionAroundSeamSamples");
-
     if (!srcCloud || srcCloud->empty()) {
         PLOGE << "srcCloud 为空";
         return false;
@@ -919,10 +918,6 @@ bool TubePlateFilletSeamsDet::extractLocalVoxelRegionAroundSeamSamples(const pcl
 
     Eigen::Vector3f cylC(cylinderCoeffsWithWeldSeam->values[0], cylinderCoeffsWithWeldSeam->values[1], cylinderCoeffsWithWeldSeam->values[2]);
     const float cylRadius = cylinderCoeffsWithWeldSeam->values[6];
-
-    const float axialHalfLen = 10.0f;  // 轴向 ±10mm
-    const float radialRadius = 10.0f;  // 径向 10mm
-    const float radialRadius2 = radialRadius * radialRadius;
 
     // 最终焊缝点快速欧式聚类参数
     const float finalClusterTolerance = 1.5f;
@@ -963,21 +958,31 @@ bool TubePlateFilletSeamsDet::extractLocalVoxelRegionAroundSeamSamples(const pcl
     };
     pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZ>());
     kdtree->setInputCloud(srcCloud);
-
+    const float axialHalfLen = 10.0f;  // 轴向 ±10mm
+    const float radialRadius = 10.0f;  // 径向 10mm
+    const float radialRadius2 = radialRadius * radialRadius;
     const float localSearchRadius = std::sqrt(axialHalfLen * axialHalfLen + radialRadius * radialRadius);
     const float queryRadius = 10.0f;
     const float queryRadius2 = queryRadius * queryRadius;
-    const float radialRadius2 = radialRadius * radialRadius;
-#pragma omp parallel for
+    const int maxThreads = std::max(1, omp_get_max_threads());
+    const bool parallelBySeam = static_cast<int>(seamSamples.size()) >= maxThreads * 2;
+#pragma omp parallel for schedule(dynamic) if (parallelBySeam)
     for (int seamdex = 0; seamdex < static_cast<int>(seamSamples.size()); ++seamdex) {
         const auto& seamPt = seamSamples[seamdex];
         Eigen::Vector3f S(seamPt.x, seamPt.y, seamPt.z);
 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr localCloud(new pcl::PointCloud<pcl::PointXYZ>());
-        localCloud->reserve(srcCloud->size() / 8);
+        std::vector<int> candidateIdx;
+        std::vector<float> candidateDist2;
+        kdtree->radiusSearch(seamPt, localSearchRadius, candidateIdx, candidateDist2);
 
-        for (size_t i = 0; i < srcCloud->size(); ++i) {
-            const auto& p = srcCloud->points[i];
+        pcl::PointCloud<pcl::PointXYZ>::Ptr localCloud(new pcl::PointCloud<pcl::PointXYZ>());
+        pcl::PointCloud<pcl::PointXYZ>::Ptr queryCloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        localCloud->reserve(candidateIdx.size());
+        queryCloud->reserve(candidateIdx.size() / 4 + 8);
+
+        for (int idx : candidateIdx) {
+            const auto& p = srcCloud->points[idx];
             Eigen::Vector3f P(p.x, p.y, p.z);
 
             Eigen::Vector3f d = P - S;
@@ -989,37 +994,26 @@ bool TubePlateFilletSeamsDet::extractLocalVoxelRegionAroundSeamSamples(const pcl
             if (radialVec.squaredNorm() > radialRadius2) continue;
 
             localCloud->points.push_back(p);
+
+            float dist2 = d.squaredNorm();
+            if (dist2 <= queryRadius2) {
+                queryCloud->points.push_back(p);
+            }
         }
 
         localCloud->width = static_cast<uint32_t>(localCloud->size());
         localCloud->height = 1;
         localCloud->is_dense = false;
 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr queryCloud(new pcl::PointCloud<pcl::PointXYZ>());
-        const float queryRadius = 10.0f;
-        const float queryRadius2 = queryRadius * queryRadius;
-
-        for (const auto& p : localCloud->points) {
-            float dx = p.x - seamPt.x;
-            float dy = p.y - seamPt.y;
-            float dz = p.z - seamPt.z;
-            float dist2 = dx * dx + dy * dy + dz * dz;
-
-            if (dist2 <= queryRadius2) {
-                queryCloud->points.push_back(p);
-            }
-        }
-
         queryCloud->width = static_cast<uint32_t>(queryCloud->size());
         queryCloud->height = 1;
         queryCloud->is_dense = false;
-
         if (queryCloud->empty()) {
             PLOGW << "seamdex = " << seamdex << " 的 queryCloud 为空";
             continue;
         }
 
-        if (!localCloud->empty()) {
+        if (/*seamdex == 5 && */ !localCloud->empty()) {
             ScopedTimer t(std::string("seamdex" + std::to_string(seamdex)));
 
             SeamConcavityExtractor extractor;

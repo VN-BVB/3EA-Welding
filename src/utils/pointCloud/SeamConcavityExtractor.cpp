@@ -1,4 +1,6 @@
 ﻿#include "SeamConcavityExtractor.h"
+
+#include "utils/common/CommonFunc.h"
 SeamConcavityExtractor::SeamConcavityExtractor() {
     inputCloud_.reset(new pcl::PointCloud<pcl::PointXYZ>());
     queryPoints_.reset(new pcl::PointCloud<pcl::PointXYZ>());
@@ -157,23 +159,16 @@ bool SeamConcavityExtractor::run() {
     //     debugSaveSingleQueryProcess(debugTarget, "./data/seamDetWithPointCloud/tubePlateFilletSeamsDet/debug_single_point");
     // }
     // ================= 第一阶段：只计算 meanDeviation =================
-    int numThreads = omp_get_max_threads();
+    int numThreads = omp_in_parallel() ? 1 : omp_get_max_threads();
     if (numThreads < 1) numThreads = 1;
-    int chunkSize = (totalPts + numThreads - 1) / numThreads;
 
-#pragma omp parallel for schedule(static, 1)
-    for (int chunkId = 0; chunkId < numThreads; ++chunkId) {
-        int beginIdx = chunkId * chunkSize;
-        int endIdx = std::min(beginIdx + chunkSize, totalPts);
+#pragma omp parallel for schedule(dynamic, 64) if (numThreads > 1) num_threads(numThreads)
+    for (int i = 0; i < totalPts; ++i) {
+        auto& result = featureResults_[i];
+        result.queryPoint = queryPoints_->points[i];
 
-        for (int i = beginIdx; i < endIdx; ++i) {
-            FeatureResult result;
-            result.queryPoint = queryPoints_->points[i];
-
-            bool ok = processSingleQueryPointMeanDeviationOnly(queryPoints_->points[i], result);
-            result.valid = ok;
-            featureResults_[i] = result;
-        }
+        bool ok = processSingleQueryPointMeanDeviationOnly(queryPoints_->points[i], result);
+        result.valid = ok;
     }
 
     // ================= 自动估计 meanDeviation 阈值 =================
@@ -187,7 +182,8 @@ bool SeamConcavityExtractor::run() {
     int candidateCount = 0;
     for (auto& r : featureResults_) {
         if (!r.valid) continue;
-        if (r.isMeanDeviationCandidate = (r.meanDeviation >= meanDeviationAutoThresh_)) candidateCount++;
+        r.isMeanDeviationCandidate = (r.meanDeviation >= meanDeviationAutoThresh_);
+        if (r.isMeanDeviationCandidate) candidateCount++;
     }
 
     /*保存第一阶段候选点 */
@@ -198,34 +194,29 @@ bool SeamConcavityExtractor::run() {
     PLOGD << "meanDeviationAutoThresh = " << meanDeviationAutoThresh_ << ", candidateCount = " << candidateCount << ", totalPts = " << totalPts;
 
 // ================= 第二阶段：只对候选点计算 concavity =================
-#pragma omp parallel for schedule(static, 1)
-    for (int chunkId = 0; chunkId < numThreads; ++chunkId) {
-        int beginIdx = chunkId * chunkSize;
-        int endIdx = std::min(beginIdx + chunkSize, totalPts);
+#pragma omp parallel for schedule(dynamic, 32) if (numThreads > 1) num_threads(numThreads)
+    for (int i = 0; i < totalPts; ++i) {
+        auto& r = featureResults_[i];
+        if (!r.valid) continue;
 
-        for (int i = beginIdx; i < endIdx; ++i) {
-            auto& r = featureResults_[i];
-            if (!r.valid) continue;
+        if (!r.isMeanDeviationCandidate) {
+            r.positiveRatio = 0.0f;
+            r.negativeRatio = 0.0f;
+            r.concavityScore = 0.0f;
+            r.absConcavityScore = 0.0f;
+            r.isFinalSeamPoint = false;
+            r.isConcavityPoint = false;
+            continue;
+        }
 
-            if (!r.isMeanDeviationCandidate) {
-                r.positiveRatio = 0.0f;
-                r.negativeRatio = 0.0f;
-                r.concavityScore = 0.0f;
-                r.absConcavityScore = 0.0f;
-                r.isFinalSeamPoint = false;
-                r.isConcavityPoint = false;
-                continue;
-            }
-
-            bool ok = processSingleQueryPointConcavityOnly(r);
-            if (!ok) {
-                r.positiveRatio = 0.0f;
-                r.negativeRatio = 0.0f;
-                r.concavityScore = 0.0f;
-                r.absConcavityScore = 0.0f;
-                r.isFinalSeamPoint = false;
-                r.isConcavityPoint = false;
-            }
+        bool ok = processSingleQueryPointConcavityOnly(r);
+        if (!ok) {
+            r.positiveRatio = 0.0f;
+            r.negativeRatio = 0.0f;
+            r.concavityScore = 0.0f;
+            r.absConcavityScore = 0.0f;
+            r.isFinalSeamPoint = false;
+            r.isConcavityPoint = false;
         }
     }
     // ================= 自动估计 concavity 阈值 =================
@@ -468,7 +459,10 @@ bool SeamConcavityExtractor::extractNeighborhood(const pcl::PointXYZ& queryPoint
     }
 
     neighborhood.neighborIndices.clear();
-    neighborhood.rawDistances.clear();
+    neighborhood.rawSqrDistances.clear();
+
+    neighborhood.neighborIndices.reserve(radiusFound);
+    neighborhood.rawSqrDistances.reserve(radiusFound);
 
     for (int i = 0; i < radiusFound; ++i) {
         int idx = radiusIndices[i];
@@ -480,12 +474,13 @@ bool SeamConcavityExtractor::extractNeighborhood(const pcl::PointXYZ& queryPoint
         }
 
         neighborhood.neighborIndices.push_back(idx);
-        neighborhood.rawDistances.push_back(std::sqrt(radiusSqrDists[i]));
+        neighborhood.rawSqrDistances.push_back(radiusSqrDists[i]);
     }
 
-    if (neighborhood.neighborIndices.size() < neighborhoodMinValidPoints_) {
+    if (static_cast<int>(neighborhood.neighborIndices.size()) < neighborhoodMinValidPoints_) {
         return false;
     }
+
     if (!filterValidNeighborhoodByQuantile(neighborhood)) {
         return false;
     }
@@ -497,7 +492,7 @@ bool SeamConcavityExtractor::extractNeighborhood(const pcl::PointXYZ& queryPoint
     return true;
 }
 bool SeamConcavityExtractor::filterValidNeighborhoodByQuantile(NeighborhoodData& neighborhood) {
-    if (static_cast<int>(neighborhood.rawDistances.size()) < neighborhoodMinValidPoints_) {
+    if (static_cast<int>(neighborhood.rawSqrDistances.size()) < neighborhoodMinValidPoints_) {
         return false;
     }
 
@@ -510,17 +505,20 @@ bool SeamConcavityExtractor::filterValidNeighborhoodByQuantile(NeighborhoodData&
     qLow = std::max(0.0f, qLow);
     qHigh = std::min(1.0f, qHigh);
 
-    float dlow = computeDistanceQuantile(neighborhood.rawDistances, qLow);
-    float dhigh = computeDistanceQuantile(neighborhood.rawDistances, qHigh);
+    float dlow2, dhigh2;
+    computeTwoQuantiles(neighborhood.rawSqrDistances, qLow, qHigh, dlow2, dhigh2);
 
     neighborhood.validNeighborIndices.clear();
-    neighborhood.validDistances.clear();
+    neighborhood.validSqrDistances.clear();
+
+    neighborhood.validNeighborIndices.reserve(neighborhood.neighborIndices.size());
+    neighborhood.validSqrDistances.reserve(neighborhood.rawSqrDistances.size());
 
     for (size_t i = 0; i < neighborhood.neighborIndices.size(); ++i) {
-        float dist = neighborhood.rawDistances[i];
-        if (dist >= dlow && dist <= dhigh) {
+        float dist2 = neighborhood.rawSqrDistances[i];
+        if (dist2 >= dlow2 && dist2 <= dhigh2) {
             neighborhood.validNeighborIndices.push_back(neighborhood.neighborIndices[i]);
-            neighborhood.validDistances.push_back(dist);
+            neighborhood.validSqrDistances.push_back(dist2);
         }
     }
 
@@ -624,11 +622,11 @@ bool SeamConcavityExtractor::clusterValidNeighborhoodKeepMaxCluster(Neighborhood
 
     for (int localIdx : component) {
         keptIndices.push_back(neighborhood.validNeighborIndices[localIdx]);
-        keptDistances.push_back(neighborhood.validDistances[localIdx]);
+        keptDistances.push_back(neighborhood.validSqrDistances[localIdx]);
     }
 
     neighborhood.validNeighborIndices.swap(keptIndices);
-    neighborhood.validDistances.swap(keptDistances);
+    neighborhood.validSqrDistances.swap(keptDistances);
 
     return static_cast<int>(neighborhood.validNeighborIndices.size()) >= neighborhoodMinValidPoints_;
 }
@@ -645,9 +643,10 @@ bool SeamConcavityExtractor::computeSphereProjection(const NeighborhoodData& nei
 
     sphereData.unitVectors.clear();
     sphereData.weights.clear();
+    sphereData.unitVectors.reserve(neighborhood.validNeighborIndices.size());
+    sphereData.weights.reserve(neighborhood.validNeighborIndices.size());
 
-    std::vector<float> dvalid = neighborhood.validDistances;
-    float medianDist = computeMedian(dvalid);
+    float medianDist = computeMedian(neighborhood.validSqrDistances);
 
     Eigen::Vector3f meanVec = Eigen::Vector3f::Zero();
 
@@ -660,7 +659,7 @@ bool SeamConcavityExtractor::computeSphereProjection(const NeighborhoodData& nei
         if (norm < 1e-6f) continue;
 
         Eigen::Vector3f uhat = diff / norm;
-        float dist = neighborhood.validDistances[i];
+        float dist = neighborhood.validSqrDistances[i];
 
         float w = std::exp(-weightAlpha_ * (dist - medianDist) * (dist - medianDist));
 
@@ -709,46 +708,36 @@ bool SeamConcavityExtractor::computePcaProjection(const SphereProjectionData& sp
 
     pcaData.centeredVectors.clear();
     pcaData.projected2DPoints.clear();
+    pcaData.centeredVectors.reserve(sphereData.unitVectors.size());
+    pcaData.projected2DPoints.reserve(sphereData.unitVectors.size());
 
     // 先按你原来的方式去中心化
-    pcl::PointCloud<pcl::PointXYZ>::Ptr centeredCloud(new pcl::PointCloud<pcl::PointXYZ>());
-    centeredCloud->reserve(sphereData.unitVectors.size());
+    Eigen::Matrix3f cov = Eigen::Matrix3f::Zero();
 
     for (const auto& uhat : sphereData.unitVectors) {
         Eigen::Vector3f centered = uhat - sphereData.meanVector;
         pcaData.centeredVectors.push_back(centered);
 
-        pcl::PointXYZ p;
-        p.x = centered.x();
-        p.y = centered.y();
-        p.z = centered.z();
-        centeredCloud->points.push_back(p);
-    }
-
-    centeredCloud->width = static_cast<uint32_t>(centeredCloud->size());
-    centeredCloud->height = 1;
-    centeredCloud->is_dense = true;
-
-    pcl::PCA<pcl::PointXYZ> pca;
-    pca.setInputCloud(centeredCloud);
-
-    Eigen::Matrix3f eigenVectors = pca.getEigenVectors();
-    Eigen::Vector3f eigenValues = pca.getEigenValues();
-
-    pcaData.eigenValues = eigenValues;
-
-    // PCL 通常是降序：col(0)最大，col(1)次大
-    pcaData.v1 = eigenVectors.col(0).normalized();
-    pcaData.v2 = eigenVectors.col(1).normalized();
-
-    // 协方差矩阵（可选保存）
-    Eigen::Matrix3f cov = Eigen::Matrix3f::Zero();
-    for (const auto& centered : pcaData.centeredVectors) {
         cov += centered * centered.transpose();
     }
+
+    // PCL 通常是降序：col(0)最大，col(1)次大
     cov /= static_cast<float>(pcaData.centeredVectors.size() - 1);
     pcaData.covariance = cov;
 
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(cov);
+    if (solver.info() != Eigen::Success) {
+        return false;
+    }
+
+    pcaData.eigenValues = solver.eigenvalues();
+    const Eigen::Matrix3f eigenVectors = solver.eigenvectors();
+
+    // Eigen returns eigenvalues in ascending order.
+    pcaData.v1 = eigenVectors.col(2).normalized();
+    pcaData.v2 = eigenVectors.col(1).normalized();
+
+    // 协方差矩阵（可选保存）
     // 投影到2D
     for (const auto& centered : pcaData.centeredVectors) {
         float x = centered.dot(pcaData.v1);
@@ -765,13 +754,22 @@ bool SeamConcavityExtractor::generateStandardCircle2D(ReconstructedCurveData& cu
         return false;
     }
 
-    curveData.fittedCircle2D.reserve(curveSampleCount_);
+    static thread_local int cachedSampleCount = 0;
+    static thread_local std::vector<Eigen::Vector2f> cachedCircle;
 
-    for (int k = 0; k < curveSampleCount_; ++k) {
-        float theta = 2.0f * static_cast<float>(M_PI) * static_cast<float>(k) / static_cast<float>(curveSampleCount_);
-        curveData.fittedCircle2D.emplace_back(std::cos(theta), std::sin(theta));
+    if (cachedSampleCount != curveSampleCount_) {
+        cachedCircle.clear();
+        cachedCircle.reserve(curveSampleCount_);
+
+        for (int k = 0; k < curveSampleCount_; ++k) {
+            float theta = 2.0f * static_cast<float>(M_PI) * static_cast<float>(k) / static_cast<float>(curveSampleCount_);
+            cachedCircle.emplace_back(std::cos(theta), std::sin(theta));
+        }
+
+        cachedSampleCount = curveSampleCount_;
     }
 
+    curveData.fittedCircle2D = cachedCircle;
     return true;
 }
 bool SeamConcavityExtractor::reconstructCurveToSphere(const SphereProjectionData& sphereData, const PcaProjectionData& pcaData,
@@ -811,20 +809,58 @@ bool SeamConcavityExtractor::computeMeanDeviation(const SphereProjectionData& sp
     meanDeviation = static_cast<float>(sum / static_cast<double>(sphereData.unitVectors.size()));
     return std::isfinite(meanDeviation);
 }
-float SeamConcavityExtractor::computeDistanceQuantile(std::vector<float> values, float q) const {
-    if (values.empty()) return 0.0f;
+bool SeamConcavityExtractor::computeTwoQuantiles(const std::vector<float>& values, float qLow, float qHigh, float& outLow, float& outHigh) const {
+    if (values.empty()) return false;
 
-    q = std::max(0.0f, std::min(1.0f, q));
-    std::sort(values.begin(), values.end());
+    qLow = std::max(0.0f, std::min(1.0f, qLow));
+    qHigh = std::max(0.0f, std::min(1.0f, qHigh));
+    if (qLow > qHigh) std::swap(qLow, qHigh);
 
-    float pos = q * static_cast<float>(values.size() - 1);
-    int idx0 = static_cast<int>(std::floor(pos));
-    int idx1 = static_cast<int>(std::ceil(pos));
+    const int n = static_cast<int>(values.size());
 
-    if (idx0 == idx1) return values[idx0];
+    float posLow = qLow * (n - 1);
+    float posHigh = qHigh * (n - 1);
 
-    float t = pos - static_cast<float>(idx0);
-    return values[idx0] * (1.0f - t) + values[idx1] * t;
+    int idxLow0 = static_cast<int>(std::floor(posLow));
+    int idxLow1 = static_cast<int>(std::ceil(posLow));
+
+    int idxHigh0 = static_cast<int>(std::floor(posHigh));
+    int idxHigh1 = static_cast<int>(std::ceil(posHigh));
+
+    std::vector<float> tmp(values);
+
+    // 先处理 low
+    std::nth_element(tmp.begin(), tmp.begin() + idxLow0, tmp.end());
+    float vLow0 = tmp[idxLow0];
+
+    float vLow;
+    if (idxLow0 == idxLow1) {
+        vLow = vLow0;
+    } else {
+        std::nth_element(tmp.begin() + idxLow0, tmp.begin() + idxLow1, tmp.end());
+        float vLow1 = tmp[idxLow1];
+        float t = posLow - idxLow0;
+        vLow = vLow0 * (1.0f - t) + vLow1 * t;
+    }
+
+    // 再处理 high
+    std::nth_element(tmp.begin(), tmp.begin() + idxHigh0, tmp.end());
+    float vHigh0 = tmp[idxHigh0];
+
+    float vHigh;
+    if (idxHigh0 == idxHigh1) {
+        vHigh = vHigh0;
+    } else {
+        std::nth_element(tmp.begin() + idxHigh0, tmp.begin() + idxHigh1, tmp.end());
+        float vHigh1 = tmp[idxHigh1];
+        float t = posHigh - idxHigh0;
+        vHigh = vHigh0 * (1.0f - t) + vHigh1 * t;
+    }
+
+    outLow = vLow;
+    outHigh = vHigh;
+
+    return true;
 }
 float SeamConcavityExtractor::computeMedian(std::vector<float> values) const {
     if (values.empty()) return 0.0f;
@@ -837,16 +873,16 @@ float SeamConcavityExtractor::computeMedian(std::vector<float> values) const {
     return 0.5f * (values[n / 2 - 1] + values[n / 2]);
 }
 float SeamConcavityExtractor::pointToCurveMinDistance(const Eigen::Vector3f& point, const std::vector<Eigen::Vector3f>& curve) const {
-    float minDist = std::numeric_limits<float>::max();
+    float minDist2 = std::numeric_limits<float>::max();
 
     for (const auto& c : curve) {
-        float dist = (point - c).norm();
-        if (dist < minDist) {
-            minDist = dist;
+        float dist2 = (point - c).squaredNorm();
+        if (dist2 < minDist2) {
+            minDist2 = dist2;
         }
     }
 
-    return minDist;
+    return std::sqrt(minDist2);
 }
 Eigen::Vector3f SeamConcavityExtractor::toEigen(const pcl::PointXYZ& p) const { return Eigen::Vector3f(p.x, p.y, p.z); }
 

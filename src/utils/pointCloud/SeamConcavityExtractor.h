@@ -8,8 +8,8 @@ struct NeighborhoodData {
     float referenceRadius = 0.0f;           // 最终搜索半径 r
     std::vector<int> neighborIndices;       // 原始邻域索引
     std::vector<int> validNeighborIndices;  // 有效邻域索引
-    std::vector<float> rawDistances;        // 原始邻域距离
-    std::vector<float> validDistances;      // 有效邻域距离
+    std::vector<float> rawSqrDistances;     // 原始邻域距离
+    std::vector<float> validSqrDistances;   // 有效邻域距离
 };
 
 struct SphereProjectionData {
@@ -229,9 +229,9 @@ private:
     // ========================= 数学辅助函数 =========================
 
     /**
-     * @brief computeDistanceQuantile 计算距离分位数
+     * @brief computeTwoQuantiles 计算距离分位数
      */
-    float computeDistanceQuantile(std::vector<float> values, float q) const;
+    bool computeTwoQuantiles(const std::vector<float>& values, float qLow, float qHigh, float& outLow, float& outHigh) const;
 
     /**
      * @brief computeMedian 计算中位数
