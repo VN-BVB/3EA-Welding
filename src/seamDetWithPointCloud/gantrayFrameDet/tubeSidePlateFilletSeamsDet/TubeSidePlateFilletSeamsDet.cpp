@@ -45,6 +45,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
             detectSuccFlag = false;
             continue;
         }
+
         if (saveFlag) {
             cloudCylinderInWeldArea->height = 1;
             cloudCylinderInWeldArea->width = static_cast<uint32_t>(cloudCylinderInWeldArea->size());

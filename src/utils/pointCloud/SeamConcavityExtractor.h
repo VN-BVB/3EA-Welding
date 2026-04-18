@@ -47,8 +47,10 @@ struct ReconstructedCurveData {
 struct FeatureResult {
     pcl::PointXYZ queryPoint;
 
-    bool valid = false;             // 当前点特征是否成功计算
-    bool isConcavityPoint = false;  // 是否判定为凹凸焊缝点
+    bool valid = false;                     // 当前点特征是否成功计算
+    bool isConcavityPoint = false;          // 是否判定为凹凸焊缝点
+    bool isMeanDeviationCandidate = false;  // 是否通过第一阶段 meanDeviation 筛选
+    bool isFinalSeamPoint = false;          // 是否通过第二阶段 concavity 筛选
 
     float referenceRadius = 0.0f;    // 邻域参考半径 r
     float meanDeviation = 0.0f;      // 平均偏差 e
@@ -106,6 +108,20 @@ public:
      */
     const std::vector<FeatureResult>& getAllFeatureResults() const;
 
+    /**
+     * @brief setNeighborhoodClusterTolerance
+     *        设置邻域内欧式聚类半径
+     */
+    void setNeighborhoodClusterTolerance(float tol);
+
+    /**
+     * @brief setNeighborhoodMinValidPoints
+     *        设置有效邻域最少点数
+     */
+    void setNeighborhoodMinValidPoints(int n);
+    void setDotSignEpsilon(float eps);
+    void setAreadex(int areanum);
+
 public:
     // ========================= 参数设置接口 =========================
 
@@ -133,6 +149,11 @@ public:
      * @brief setDebug 是否打印调试信息
      */
     void setDebug(bool enable);
+    void setUseAutoThreshold(bool enable);
+    void setAutoThresholdMadScale(float s);
+
+    float getMeanDeviationAutoThreshold() const;
+    float getConcavityScoreAutoThreshold() const;
 
 private:
     // ========================= 总流程阶段函数 =========================
@@ -146,7 +167,8 @@ private:
      * @brief processSingleQueryPoint 处理单个查询点
      */
     bool processSingleQueryPoint(const pcl::PointXYZ& queryPoint, FeatureResult& result);
-
+    bool processSingleQueryPointMeanDeviationOnly(const pcl::PointXYZ& queryPoint, FeatureResult& result);
+    bool processSingleQueryPointConcavityOnly(FeatureResult& result);
     /**
      * @brief extractNeighborhood 提取邻域并确定参考半径
      */
@@ -157,6 +179,11 @@ private:
      */
     bool filterValidNeighborhoodByQuantile(NeighborhoodData& neighborhood);
 
+    /**
+     * @brief clusterValidNeighborhoodKeepMaxCluster
+     *        对分位数筛选后的有效邻域做欧式聚类，只保留最大聚类
+     */
+    bool clusterValidNeighborhoodKeepMaxCluster(NeighborhoodData& neighborhood);
     /**
      * @brief computeSphereProjection 计算球面投影、单位向量和权重
      */
@@ -225,6 +252,21 @@ private:
      * @brief toPcl 转 pcl::PointXYZ
      */
     pcl::PointXYZ toPcl(const Eigen::Vector3f& v) const;
+    // GMM聚类
+
+    float estimateMeanDeviationThreshold(const std::vector<FeatureResult>& results) const;
+    float estimateConcavityThreshold(const std::vector<FeatureResult>& results) const;
+
+    bool saveMeanDeviationCandidateCloud(const std::vector<FeatureResult>& results, const std::string& savePath);
+    bool saveFinalSeamPointCloud(const std::vector<FeatureResult>& results, const std::string& savePath);
+
+    /**
+     * @brief saveMeanDeviationHeatmap 画偏差图
+     */
+    bool saveMeanDeviationHeatmap(const std::vector<FeatureResult>& results, const std::string& savePath);
+    bool saveConcavityScoreHeatmap(const std::vector<FeatureResult>& results, const std::string& savePath);
+    bool saveFeatureCurvesImage(const std::vector<FeatureResult>& results, const std::string& savePath);
+    bool saveFeatureCurvesCsv(const std::vector<FeatureResult>& results, const std::string& savePath);
 
 private:
     // ========================= 输入输出 =========================
@@ -238,16 +280,34 @@ private:
     pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_;
 
 private:
-    // ========================= 参数 =========================
-    float neighborRadius_ = 3.0f;  // 固定邻域半径
-    float quantileGamma_ = 0.8f;   // 有效距离比例 γ
-    float weightAlpha_ = 1.0f;     // 权重衰减系数 alpha
-    int curveSampleCount_ = 72;    // 拟合圆采样数 Kp
+    // ========================= debug单个点 =========================
+    bool debugSaveSingleQueryProcess(const pcl::PointXYZ& targetPoint, const std::string& saveDir);
+    bool saveNeighborhoodClouds(const FeatureResult& result, const std::string& saveDir);
+    bool savePcaVisualizationClouds(const FeatureResult& result, const std::string& saveDir);
+    bool saveReconstructedCurveCloud(const FeatureResult& result, const std::string& saveDir);
+    bool saveDebugTextReport(const FeatureResult& result, const std::string& saveDir);
 
-    float meanDeviationThresh_ = 0.1f;   // 平均偏差阈值
-    float concavityScoreThresh_ = 1.1f;  // 凹凸度阈值（可后续再调）
+    pcl::PointXYZ findNearestQueryPoint(const pcl::PointXYZ& targetPoint, int& nearestIdx, float& nearestDist) const;
+
+private:
+    // ========================= 参数 =========================
+    float neighborRadius_ = 3.0f;                // 固定邻域半径
+    float quantileGamma_ = 1.0f;                 // 有效距离比例 γ
+    float weightAlpha_ = 1.0f;                   // 权重衰减系数 alpha
+    int curveSampleCount_ = 72;                  // 拟合圆采样数 Kp
+    float neighborhoodClusterTolerance_ = 0.0f;  // 可调，单位与点云一致
+    int neighborhoodMinValidPoints_ = 5;
+    float meanDeviationThresh_ = 0.1f;   // 手动阈值
+    float concavityScoreThresh_ = 0.5f;  // 手动阈值
+
+    float meanDeviationAutoThresh_ = 0.0f;   // 自动估计结果
+    float concavityScoreAutoThresh_ = 0.0f;  // 自动估计结果
+    bool useAutoThreshold_ = 1;              // 是否启用自动阈值
+    float autoThreshMadScale_ = 1.0f;        // median + scale * 1.4826 * MAD
+    float dotSignEps_ = 1e-6f;
 
     bool debug_ = false;
+    int areadex = 0;
 };
 
 #endif  // SEAMCONCAVITYEXTRACTOR_H

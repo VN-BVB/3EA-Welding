@@ -70,7 +70,7 @@ private:
     QTcpServer *server = nullptr;      // 通信数据收发实例
     QList<QTcpSocket *> clientSocket;  // 客户端通信数据收发实例
     QByteArray buffer;                 // 接收到的数据实例
-    QString cirTime = "300";           // 发送信息延时
+    QString cirTime = "10";            // 发送信息延时
 
     bool listenFlag = false;    // 当前是否正在侦听标志位
     bool running = false;       // 机器人是否正在运动
