@@ -438,29 +438,26 @@ void socketRecv_Task(void) {  // 套接字接收
                                         swingPrevTarget[1] -= 0.1 * 1000;
                                         break;
                                     }
-                                    SetBVar(15, 1); //摆焊标志位
-                                }
+                                    if (targetNum % 2 == 0){
+                                        SetBVar(17, 1); // 1，3，5...的摆焊标志位
+                                    }else{
+                                        SetBVar(18, 1); // 2，4，6...的摆焊标志位
+                                    }  
 
-                                // 存储摆焊类型
-                                if (targetNum % 2 == 0){
-                                    SetIVar(3, (int)fbuff); // 1，3，5...的摆焊类型存进I003
-                                }
-                                else{
-                                    SetIVar(4, (int)fbuff); // 2，4，6...的摆焊类型存进I004
                                 }
                                 buffNum++;
                             } else if (buffNum < 10) {  // 如果到了10个, 说明当前数据是电流指令。
                                  if (targetNum % 2 == 0) {
-                                    SetIVar(5, (int)fbuff);  // 1，3，5...的起弧存进B011
+                                    SetIVar(5, (int)fbuff);  // 1，3，5...
                                 } else {
-                                    SetIVar(7, (int)fbuff);  // 2，4，6...的起弧存进B012
+                                    SetIVar(7, (int)fbuff);  // 2，4，6...
                                 }
                                 buffNum++;
                             } else if (buffNum < 11) {  // 如果到了11个, 说明当前数据是电压指令。
                                  if (targetNum % 2 == 0) {
-                                    SetIVar(6, (int)fbuff);  // 1，3，5...的起弧存进B011
+                                    SetIVar(6, (int)fbuff); 
                                 } else {
-                                    SetIVar(8, (int)fbuff);  // 2，4，6...的起弧存进B012
+                                    SetIVar(8, (int)fbuff); 
                                 }
                                 buffNum++;
                             }
@@ -524,7 +521,14 @@ void socketRecv_Task(void) {  // 套接字接收
                                     // curveBufGroup = 0;
 
                                     // 通知JBI执行曲线
-                                    SetBVar(20, 1);
+                                    if (targetNum % 2 == 0)
+                                    {
+                                        SetBVar(19, 1);; // 1，3，5...的曲线标志位
+                                    }
+                                    else
+                                    {
+                                        SetBVar(20, 1);; // 2，4，6...的曲线标志位
+                                    }
                                     handled = 1;
                                 }
                                 //存储摆焊接参考点
@@ -574,15 +578,22 @@ void socketRecv_Task(void) {  // 套接字接收
                                     {
                                         SetBVar(2, 0);
                                         break;
-                                    }                                    
-                                    if ((int)target[0] == 820*1000 &&
-                                        (int)target[1] == 0*1000 &&
-                                        (int)target[2] == 150*1000 &&
-                                        (int)target[3] == -180*10000 &&
-                                        (int)target[4] == 0*10000 &&
-                                        (int)target[5] == 0*10000)
+                                    }
+                                    if ((int)target[0] == 820 * 1000 &&
+                                        (int)target[1] == 0 * 1000 &&
+                                        (int)target[2] == 150 * 1000 &&
+                                        (int)target[3] == -180 * 10000 &&
+                                        (int)target[4] == 0 * 10000 &&
+                                        (int)target[5] == 0 * 10000)
                                     {
-                                        SetBVar(16, 1); //回原标志位
+                                        if (targetNum % 2 == 0)
+                                        {
+                                            SetBVar(15, 1);
+                                        }
+                                        else
+                                        {
+                                            SetBVar(16, 1);
+                                        }
                                     }
                                 }
                                 targetNum++;

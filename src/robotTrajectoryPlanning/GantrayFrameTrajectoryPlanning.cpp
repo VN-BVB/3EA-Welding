@@ -56,9 +56,11 @@ void GantrayFrameTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::sha
     this->compensateSeams(weldSeamInfo);
 
     // --------------------------- 生成焊接轨迹 ---------------------------
+    // 摆焊点基于后撤点进行计算，目前Demo先放到写入函数中了，后续改到这个函数中
 
     this->generateWeldPose(weldSeamInfo);
     this->debugWeldingCollisionCheck(weldSeamInfo);  // 碰撞检测
+    // this->computeSwingReferencePointsForSeam(weldSeamInfo);
 
     // --------------------------- 打印焊接轨迹 ---------------------------
     PLOGD << "================ 焊接轨迹（robotWeldPose） ================";
@@ -1306,6 +1308,11 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
             pts[1].y = p1_new.y();
             pts[1].z = p1_new.z();
         } else if (info->weldType == Tube_Plate_Fillet) {
+            if (info->weldEndPointsInRobot) {
+                for (auto& pt : *(info->weldEndPointsInRobot)) {
+                    pt.z += 80.0f;
+                }
+            }
         }
     }
 }
@@ -1475,114 +1482,138 @@ void GantrayFrameTrajectoryPlanning::planPlatePlateFilletSeamOrientation(std::ve
         return;
     }
 }
+void GantrayFrameTrajectoryPlanning::computeSwingReferencePointsForSeam(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
+    for (auto& info : weldSeamInfo) {
+        if (!info) continue;
+
+        info->swingReferencePoints.clear();
+
+        if (!info->detectSuccFlag) continue;
+        if (info->robotWeldPose.empty()) continue;
+
+        if (info->weldType == Plate_Plate_Fillet_V) {
+            robotPose startWeld = info->robotWeldPose[0];
+            applyWeldGunWithdraw(startWeld, settingPara.PlatePlateFilletVerticalWithdrawDistance);
+
+            std::vector<double> v;
+            if (computePlatePlateFilletVerticalSwingPoints(info, startWeld, v) && v.size() == 6) {
+                info->swingReferencePoints = v;
+            } else {
+                info->swingReferencePoints.clear();
+                PLOGE << "板板竖直角接摆焊点计算失败。";
+            }
+        } else if (info->weldType == Tube_Plate_Fillet) {
+            // 先留空，后续再补
+            info->swingReferencePoints.clear();
+        } else {
+            info->swingReferencePoints.clear();
+        }
+    }
+}
 bool GantrayFrameTrajectoryPlanning::computePlatePlateFilletVerticalSwingPoints(const std::shared_ptr<WeldSeamInfo>& info, const robotPose& refPose,
                                                                                 std::vector<double>& swingPoints) {
     swingPoints.clear();
-    if (info->weldType == Plate_Plate_Fillet_V) {
-        if (!info || !info->weldCoeff || info->weldCoeff->values.size() != 4) return false;
+    if (!info || !info->weldCoeff || info->weldCoeff->values.size() != 4) return false;
 
-        if (info->otherSurface.empty()) return false;
+    if (info->otherSurface.empty()) return false;
 
-        if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) return false;
+    if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) return false;
 
-        // ===== 1. 焊缝端点 → seamDir =====
-        Eigen::Vector3f P0(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
+    // ===== 1. 焊缝端点 → seamDir =====
+    Eigen::Vector3f P0(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
 
-        Eigen::Vector3f P1(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
+    Eigen::Vector3f P1(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
 
-        Eigen::Vector3f seamDir = (P0 - P1).normalized();
+    Eigen::Vector3f seamDir = (P0 - P1).normalized();
 
-        // ===== 2. 主平面法向 n1 =====
-        Eigen::Vector3f n1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
-        n1.normalize();
+    // ===== 2. 主平面法向 n1 =====
+    Eigen::Vector3f n1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
+    n1.normalize();
 
-        // ===== 3. 第二平面法向 n2 =====
-        Eigen::Vector3f n2(0, 0, 0);
-        for (auto& surf : info->otherSurface) {
-            if (!surf || surf->values.size() != 4) continue;
+    // ===== 3. 第二平面法向 n2 =====
+    Eigen::Vector3f n2(0, 0, 0);
+    for (auto& surf : info->otherSurface) {
+        if (!surf || surf->values.size() != 4) continue;
 
-            n2 = Eigen::Vector3f(surf->values[0], surf->values[1], surf->values[2]);
-            n2.normalize();
-            break;
-        }
-
-        if (n2.norm() < 1e-6) n2 = n1;
-
-        // ===== 4. 参考点（后撤后的点）=====
-        Eigen::Vector3f P_ref(refPose.x_, refPose.y_, refPose.z_);
-
-        // ================= 第一参考点 =================
-        // 主平面内 ⟂ seamDir
-        Eigen::Vector3f seamDir_proj = seamDir - seamDir.dot(n1) * n1;
-        if (seamDir_proj.norm() < 1e-6) return false;
-        seamDir_proj.normalize();
-
-        Eigen::Vector3f verticalDir = n1.cross(seamDir_proj);
-        if (verticalDir.norm() < 1e-6) return false;
-        verticalDir.normalize();
-
-        // 朝 n2
-        if (verticalDir.dot(n2) < 0) verticalDir = -verticalDir;
-
-        float L1 = 1.0f;
-        Eigen::Vector3f refPoint1 = P_ref + L1 * verticalDir;
-
-        // ================= 第二参考点 =================
-        Eigen::Vector3f seamDir_proj2 = seamDir - seamDir.dot(n2) * n2;
-        if (seamDir_proj2.norm() < 1e-6) return false;
-        seamDir_proj2.normalize();
-
-        Eigen::Vector3f horizontalDir = n2.cross(seamDir_proj2);
-        if (horizontalDir.norm() < 1e-6) return false;
-        horizontalDir.normalize();
-
-        // 朝 n1
-        if (horizontalDir.dot(n1) < 0) horizontalDir = -horizontalDir;
-
-        float L2 = 0.1f;
-        Eigen::Vector3f refPoint2 = P_ref - L2 * horizontalDir;
-
-        // ===== 5. 输出 =====
-        swingPoints.reserve(6);
-
-        swingPoints.push_back(refPoint1.x());
-        swingPoints.push_back(refPoint1.y());
-        swingPoints.push_back(refPoint1.z());
-
-        swingPoints.push_back(refPoint2.x());
-        swingPoints.push_back(refPoint2.y());
-        swingPoints.push_back(refPoint2.z());
-        PLOGD << "========== Swing Debug (Plate_Plate_Fillet_V) ==========";
-
-        // 原点（后撤点）
-        PLOGD << "P_ref: " << P_ref.x() << ", " << P_ref.y() << ", " << P_ref.z();
-
-        // seamDir
-        PLOGD << "seamDir: " << seamDir.x() << ", " << seamDir.y() << ", " << seamDir.z();
-
-        // 法向
-        PLOGD << "n1 (main plane): " << n1.x() << ", " << n1.y() << ", " << n1.z();
-
-        PLOGD << "n2 (other plane): " << n2.x() << ", " << n2.y() << ", " << n2.z();
-
-        // 第一方向（主平面摆动方向）
-        PLOGD << "verticalDir (ref1 dir): " << verticalDir.x() << ", " << verticalDir.y() << ", " << verticalDir.z();
-
-        // 第二方向（另一板摆动方向）
-        PLOGD << "horizontalDir (ref2 dir): " << horizontalDir.x() << ", " << horizontalDir.y() << ", " << horizontalDir.z();
-
-        // 第一参考点
-        PLOGD << "refPoint1: " << refPoint1.x() << ", " << refPoint1.y() << ", " << refPoint1.z();
-
-        // 第二参考点
-        PLOGD << "refPoint2: " << refPoint2.x() << ", " << refPoint2.y() << ", " << refPoint2.z();
-
-        PLOGD << "=======================================================";
-
-        return true;
-    } else {
-        return false;
+        n2 = Eigen::Vector3f(surf->values[0], surf->values[1], surf->values[2]);
+        n2.normalize();
+        break;
     }
+
+    if (n2.norm() < 1e-6) n2 = n1;
+
+    // ===== 4. 参考点（后撤后的点）=====
+    Eigen::Vector3f P_ref(refPose.x_, refPose.y_, refPose.z_);
+
+    // ================= 第一参考点 =================
+    // 主平面内 ⟂ seamDir
+    Eigen::Vector3f seamDir_proj = seamDir - seamDir.dot(n1) * n1;
+    if (seamDir_proj.norm() < 1e-6) return false;
+    seamDir_proj.normalize();
+
+    Eigen::Vector3f verticalDir = n1.cross(seamDir_proj);
+    if (verticalDir.norm() < 1e-6) return false;
+    verticalDir.normalize();
+
+    // 朝 n2
+    if (verticalDir.dot(n2) < 0) verticalDir = -verticalDir;
+
+    float L1 = 1.0f;
+    Eigen::Vector3f refPoint1 = P_ref + L1 * verticalDir;
+
+    // ================= 第二参考点 =================
+    Eigen::Vector3f seamDir_proj2 = seamDir - seamDir.dot(n2) * n2;
+    if (seamDir_proj2.norm() < 1e-6) return false;
+    seamDir_proj2.normalize();
+
+    Eigen::Vector3f horizontalDir = n2.cross(seamDir_proj2);
+    if (horizontalDir.norm() < 1e-6) return false;
+    horizontalDir.normalize();
+
+    // 朝 n1
+    if (horizontalDir.dot(n1) < 0) horizontalDir = -horizontalDir;
+
+    float L2 = 0.1f;
+    Eigen::Vector3f refPoint2 = P_ref - L2 * horizontalDir;
+
+    // ===== 5. 输出 =====
+    swingPoints.reserve(6);
+
+    swingPoints.push_back(refPoint1.x());
+    swingPoints.push_back(refPoint1.y());
+    swingPoints.push_back(refPoint1.z());
+
+    swingPoints.push_back(refPoint2.x());
+    swingPoints.push_back(refPoint2.y());
+    swingPoints.push_back(refPoint2.z());
+    PLOGD << "========== Swing Debug (Plate_Plate_Fillet_V) ==========";
+
+    // 原点（后撤点）
+    PLOGD << "P_ref: " << P_ref.x() << ", " << P_ref.y() << ", " << P_ref.z();
+
+    // seamDir
+    PLOGD << "seamDir: " << seamDir.x() << ", " << seamDir.y() << ", " << seamDir.z();
+
+    // 法向
+    PLOGD << "n1 (main plane): " << n1.x() << ", " << n1.y() << ", " << n1.z();
+
+    PLOGD << "n2 (other plane): " << n2.x() << ", " << n2.y() << ", " << n2.z();
+
+    // 第一方向（主平面摆动方向）
+    PLOGD << "verticalDir (ref1 dir): " << verticalDir.x() << ", " << verticalDir.y() << ", " << verticalDir.z();
+
+    // 第二方向（另一板摆动方向）
+    PLOGD << "horizontalDir (ref2 dir): " << horizontalDir.x() << ", " << horizontalDir.y() << ", " << horizontalDir.z();
+
+    // 第一参考点
+    PLOGD << "refPoint1: " << refPoint1.x() << ", " << refPoint1.y() << ", " << refPoint1.z();
+
+    // 第二参考点
+    PLOGD << "refPoint2: " << refPoint2.x() << ", " << refPoint2.y() << ", " << refPoint2.z();
+
+    PLOGD << "=======================================================";
+
+    return true;
 }
 void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     const float toolRadius = settingPara.toolRadius;

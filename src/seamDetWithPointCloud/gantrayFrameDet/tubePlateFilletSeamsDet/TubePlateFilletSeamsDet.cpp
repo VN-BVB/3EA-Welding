@@ -1222,7 +1222,7 @@ bool TubePlateFilletSeamsDet::refineTheoryPointsToActualPoints(const std::vector
                                                                const pcl::PointCloud<pcl::PointXYZ>::Ptr& refCloud,
                                                                const pcl::ModelCoefficients::Ptr& planeCoeffs, const Eigen::Vector3f& refDirInput,
                                                                std::vector<pcl::PointXYZ>& actualPts) {
-#define DEBUG_REFINE_BEFORE_PROJECTION
+    // #define DEBUG_REFINE_BEFORE_PROJECTION
     if (!refCloud || refCloud->empty()) {
         PLOGE << "refineTheoryPointsToActualPoints: refCloud 为空";
         return false;

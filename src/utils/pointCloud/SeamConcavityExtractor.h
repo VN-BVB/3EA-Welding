@@ -212,7 +212,8 @@ private:
     /**
      * @brief computeMeanDeviation 计算平均偏差 e
      */
-    bool computeMeanDeviation(const SphereProjectionData& sphereData, const ReconstructedCurveData& curveData, float& meanDeviation);
+    bool computeMeanDeviation(const SphereProjectionData& sphereData, const PcaProjectionData& pcaData, const ReconstructedCurveData& curveData,
+                              float& meanDeviation);
 
     /**
      * @brief computeConcavityScore 计算凹凸度分数

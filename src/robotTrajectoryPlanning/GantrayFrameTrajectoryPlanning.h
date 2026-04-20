@@ -33,6 +33,7 @@ private:
     void applyWeldGunWithdraw(robotPose &pose, double withdrawDistance);
     void compensateSeams(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
     void planPlatePlateFilletSeamOrientation(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
+    void computeSwingReferencePointsForSeam(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
     bool computePlatePlateFilletVerticalSwingPoints(const std::shared_ptr<WeldSeamInfo> &info, const robotPose &refPose,
                                                     std::vector<double> &swingPoints);  // 计算摆焊点
 
