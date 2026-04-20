@@ -38,8 +38,8 @@ protected:
         RIGHT_LEFT_VERTICAL_SWING_WELD = 5,   // 机器人右方左侧竖直焊缝摆焊
         RIGHT_RIGHT_VERTICAL_SWING_WELD = 6,  // 机器人右方右侧竖直焊缝摆焊
         GANTRAY_FRAME_LINE_SWING_WELD = 100,  // 龙门支架直线摆焊（龙门支架改为用上位机提供的参考点）
-        GANTRAY_FRAME_CURVE_SWING_WELD = 101  // 龙门支架曲线焊接
-
+        GANTRAY_FRAME_CURVE_WELD = 101,       // 龙门支架曲线焊接
+        GANTRAY_FRAME_CURVE_SWING_WELD = 102  // 龙门支架曲线摆焊
     };
     // 配置初始化方法（供派生类调用）
     void initConfig();

@@ -36,6 +36,7 @@ private:
     void computeSwingReferencePointsForSeam(std::vector<std::shared_ptr<WeldSeamInfo>> &weldSeamInfo);
     bool computePlatePlateFilletVerticalSwingPoints(const std::shared_ptr<WeldSeamInfo> &info, const robotPose &refPose,
                                                     std::vector<double> &swingPoints);  // 计算摆焊点
+    bool computeTubePlateFilletSwingPoints(const std::shared_ptr<WeldSeamInfo> &info, const robotPose &basePose, std::vector<double> &swingPoints);
 
 private:
     WORKPIECE_SIDE_OF_ROBOT workpieceSide = WORKPIECE_SIDE_OF_ROBOT::FRONT;  // 当前工件位于机器人基座的方向pi

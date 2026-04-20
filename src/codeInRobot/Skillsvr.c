@@ -43,7 +43,8 @@ enum SWING_WELD_ACTION {
     RIGHT_LEFT_VERTICAL_SWING_WELD = 5,   // 机器人右方左侧竖直焊缝摆焊
     RIGHT_RIGHT_VERTICAL_SWING_WELD = 6,  // 机器人右方右侧竖直焊缝摆焊
     GANTRAY_FRAME_LINE_SWING_WELD = 100,  // 龙门支架直线摆焊
-    GANTRAY_FRAME_CURVE_SWING_WELD = 101  // 龙门支架曲线焊接
+    GANTRAY_FRAME_CURVE_WELD = 101,       // 龙门支架曲线焊接
+    GANTRAY_FRAME_CURVE_SWING_WELD = 102  // 龙门支架曲线摆焊
 };
 
 // 等待来自程序的 skill 指令， 根据指令的内容（cmd）决定执行的处理的任务。
@@ -324,7 +325,7 @@ void hd_GetPosServer() {  // 获取机器人当前正交位姿以及关节角
 void socketRecv_Task(void) {  // 套接字接收
 
     while (1) {    //每次txt运行
-        int curveMode = 0;        // 是否进入曲线模式
+        int curveMode = 0;        // 是否进入曲线模式 1:曲线 2:摆焊 0:退出
         int curveBufIdx = 0;      // 当前曲线缓存索引
         int curveBufGroup = 0;    // 0:P021~30, 1:P031~40
         int bytesRecv;
@@ -396,7 +397,7 @@ void socketRecv_Task(void) {  // 套接字接收
                             } else if (buffNum < 9)  {  // 如果到了9个, 说明当前数据是摆焊指令, 就存到摆焊处
                                 CURR_SWING_METHOD = (int)fbuff;
 
-                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)&& (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){ //
+                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)&& (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_WELD) && (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){ //
                                     int j = 0;
                                     for (j = 0; j < COORD_NUM; j++)
                                     { // 摆焊参考点和上一点以上一次运动目标点为基准
@@ -405,6 +406,7 @@ void socketRecv_Task(void) {  // 套接字接收
                                     }
                                     // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册。
                                     // 说明：这个不是上一点，而是实际运动点，上一点为写入文件中的原起点；
+                                    // 这里是角钢的摆焊，因为原始地轨程序中的上位机并没有给出焊接参考点，所以在这里给；
                                     switch (CURR_SWING_METHOD)
                                     {
                                     case FRONT_LEFT_VERTICAL_SWING_WELD:
@@ -479,7 +481,7 @@ void socketRecv_Task(void) {  // 套接字接收
                             {
                                 int handled = 0;  // 是否已处理
                                 // 存储曲线点，targetNum不跟进；
-                                if (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD)
+                                if (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_WELD)
                                 {
                                     if (curveMode == 0)
                                     {
@@ -503,7 +505,7 @@ void socketRecv_Task(void) {  // 套接字接收
                                     {
                                         ask_flag = 0;
                                         return;
-                                    }
+                                    } 
                                     buffNum = 0;
                                     continue;
                                 }
@@ -532,7 +534,7 @@ void socketRecv_Task(void) {  // 套接字接收
                                     handled = 1;
                                 }
                                 //存储摆焊接参考点
-                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD) && (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){
+                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD) && (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_WELD)){
                                     if (targetNum % 2 == 0){
                                         valRet = setValP(swingRefTarget, 7); // 1，3，5...的摆焊参考点存进P007
                                         if (valRet < 0)

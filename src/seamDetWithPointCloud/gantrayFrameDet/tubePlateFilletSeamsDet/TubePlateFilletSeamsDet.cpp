@@ -4,7 +4,7 @@
 #include "settingPara/SettingPara.h"
 #include "utils/pointCloud/PointCloudFunc.h"
 #include "utils/pointCloud/SeamConcavityExtractor.h"
-// #define correctPointByRemovingPlane
+#define correctPointByRemovingPlane
 TubePlateFilletSeamsDet::TubePlateFilletSeamsDet(QObject* parent) : AbstractSeamDet{parent} {}
 
 std::vector<std::shared_ptr<WeldSeamInfo>> TubePlateFilletSeamsDet::solveSeamsEndPoints(std::vector<std::shared_ptr<WeldSeamInfo>> seamsInfo) {

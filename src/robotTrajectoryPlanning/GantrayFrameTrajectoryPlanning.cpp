@@ -56,11 +56,10 @@ void GantrayFrameTrajectoryPlanning::whenPlanningTrajectory(std::vector<std::sha
     this->compensateSeams(weldSeamInfo);
 
     // --------------------------- 生成焊接轨迹 ---------------------------
-    // 摆焊点基于后撤点进行计算，目前Demo先放到写入函数中了，后续改到这个函数中
 
     this->generateWeldPose(weldSeamInfo);
-    this->debugWeldingCollisionCheck(weldSeamInfo);  // 碰撞检测
-    // this->computeSwingReferencePointsForSeam(weldSeamInfo);
+    this->debugWeldingCollisionCheck(weldSeamInfo);          // 碰撞检测
+    this->computeSwingReferencePointsForSeam(weldSeamInfo);  // 摆焊参考点计算
 
     // --------------------------- 打印焊接轨迹 ---------------------------
     PLOGD << "================ 焊接轨迹（robotWeldPose） ================";
@@ -177,9 +176,9 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             const robotPose& endPose = info->robotWeldPose[1];
             // if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
             //     if (startPose.y_ >= 0) {
-            //         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
+            //         CURR_WELD_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
             //     } else if (startPose.y_ < 0) {
-            //         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_RIGHT_VERTICAL_SWING_WELD;
+            //         CURR_WELD_METHOD = SWING_WELD_ACTION::FRONT_RIGHT_VERTICAL_SWING_WELD;
             //     }
             // }
             // ================= 起点过渡=================
@@ -198,23 +197,21 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             robotPose endWeld = endPose;
             applyWeldGunWithdraw(endWeld, settingPara.PlatePlateFilletVerticalWithdrawDistance);
 
-            std::vector<double> v;
-            if (!computePlatePlateFilletVerticalSwingPoints(info, startWeld, v)) {
-                v.clear();
-            }
-            SWING_WELD_ACTION CURR_SWING_METHOD = GANTRAY_FRAME_LINE_SWING_WELD;
+            const auto& v = info->swingReferencePoints;
+
+            SWING_WELD_ACTION CURR_WELD_METHOD = GANTRAY_FRAME_LINE_SWING_WELD;
             if (v.size() != 6) {
-                CURR_SWING_METHOD = LINE_WELD;
+                CURR_WELD_METHOD = LINE_WELD;
             }
             // if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::FRONT) {
             //     if (startPose.y_ >= 0) {
-            //         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
+            //         CURR_WELD_METHOD = SWING_WELD_ACTION::FRONT_LEFT_VERTICAL_SWING_WELD;
             //     } else if (startPose.y_ < 0) {
-            //         CURR_SWING_METHOD = SWING_WELD_ACTION::FRONT_RIGHT_VERTICAL_SWING_WELD;
+            //         CURR_WELD_METHOD = SWING_WELD_ACTION::FRONT_RIGHT_VERTICAL_SWING_WELD;
             //     }
             // }
             writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP,
-                           CURR_SWING_METHOD, weldingCurrent, weldingVoltage, v[0], v[1], v[2], v[3], v[4], v[5]);
+                           CURR_WELD_METHOD, weldingCurrent, weldingVoltage, v[0], v[1], v[2], v[3], v[4], v[5]);
 
             // ================= 终点过渡=================
             robotPose endTransition = endPose;
@@ -271,6 +268,12 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
 
             writeWeldPoint(outfile, startWeld.x_, startWeld.y_, startWeld.z_, startWeld.a_, startWeld.b_, startWeld.c_, moveSpeed, ARC_START,
                            LINE_WELD, weldingCurrent, weldingVoltage);
+            const auto& v = info->swingReferencePoints;
+
+            SWING_WELD_ACTION CURR_WELD_METHOD = GANTRAY_FRAME_CURVE_SWING_WELD;
+            if (v.size() != 6) {
+                CURR_WELD_METHOD = GANTRAY_FRAME_CURVE_WELD;
+            }
 
             // ================= 3. 中间轨迹点 =================
             for (int i = 0; i < N - 1; i++) {
@@ -278,17 +281,16 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
                 float extra = info->weldCollisionResult[i].extraOffset;
 
                 applyWeldGunWithdraw(midPose, (settingPara.TubePlatFilletWithdrawDistance + extra));
-
                 writeWeldPoint(outfile, midPose.x_, midPose.y_, midPose.z_, midPose.a_, midPose.b_, midPose.c_, weldingSpeedDefault, ARC_START,
-                               GANTRAY_FRAME_CURVE_SWING_WELD, weldingCurrent, weldingVoltage);
+                               CURR_WELD_METHOD, weldingCurrent, weldingVoltage);
             }
             robotPose endWeld = info->robotWeldPose[N - 1];
             applyWeldGunWithdraw(endWeld, (settingPara.TubePlatFilletWithdrawDistance + info->weldCollisionResult[N - 1].extraOffset));
-            // 轨迹终点
+            // 轨迹终点--退出曲线运动标志点
             writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_START, LINE_WELD,
                            weldingCurrent, weldingVoltage);
             // ================= 4. 熄弧终点 =================
-            applyWeldGunWithdraw(endWeld, (settingPara.TubePlatFilletWithdrawDistance + info->weldCollisionResult[N - 1].extraOffset + 1.0));
+            applyWeldGunWithdraw(endWeld, (settingPara.TubePlatFilletWithdrawDistance + info->weldCollisionResult[N - 1].extraOffset));
 
             writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP, LINE_WELD,
                            weldingCurrent, weldingVoltage);
@@ -1095,7 +1097,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
 }
 // 对所有焊缝进行后撤
 void GantrayFrameTrajectoryPlanning::applyWeldGunWithdraw(robotPose& pose, double withdrawDistance) {
-    PLOGD << "withdrawDistance" << withdrawDistance;
+    // PLOGD << "withdrawDistance" << withdrawDistance;
     // 1. 计算方向
     Eigen::Vector3d dir = abcToDirection(pose.a_, pose.b_, pose.c_);
 
@@ -1308,9 +1310,10 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
             pts[1].y = p1_new.y();
             pts[1].z = p1_new.z();
         } else if (info->weldType == Tube_Plate_Fillet) {
+            // TODO 管板角接微调未写
             if (info->weldEndPointsInRobot) {
                 for (auto& pt : *(info->weldEndPointsInRobot)) {
-                    pt.z += 80.0f;
+                    pt.z += 0.0f;
                 }
             }
         }
@@ -1503,8 +1506,22 @@ void GantrayFrameTrajectoryPlanning::computeSwingReferencePointsForSeam(std::vec
                 PLOGE << "板板竖直角接摆焊点计算失败。";
             }
         } else if (info->weldType == Tube_Plate_Fillet) {
-            // 先留空，后续再补
-            info->swingReferencePoints.clear();
+            robotPose startWeld = info->robotWeldPose[0];
+
+            float extraOffset = 0.0f;
+            if (!info->weldCollisionResult.empty()) {
+                extraOffset = info->weldCollisionResult[0].extraOffset;
+            }
+
+            applyWeldGunWithdraw(startWeld, settingPara.TubePlatFilletWithdrawDistance + extraOffset);
+
+            std::vector<double> v;
+            if (computeTubePlateFilletSwingPoints(info, startWeld, v) && v.size() == 6) {
+                info->swingReferencePoints = v;
+            } else {
+                info->swingReferencePoints.clear();
+                PLOGE << "管板角接摆焊点计算失败。";
+            }
         } else {
             info->swingReferencePoints.clear();
         }
@@ -1615,6 +1632,74 @@ bool GantrayFrameTrajectoryPlanning::computePlatePlateFilletVerticalSwingPoints(
 
     return true;
 }
+bool GantrayFrameTrajectoryPlanning::computeTubePlateFilletSwingPoints(const std::shared_ptr<WeldSeamInfo>& info, const robotPose& basePose,
+                                                                       std::vector<double>& swingPoints) {
+    swingPoints.clear();
+
+    if (!info) {
+        PLOGE << "computeTubePlateFilletSwingPoints: info 为空";
+        return false;
+    }
+
+    if (!info->weldCoeff || info->weldCoeff->values.size() < 7) {
+        PLOGE << "computeTubePlateFilletSwingPoints: 圆柱参数无效";
+        return false;
+    }
+
+    // ================= 圆柱参数 =================
+    const auto& coeff = info->weldCoeff->values;
+
+    Eigen::Vector3f cylCenter(coeff[0], coeff[1], coeff[2]);
+    Eigen::Vector3f cylAxis(coeff[3], coeff[4], coeff[5]);
+    float cylRadius = coeff[6];
+
+    if (cylAxis.norm() < 1e-6f) {
+        PLOGE << "computeTubePlateFilletSwingPoints: 圆柱轴方向长度过小";
+        return false;
+    }
+    cylAxis.normalize();
+
+    // ================= 基准点（已后撤点） =================
+    Eigen::Vector3f P(basePose.x_, basePose.y_, basePose.z_);
+
+    // ================= 计算径向方向 =================
+    // 先求 P 在圆柱轴上的投影点
+    float t = (P - cylCenter).dot(cylAxis);
+    Eigen::Vector3f projOnAxis = cylCenter + t * cylAxis;
+
+    Eigen::Vector3f radial = P - projOnAxis;
+    float radialNorm = radial.norm();
+
+    if (radialNorm < 1e-6f) {
+        PLOGE << "computeTubePlateFilletSwingPoints: 基准点落在圆柱轴上，无法计算径向方向";
+        return false;
+    }
+    radial /= radialNorm;
+
+    // ================= 两个参考点 =================
+    // 参考点1：沿圆柱径向延伸 1mm
+    Eigen::Vector3f ref1 = P + 20.0f * radial;
+
+    // 参考点2：沿圆柱轴延伸 1mm
+    Eigen::Vector3f ref2 = P + 20.0f * cylAxis;
+
+    swingPoints.resize(6);
+    swingPoints[0] = ref1.x();
+    swingPoints[1] = ref1.y();
+    swingPoints[2] = ref1.z();
+    swingPoints[3] = ref2.x();
+    swingPoints[4] = ref2.y();
+    swingPoints[5] = ref2.z();
+
+    // 第一参考点
+    PLOGD << "refPoint1: " << ref1.x() << ", " << ref1.y() << ", " << ref1.z();
+
+    // 第二参考点
+    PLOGD << "refPoint2: " << ref2.x() << ", " << ref2.y() << ", " << ref2.z();
+
+    return true;
+}
+
 void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     const float toolRadius = settingPara.toolRadius;
     const float maxExtraOffset = 300.0f;
@@ -1662,7 +1747,8 @@ void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std:
 
                 Zlist[i] = T.block<3, 1>(0, 2);
             }
-#pragma omp parallel for schedule(dynamic)
+
+            // #pragma omp parallel for schedule(dynamic)  //测试后单线程较快
             for (int i = 0; i < N; ++i) {
                 Eigen::Vector3f P(info->weldEndPointsInRobot->at(i).x, info->weldEndPointsInRobot->at(i).y, info->weldEndPointsInRobot->at(i).z);
 
@@ -1687,7 +1773,7 @@ void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std:
             }
 
             // ================= 串行打印 =================
-            if (/*settingPara.bool_save_model*/ 1) {
+            if (settingPara.bool_save_model) {
                 for (int i = 0; i < N; ++i) {
                     auto& col = info->weldCollisionResult[i];
 

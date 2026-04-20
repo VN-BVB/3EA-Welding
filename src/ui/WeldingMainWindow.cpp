@@ -167,6 +167,7 @@ void WeldingMainWindow::whenGetSeamInfo(std::vector<std::shared_ptr<WeldSeamInfo
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr visualCloud(new pcl::PointCloud<pcl::PointXYZ>);  // 用于显示的点云
     std::set<int> seamAreaPointCloudNum;
+   
     for (auto& info : weldAreaInfo) {
         if (info->detectSuccFlag == true && info->weldAreaPointCloudInRobot && !info->weldAreaPointCloudInRobot->empty()) {
             if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
