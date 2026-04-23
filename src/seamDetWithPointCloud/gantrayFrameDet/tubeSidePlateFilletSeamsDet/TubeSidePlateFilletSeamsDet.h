@@ -39,7 +39,7 @@ private:
     double Ransac_cylinder_Dth = 1.5;        // ransac拟合平面的距离阈值
     double resolution = 1.0;                 // 腐蚀膨胀中二维栅格大小
     int Statistic_NeighPoints = 20;          // 统计滤波近邻点数
-    double Statistic_sigma = 3.0;            // 统计滤波系数
+    float Statistic_sigma = 3.0;             // 统计滤波系数
     double extendCylinderInPlaneArea = 3.0;  // 选取焊缝区域衍生 R+extendCylinderInPlaneArea
 
     std::vector<pcl::PointXYZ> filletSeamsTSP;               // 焊缝的端点

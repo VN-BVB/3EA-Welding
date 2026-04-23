@@ -102,7 +102,8 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubePlateFilletSeamsDet::solveSeamsEn
         {
             // ScopedTimer t("statisticFilter");
             // 统计滤波
-            statisticFilter(axisRangeCloud);
+            MyToolFunc::statisticFilter(axisRangeCloud, axisRangeCloud, Statistic_NeighPoints, Statistic_sigma);
+
             if (saveFlag) {
                 axisRangeCloud->height = 1;
                 axisRangeCloud->width = static_cast<uint32_t>(axisRangeCloud->size());
@@ -171,13 +172,7 @@ void TubePlateFilletSeamsDet::singleSeamReinitialize() {
     // saveFlag = true;
     detectSuccFlag = false;
 }
-void TubePlateFilletSeamsDet::statisticFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud) {
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    sor.setInputCloud(input_cloud);       // 设置待滤波的点云
-    sor.setMeanK(Statistic_NeighPoints);  // 设置在进行统计时考虑查询点邻近点数
-    sor.setStddevMulThresh(Statistic_sigma);  // 设置判断是否为离群点的阈值，里边的数字表示标准差的倍数，1个标准差以上就是离群点。
-    sor.filter(*input_cloud);  // 存储内点
-}
+
 void TubePlateFilletSeamsDet::ransacCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cylinder,
                                              pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_non_cylinder) {
     if (!input_cloud || input_cloud->empty() || !cloud_cylinder || !cloud_non_cylinder) {
@@ -876,6 +871,7 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
 
         // 默认沿平面法向方向找
         Eigen::Vector3f refDir = n;
+        // Eigen::Vector3f refDir = axis;
         bool ok = false;
 
         {

@@ -686,7 +686,7 @@ void PointCloudReconstruction::pointCloudPostProcess(pcl::PointCloud<pcl::PointX
         // 对点云模型进行滤波
         MyToolFunc::passthroughFilter(pointCloud, pointCloud, SettingPara::getInstance().passthrough_Min,
                                       SettingPara::getInstance().passthrough_Max);  // 直通滤波
-        MyToolFunc::statisticalFilter(pointCloud, pointCloud, SettingPara::getInstance().statistical_Pts,
+        MyToolFunc::customStatisticalFilter(pointCloud, pointCloud, SettingPara::getInstance().statistical_Pts,
                                       SettingPara::getInstance().statistical_Std);  // 统计滤波
         // 解决由于滤波后无序点云尺寸发生变化，height和width未被自动赋值导致的程序崩溃问题；
         pointCloud->height = 1;

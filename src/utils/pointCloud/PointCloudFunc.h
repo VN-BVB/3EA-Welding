@@ -88,7 +88,10 @@ void projPoint2Plane(const pcl::PointXYZ& point, const pcl::ModelCoefficients& c
 // 直通滤波
 void passthroughFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, double min, double max);
 // 统计滤波
-void statisticalFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, int nr_k, float std_mul);
+void statisticFilter(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& output_cloud, int nr_k,
+                     float std_mul);
+void customStatisticalFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, int nr_k,
+                             float std_mul);
 // 计算向量的标准差, v为输入向量, avg为均值
 float calcSigma(std::vector<float>& v, float& avg);
 // 计算高斯聚类最大点集

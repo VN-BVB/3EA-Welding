@@ -17,10 +17,37 @@ void MyToolFunc::passthroughFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, p
     extract.setNegative(false);
     extract.filter(*cloud_filtered);
 }
+void MyToolFunc::statisticFilter(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& output_cloud, int nr_k,
+                                 float std_mul) {
+    // ===== 基本检查 =====
+    if (!input_cloud || input_cloud->empty()) {
+        PLOGW << "statisticFilter: 输入点云为空";
+        if (output_cloud) output_cloud->clear();
+        return;
+    }
 
+    // ===== 输出指针检查 =====
+    if (!output_cloud) {
+        output_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    }
+
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    sor.setInputCloud(input_cloud);
+    sor.setMeanK(nr_k);
+    sor.setStddevMulThresh(std_mul);
+
+    // ===== 关键点：避免 input == output 崩溃 =====
+    if (input_cloud == output_cloud) {
+        pcl::PointCloud<pcl::PointXYZ> tmp;
+        sor.filter(tmp);
+        *output_cloud = tmp;
+    } else {
+        sor.filter(*output_cloud);
+    }
+}
 // 统计滤波
-void MyToolFunc::statisticalFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, int nr_k,
-                                   float std_mul) {
+void MyToolFunc::customStatisticalFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_filtered, int nr_k,
+                                         float std_mul) {
     pcl::KdTreeFLANN<pcl::PointXYZ> tree;
     tree.setInputCloud(cloud);
 

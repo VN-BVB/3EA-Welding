@@ -58,7 +58,8 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeSidePlateFilletSeamsDet::solveSea
             pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeSidePlateFilletSeamsDet/cloudPlaneInWeldArea2.pcd", *cloudPlaneInWeldAreaWithSeam);
         }
         // 统计滤波
-        statisticFilter(cloudPlaneInWeldAreaWithSeam);
+        MyToolFunc::statisticFilter(cloudPlaneInWeldAreaWithSeam, cloudPlaneInWeldAreaWithSeam, Statistic_NeighPoints, Statistic_sigma);
+
         if (saveFlag) {
             cloudPlaneInWeldAreaWithSeam->height = 1;
             cloudPlaneInWeldAreaWithSeam->width = static_cast<uint32_t>(cloudPlaneInWeldAreaWithSeam->size());
@@ -101,13 +102,6 @@ void TubeSidePlateFilletSeamsDet::singleSeamReinitialize() {
     saveFlag = SettingPara::getInstance().bool_save_model;
     // saveFlag = true;
     detectSuccFlag = false;
-}
-void TubeSidePlateFilletSeamsDet::statisticFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud) {
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    sor.setInputCloud(input_cloud);       // 设置待滤波的点云
-    sor.setMeanK(Statistic_NeighPoints);  // 设置在进行统计时考虑查询点邻近点数
-    sor.setStddevMulThresh(Statistic_sigma);  // 设置判断是否为离群点的阈值，里边的数字表示标准差的倍数，1个标准差以上就是离群点。
-    sor.filter(*input_cloud);  // 存储内点
 }
 // Ransac拟合平面，并输出平面的内点集合
 void TubeSidePlateFilletSeamsDet::ransacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud_plane,

@@ -6,6 +6,27 @@
 #include "seamDetWithPointCloud/AbstractSeamDet.h"
 #include "utils/common/WeldSeamInfo.h"
 struct FeatureResult;
+struct PtTheta {
+    pcl::PointXYZ pt;
+    float theta = 0.0f;
+};
+
+struct CylinderModelCache {
+    Eigen::Vector3f center = Eigen::Vector3f::Zero();
+    Eigen::Vector3f axis = Eigen::Vector3f::Zero();
+    float radius = 0.0f;
+    // 以该圆柱轴为 z 方向构造的局部正交基
+    Eigen::Vector3f u = Eigen::Vector3f::Zero();
+    Eigen::Vector3f v = Eigen::Vector3f::Zero();
+};
+
+struct TubeTubeSeamContext {
+    CylinderModelCache primary;
+    CylinderModelCache secondary;
+
+    float axisDot = 0.0f;
+    bool axesNearlyParallel = false;
+};
 class TubeTubeFilletSeamsDet : public AbstractSeamDet {
 public:
     explicit TubeTubeFilletSeamsDet(QObject* parent = nullptr);
@@ -18,15 +39,14 @@ public:
 
 private:
     void singleSeamReinitialize();
-    void statisticFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
-    void ransacCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cylinder,
-                        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_non_cylinder);
-    void ransacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::ModelCoefficients::Ptr planeCoeff);
-
+    void ransacCylinder();
     void extractSeamPointsFromCylinderPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
                                             pcl::ModelCoefficients::Ptr plane_coeff, double thresh_plane);
     void removePlanePoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+    bool buildCylinderCache(const pcl::ModelCoefficients::Ptr& coeffs, CylinderModelCache& cache);
     bool solveSeamEndPoints();
+    bool solveTheorySeamEndPoints(std::vector<pcl::PointXYZ>& filletSeamsTheoryTP);
+    bool solveActualSeamPoints(const std::vector<pcl::PointXYZ>& filletSeamsTheoryTP, std::vector<pcl::PointXYZ>& filletSeamsActualTP);
     bool moveAlongOrdered(const std::vector<PtTheta>& ordered, float offset, bool from_start, PtTheta& result, int& cut_idx);
     bool extractLocalVoxelRegionAroundSeamSamples(const pcl::PointCloud<pcl::PointXYZ>::Ptr& srcCloud, const std::vector<pcl::PointXYZ>& seamSamples,
                                                   pcl::PointCloud<pcl::PointXYZI>::Ptr& outCloud);
@@ -40,11 +60,12 @@ private:
     bool detectSuccFlag = false;
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloudInWeldArea;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudCylinderInWeldAreaWithSeam;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudNoCylinderInWeldArea;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPlaneInWeldArea;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cylinderCloudPrimary;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cylinderCloudSecondary;
     pcl::PointCloud<pcl::PointXYZ>::Ptr seamEndPoints;
     pcl::PointCloud<pcl::PointXYZ>::Ptr axisRangeCloud;
+
+    TubeTubeSeamContext seamCtx_;
 
     int areaNum = -1;
     double Max_cluster_radius = 8;           // 欧式聚类提取最大点集半径
@@ -54,7 +75,7 @@ private:
     double Ransac_cylinder_Dth = 1.5;        // ransac拟合圆柱面的距离阈值
 
     int Statistic_NeighPoints = 20;           // 统计滤波近邻点数
-    double Statistic_sigma = 6.0;             // 统计滤波系数
+    float Statistic_sigma = 6.0;              // 统计滤波系数
     double extendCylinderInPlaneArea = 15.0;  // 选取焊缝区域衍生
     float t_step = 1.0f;                      // 轴向分辨率（mm）
     float theta_step = 2.0f * M_PI / 180.0f;  // n°一格
@@ -65,10 +86,9 @@ private:
     const float maxTangentialDist = 5.0f;  // 到“过理论点 T、方向 n 的直线”的最大横向距离
     const float maxEuclidDist = 6.0f;      // 兜底欧式距离阈值
 
-    std::vector<pcl::PointXYZ> filletSeamsTP;                // 焊缝的端点
-    pcl::ModelCoefficients::Ptr cylinderCoeffsWithWeldSeam;  // 焊缝所在母材系数
-    pcl::ModelCoefficients::Ptr planeCoeffsInWeldArea;       // 焊接区域中母材平面系数
-    pcl::ModelCoefficients::Ptr lineCoeffsWithWeldSeam2Val;  // 焊缝所在直线系数 (用于验证)
+    std::vector<pcl::PointXYZ> filletSeamsTP;             // 焊缝的端点
+    pcl::ModelCoefficients::Ptr cylinderCoeffsPrimary;    // 焊缝区域圆柱第一母材系数
+    pcl::ModelCoefficients::Ptr cylinderCoeffsSecondary;  // 焊接区域圆柱第二母材系数
 };
 
 #endif  // TUBETUBEFILLETSEAMSDET_H

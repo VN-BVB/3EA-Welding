@@ -14,7 +14,6 @@ public:
 
 private:
     void singleSeamReinitialize();
-    void statisticFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
     float computePlaneArea(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::ModelCoefficients::Ptr coeff);
     void ransacMultiPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
                           pcl::ModelCoefficients::Ptr& mainPlaneCoeffs, pcl::ModelCoefficients::Ptr& otherPlaneCoeffs);
@@ -40,7 +39,7 @@ private:
 
     double resolution = 1.0;                  // 二维栅格大小
     int Statistic_NeighPoints = 20;           // 统计滤波近邻点数
-    double Statistic_sigma = 3.0;             // 统计滤波系数
+    float Statistic_sigma = 3.0;              // 统计滤波系数
     double extendCylinderInPlaneArea = 10.0;  // 选取焊缝区域衍生
     float max_dist = 5.0f;                    // 拟合端点衍生
 
