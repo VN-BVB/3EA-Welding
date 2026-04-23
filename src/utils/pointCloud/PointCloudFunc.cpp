@@ -486,7 +486,7 @@ std::vector<pcl::PointXYZ> MyToolFunc::lineCloudEndPoints(pcl::PointCloud<pcl::P
     return lineEndpoints;
 }
 
-// 在球体邻域内保留一个点，避免密度不均
+// 在球体邻域内保留一个点，避免密度不均；均匀下采样点云
 void MyToolFunc::pointcloudUniformDownsampling(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float leafSize,
                                                pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudResult) {
     if (!cloud || cloud->points.empty()) {
@@ -500,6 +500,15 @@ void MyToolFunc::pointcloudUniformDownsampling(const pcl::PointCloud<pcl::PointX
     if (cloudResult->points.empty()) {
         PLOGE << "下采样后点云为空";
     }
+}
+
+// 体素下采样点云
+void MyToolFunc::pointcloudVoxelDownsampling(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float leafSize,
+                                             pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudResult) {
+    pcl::VoxelGrid<pcl::PointXYZ> voxel;
+    voxel.setInputCloud(cloud);
+    voxel.setLeafSize(leafSize, leafSize, leafSize);
+    voxel.filter(*cloudResult);
 }
 // 点云投影至指定平面
 void MyToolFunc::projectCloudToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,

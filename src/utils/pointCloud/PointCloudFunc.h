@@ -96,9 +96,11 @@ void myFastMaxCluster(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double cluster_
 // 计算高曲率点
 void highCurvaturePointsDetect(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_detect, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double K_Radius,
                                double sm_ratio, pcl::PointCloud<pcl::PointXYZ>::Ptr high_curvature_scatter_points);
-
+// 均匀下采样点云
 void pointcloudUniformDownsampling(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float leafSize,
                                    pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudResult);
+// 体素下采样点云
+void pointcloudVoxelDownsampling(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float leafSize, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudResult);
 void projectCloudToPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
                          pcl::ModelCoefficients::Ptr planeCoeffs);
 void projectCloudToCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,

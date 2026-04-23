@@ -229,7 +229,7 @@ void SteelAngleTrajectoryPlanning::write2File(const std::vector<std::shared_ptr<
                 backBeamIndex = i;
             } else if (weldSeamInfo[i]->weldType == WELD_TYPE::FRONT_BEAM_BUTT) {  // 正面横梁对接
                 frontBeamIndex = i;
-                // TODO 临时误差补偿?
+                // TODO 临时误差补偿
                 if (weldSeamInfo[i]->detectSuccFlag && weldSeamInfo[i]->weldEndPointsInRobot && weldSeamInfo[i]->weldEndPointsInRobot->size() == 2) {
                     if (workpieceSide == WORKPIECE_SIDE_OF_ROBOT::LEFT) {
                         weldSeamInfo[i]->weldEndPointsInRobot->at(0).x += 6;

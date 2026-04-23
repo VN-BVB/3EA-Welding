@@ -1,5 +1,6 @@
 SOURCES += \
     $$PWD/common/CommonFunc.cpp \
+    $$PWD/common/DataClustering.cpp \
     $$PWD/common/ThreadPool.cpp \
     $$PWD/imageWidget/openGLImageWidget.cpp \
     $$PWD/myMatrixVector/MyMatrixVector.cpp \
@@ -11,6 +12,7 @@ SOURCES += \
 
 HEADERS += \
     $$PWD/common/CommonFunc.h \
+    $$PWD/common/DataClustering.h \
     $$PWD/common/ThreadPool.h \
     $$PWD/imageWidget/openGLImageWidget.h \
     $$PWD/myMatrixVector/MyMatrixVector.h \

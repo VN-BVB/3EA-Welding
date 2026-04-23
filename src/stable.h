@@ -203,10 +203,12 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+//
 #include "NvInfer.h"
 #include "NvInferPlugin.h"
 #include "modbus-tcp.h"

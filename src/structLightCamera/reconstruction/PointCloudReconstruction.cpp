@@ -309,6 +309,18 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
     weldsSegmentation->inference(afterDistortCorrect, *(segRes.get()));  // 深度学习推理
     if (segRes->empty()) {
         PLOGW << "分割结果为空";
+        // // ===== 手动构造一个 SegResult =====
+        // SegResult fakeSeg;
+        // fakeSeg.classId = 4;  // 给个默认类别（按你实际类别定义）
+        // fakeSeg.score = 1.0f;
+
+        // // 你给的框
+        // fakeSeg.topLeftX = 600;
+        // fakeSeg.topLeftY = 450;
+        // fakeSeg.bottomRightX = 1470;
+        // fakeSeg.bottomRightY = 620;
+
+        // segRes->push_back(fakeSeg);
         return;
     }
     overlayImg = (*segRes)[0].segRes;
@@ -691,6 +703,7 @@ void PointCloudReconstruction::reconstructForWorkbench() {
     std::vector<cv::Point2d> cameraCoordinate;  // 相机匹配点(u,v)
     std::vector<double> projectCoordinate;      // 投影仪匹配点横坐标u
     pcl::PointCloud<pcl::PointXYZ>::Ptr reconstructPointCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr planeFitCloud(new pcl::PointCloud<pcl::PointXYZ>);
     auto t1 = std::chrono::steady_clock::now();
     PLOGD << "step0 init time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms";
 
@@ -708,9 +721,14 @@ void PointCloudReconstruction::reconstructForWorkbench() {
     pointCloudPostProcess(reconstructPointCloud);
     auto t4 = std::chrono::steady_clock::now();
     PLOGD << "step3 pointCloudPostProcess time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count() << " ms";
+    MyToolFunc::pointcloudVoxelDownsampling(reconstructPointCloud, 1.0f, planeFitCloud);
+    if (!planeFitCloud || planeFitCloud->empty()) {
+        PLOGE << "planeFitCloud 为空，降采样失败，退回原始点云拟合";
+        pcl::copyPointCloud(*reconstructPointCloud, *planeFitCloud);
+    }
 
     // 4. 拟合工作台平面
-    pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr modelPlane(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(reconstructPointCloud));
+    pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr modelPlane(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(planeFitCloud));
     pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(modelPlane);  // 定义RANSAC算法模型
     ransac.setDistanceThreshold(ransacPlaneThreshold);             // 设定距离阈值
     ransac.setMaxIterations(500);                                  // 设置最大迭代次数
@@ -724,13 +742,13 @@ void PointCloudReconstruction::reconstructForWorkbench() {
 
     // 5. 保存点云到本地(若需)
     PLOGD << "bool_save_model: " << SettingPara::getInstance().bool_save_model;
-    reconstructPointCloud->width = reconstructPointCloud->points.size();
-    reconstructPointCloud->height = 1;
+    planeFitCloud->width = planeFitCloud->points.size();
+    planeFitCloud->height = 1;
     if (SettingPara::getInstance().bool_save_model) {
-        pcl::io::savePCDFile("./data/common/pointCloud.pcd", *reconstructPointCloud);
+        pcl::io::savePCDFile("./data/common/pointCloud.pcd", *planeFitCloud);
     }
     // 背景平面赋值
-    pcl::copyPointCloud(*reconstructPointCloud, inliers, *workbenchPointCloud);
+    pcl::copyPointCloud(*planeFitCloud, inliers, *workbenchPointCloud);
     // 获取工件点云--改为保存获取用于看的去平面点云
     if (SettingPara::getInstance().bool_save_model) {
         double a = workbenchCoeff[0];

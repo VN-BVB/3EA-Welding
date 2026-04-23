@@ -4,6 +4,7 @@
 #include "seamDetWithPointCloud/gantrayFrameDet/platePlateFilletSeamsDet/PlatePlateFilletSeamsDet.h"
 #include "seamDetWithPointCloud/gantrayFrameDet/tubePlateFilletSeamsDet/TubePlateFilletSeamsDet.h"
 #include "seamDetWithPointCloud/gantrayFrameDet/tubeSidePlateFilletSeamsDet/TubeSidePlateFilletSeamsDet.h"
+#include "seamDetWithPointCloud/gantrayFrameDet/tubeTubeFilletSeamsDet/TubeTubeFilletSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/beamButtSeamsDet/BeamButtSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/cornerButtSeamsDet/CornerButtSeamsDet.h"
 #include "seamDetWithPointCloud/steelAngelDet/downBeamFilletSeamsDet/DownBeamFilletSeamsDet.h"
@@ -28,9 +29,7 @@ void SeamDetWithPointCloud::initGantrayFrameSeamsDet() {
     gantrayFrameSeamsDet[WELD_AREA_TYPE::Plate_Plate_F] = []() { return std::make_shared<PlatePlateFilletSeamsDet>(nullptr); };
     gantrayFrameSeamsDet[WELD_AREA_TYPE::TubeSide_Plate_F] = []() { return std::make_shared<TubeSidePlateFilletSeamsDet>(nullptr); };
     gantrayFrameSeamsDet[WELD_AREA_TYPE::Tube_Plate_F] = []() { return std::make_shared<TubePlateFilletSeamsDet>(nullptr); };
-    // gantrayFrameSeamsDet[WELD_AREA_TYPE::Tube_Tube_F] = []() {
-    //     return std::make_shared<TubeTubeFilletSeamsDet>(nullptr);
-    // };
+    gantrayFrameSeamsDet[WELD_AREA_TYPE::Tube_Tube_F] = []() { return std::make_shared<TubeTubeFilletSeamsDet>(nullptr); };
 }
 std::shared_ptr<AbstractSeamDet> SeamDetWithPointCloud::createSeamDet(WELD_AREA_TYPE type) {
     auto it = gantrayFrameSeamsDet.find(type);
@@ -54,9 +53,15 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloudGF(std::vector<std::shared_
             PLOGD << "板板角接焊缝";
         } else if (info->weldAreaType == WELD_AREA_TYPE::Tube_Plate_F) {
             PLOGD << "管板角接焊缝";
+        } else if (info->weldAreaType == WELD_AREA_TYPE::Tube_Tube_F) {
+            PLOGD << "管管角接焊缝";
         }
         WeldSeamsfutures.emplace_back(threadPool->addTask([this, info]() {
             auto det = createSeamDet(info->weldAreaType);
+            if (!det) {
+                PLOGE << "createSeamDet 返回空，type = " << static_cast<int>(info->weldAreaType);
+                return std::vector<std::shared_ptr<WeldSeamInfo>>{};
+            }
             std::vector<std::shared_ptr<WeldSeamInfo>> tmp{info};
             return det->solveSeamsEndPoints(tmp);
         }));

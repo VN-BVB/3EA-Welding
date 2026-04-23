@@ -281,8 +281,13 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
                 float extra = info->weldCollisionResult[i].extraOffset;
 
                 applyWeldGunWithdraw(midPose, (settingPara.TubePlatFilletWithdrawDistance + extra));
-                writeWeldPoint(outfile, midPose.x_, midPose.y_, midPose.z_, midPose.a_, midPose.b_, midPose.c_, weldingSpeedDefault, ARC_START,
-                               CURR_WELD_METHOD, weldingCurrent, weldingVoltage);
+                if (i == 0) {
+                    writeWeldPoint(outfile, midPose.x_, midPose.y_, midPose.z_, midPose.a_, midPose.b_, midPose.c_, weldingSpeedDefault, ARC_START,
+                                   CURR_WELD_METHOD, weldingCurrent, weldingVoltage, v[0], v[1], v[2], v[3], v[4], v[5]);
+                } else {
+                    writeWeldPoint(outfile, midPose.x_, midPose.y_, midPose.z_, midPose.a_, midPose.b_, midPose.c_, weldingSpeedDefault, ARC_START,
+                                   CURR_WELD_METHOD, weldingCurrent, weldingVoltage);
+                }
             }
             robotPose endWeld = info->robotWeldPose[N - 1];
             applyWeldGunWithdraw(endWeld, (settingPara.TubePlatFilletWithdrawDistance + info->weldCollisionResult[N - 1].extraOffset));
@@ -303,6 +308,8 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
                            moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
             if (info->areaNum != weldSeamInfo.size()) {
                 writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
+                writeWeldPoint(outfile, X0, Y0, Z0, A0, B0, C0, moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent,
+                               weldingVoltage);  // 此处为了让targetNum偏移一位，是在调试阶段让两段曲线分别存在两个缓冲区而加的，可以删除；
             }
         }
     }

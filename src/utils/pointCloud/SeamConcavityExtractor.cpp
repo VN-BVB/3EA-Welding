@@ -1,6 +1,7 @@
 ﻿#include "SeamConcavityExtractor.h"
 
 #include "utils/common/CommonFunc.h"
+#include "utils/common/DataClustering.h"
 
 namespace {
 const std::vector<Eigen::Vector2f>& getCachedStandardCircle2D(int sampleCount) {
@@ -846,7 +847,8 @@ bool SeamConcavityExtractor::computeMeanDeviation(const SphereProjectionData& sp
 
     double sum = 0.0;
     const int curveCount = static_cast<int>(curveData.reconstructedCurve3D.size());
-    const bool useLocalCurveSearch = curveCount == curveSampleCount_ && curveCount >= 8 && pcaData.v1.squaredNorm() > 1e-6f && pcaData.v2.squaredNorm() > 1e-6f;
+    const bool useLocalCurveSearch =
+        curveCount == curveSampleCount_ && curveCount >= 8 && pcaData.v1.squaredNorm() > 1e-6f && pcaData.v2.squaredNorm() > 1e-6f;
     const float invTwoPi = 1.0f / (2.0f * static_cast<float>(M_PI));
 
     for (size_t i = 0; i < sphereData.unitVectors.size(); ++i) {
@@ -1554,6 +1556,61 @@ bool SeamConcavityExtractor::judgeConcavityPoint(float meanDeviation, float conc
 
     return (meanDeviation >= meanDeviationThresh_) && (concavityScoreAbs >= concavityScoreThresh_);
 }
+// TODO 更改为调用模式 未进行测试
+// float SeamConcavityExtractor::estimateMeanDeviationThreshold(const std::vector<FeatureResult>& results) const {
+//     std::vector<double> vals;
+//     vals.reserve(results.size());
+
+//     for (const auto& r : results) {
+//         if (!r.valid) continue;
+//         if (!std::isfinite(r.meanDeviation)) continue;
+//         vals.push_back(static_cast<double>(r.meanDeviation));
+//     }
+
+//     if (vals.empty()) {
+//         return meanDeviationThresh_;
+//     }
+
+//     SeamClustering::MADOptions opt;
+//     opt.madScale = autoThreshMadScale_;  // 你原来就是 med + scale * robustSigma
+//     opt.scaleToNormalSigma = true;
+//     opt.fallback = SeamClustering::FallbackPolicy::None;
+
+//     SeamClustering::ThresholdResult tr = SeamClustering::computeMADThreshold(vals, opt);
+
+//     if (tr.status != SeamClustering::Status::Ok || !std::isfinite(tr.threshold) || tr.threshold <= 0.0) {
+//         return meanDeviationThresh_;
+//     }
+
+//     return static_cast<float>(tr.threshold);
+// }
+// float SeamConcavityExtractor::estimateConcavityThreshold(const std::vector<FeatureResult>& results) const {
+//     std::vector<double> vals;
+//     vals.reserve(results.size());
+
+//     for (const auto& r : results) {
+//         if (!r.valid) continue;
+//         if (!std::isfinite(r.absConcavityScore)) continue;
+//         vals.push_back(static_cast<double>(r.absConcavityScore));
+//     }
+
+//     if (vals.empty()) {
+//         return concavityScoreThresh_;
+//     }
+
+//     SeamClustering::MADOptions opt;
+//     opt.madScale = autoThreshMadScale_;
+//     opt.scaleToNormalSigma = true;
+//     opt.fallback = SeamClustering::FallbackPolicy::None;
+
+//     SeamClustering::ThresholdResult tr = SeamClustering::computeMADThreshold(vals, opt);
+
+//     if (tr.status != SeamClustering::Status::Ok || !std::isfinite(tr.threshold) || tr.threshold <= 0.0) {
+//         return concavityScoreThresh_;
+//     }
+
+//     return static_cast<float>(tr.threshold);
+// }
 float SeamConcavityExtractor::estimateMeanDeviationThreshold(const std::vector<FeatureResult>& results) const {
     std::vector<float> vals;
     vals.reserve(results.size());
@@ -1587,6 +1644,7 @@ float SeamConcavityExtractor::estimateMeanDeviationThreshold(const std::vector<F
 
     return thresh;
 }
+
 float SeamConcavityExtractor::estimateConcavityThreshold(const std::vector<FeatureResult>& results) const {
     std::vector<float> vals;
     vals.reserve(results.size());

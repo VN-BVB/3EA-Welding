@@ -325,9 +325,10 @@ void hd_GetPosServer() {  // 获取机器人当前正交位姿以及关节角
 void socketRecv_Task(void) {  // 套接字接收
 
     while (1) {    //每次txt运行
-        int curveMode = 0;        // 是否进入曲线模式 1:曲线 2:摆焊 0:退出
-        int curveBufIdx = 0;      // 当前曲线缓存索引
-        int curveBufGroup = 0;    // 0:P021~30, 1:P031~40
+        int curveMode = 0;              // 是否进入曲线模式 0:退出 1:曲线 2:摆焊
+        int curveBufIdx = 0;            // 当前曲线缓存索引
+        int curveBufGroup = 0;          // 0:P011~20, 1:P021~30
+        int curveSwingRefLoaded = 0;    // 曲线摆焊参考点是否已经写入
         int bytesRecv;
         int bytesSend;
         int valRet;
@@ -397,18 +398,19 @@ void socketRecv_Task(void) {  // 套接字接收
                             } else if (buffNum < 9)  {  // 如果到了9个, 说明当前数据是摆焊指令, 就存到摆焊处
                                 CURR_SWING_METHOD = (int)fbuff;
 
-                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD)&& (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_WELD) && (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){ //
+                                if ((targetNum != 0) &&
+                                    (CURR_SWING_METHOD != LINE_WELD) && 
+                                    (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_WELD) && 
+                                    (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){ //
                                     int j = 0;
-                                    for (j = 0; j < COORD_NUM; j++)
-                                    { // 摆焊参考点和上一点以上一次运动目标点为基准
+                                    for (j = 0; j < COORD_NUM; j++){ // 摆焊参考点和上一点以上一次运动目标点为基准
                                         swingRefTarget[j] = prevTarget[j];
                                         swingPrevTarget[j] = prevTarget[j];
                                     }
                                     // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册。
                                     // 说明：这个不是上一点，而是实际运动点，上一点为写入文件中的原起点；
                                     // 这里是角钢的摆焊，因为原始地轨程序中的上位机并没有给出焊接参考点，所以在这里给；
-                                    switch (CURR_SWING_METHOD)
-                                    {
+                                    switch (CURR_SWING_METHOD){
                                     case FRONT_LEFT_VERTICAL_SWING_WELD:
                                         swingRefTarget[1] -= 10 * 1000;
                                         swingPrevTarget[0] += 0.1 * 1000;
@@ -464,13 +466,17 @@ void socketRecv_Task(void) {  // 套接字接收
                                 buffNum++;
                             }
                             else if (buffNum < 14){ // p1
-                                if ((targetNum != 0) && (CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD)){ 
+                                if ((targetNum != 0) && 
+                                    (CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD || 
+                                            (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD && curveSwingRefLoaded == 0))){ 
                                     swingRefTarget[buffNum - 11] = fbuff; 
                                 }
                                 buffNum++;
                             }
                             else if (buffNum < 17){ // p2
-                                if ((targetNum != 0) && (CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD)){ 
+                                if ((targetNum != 0) && 
+                                    (CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD || 
+                                            (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD && curveSwingRefLoaded == 0))){ 
                                     swingPrevTarget[buffNum - 14] = fbuff; 
                                 }
                                 buffNum++;
@@ -481,21 +487,63 @@ void socketRecv_Task(void) {  // 套接字接收
                             {
                                 int handled = 0;  // 是否已处理
                                 // 存储曲线点，targetNum不跟进；
-                                if (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_WELD)
+                                if (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_WELD || 
+                                    CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD)
                                 {
                                     if (curveMode == 0)
                                     {
-                                        curveMode = 1;
+                                        curveMode = (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_WELD) ? 1 : 2;
                                         curveBufIdx = 0;
                                         curveBufGroup = targetNum % 2;
+                                        curveSwingRefLoaded = 0;
                                     }
-                                    int base = (curveBufGroup == 0) ? 21 : 31;
+                                    int base = (curveBufGroup == 0) ? 11 : 21;
                                     int index = base + curveBufIdx;
+                                    
                                     valRet = setValP(target, index);
                                     if (valRet < 0)
                                     {
                                         SetBVar(2, 0);
                                         break;
+                                    }
+                                    if (curveMode == 2 && curveSwingRefLoaded == 0)
+                                    {
+                                        if (curveBufGroup == 0)
+                                        {
+                                            valRet = setValP(swingRefTarget, 7);   // P007
+                                            if (valRet < 0)
+                                            {
+                                                SetBVar(2, 0);
+                                                break;
+                                            }
+
+                                            valRet = setValP(swingPrevTarget, 9);  // P009
+                                            if (valRet < 0)
+                                            {
+                                                SetBVar(2, 0);
+                                                break;
+                                            }
+                                            // SetIVar(3, GANTRAY_FRAME_CURVE_SWING_WELD);
+                                        }
+                                        else
+                                        {
+                                            valRet = setValP(swingRefTarget, 8);   // P008
+                                            if (valRet < 0)
+                                            {
+                                                SetBVar(2, 0);
+                                                break;
+                                            }
+
+                                            valRet = setValP(swingPrevTarget, 10); // P010
+                                            if (valRet < 0)
+                                            {
+                                                SetBVar(2, 0);
+                                                break;
+                                            }
+                                            // SetIVar(4, GANTRAY_FRAME_CURVE_SWING_WELD);
+                                        }
+
+                                        curveSwingRefLoaded = 1;
                                     }
                                     curveBufIdx++;
 
@@ -507,34 +555,37 @@ void socketRecv_Task(void) {  // 套接字接收
                                         return;
                                     } 
                                     buffNum = 0;
+                                    // memset(target, 0, sizeof(target)); // 清空target数组以接收下一个点的数据
                                     continue;
                                 }
                                 // ================= 曲线结束点 =================
-                                if ((targetNum != 0) && (curveMode == 1) && (CURR_SWING_METHOD == LINE_WELD))
+                                if ((targetNum != 0) && (curveMode != 0) && (CURR_SWING_METHOD == LINE_WELD))
                                 {
 
-                                    int base = (curveBufGroup == 0) ? 21 : 31;
+                                    int base = (curveBufGroup == 0) ? 11 : 21;
                                     int index = base + curveBufIdx;
 
-                                    setValP(target, index); // 最后一个点
-
+                                    valRet =setValP(target, index); // 最后一个点
+                                    if (valRet < 0)
+                                    {
+                                        SetBVar(2, 0);
+                                        break;
+                                    }
+                                    // 通知JBI执行曲线（以前的程序太多ifelse了，cpu流水线不满载，“SetBVar(num”这种在修改阶段容易查询位置）
+                                    SetBVar(19 + curveBufGroup, 1);
+                                    if (curveMode == 2) {
+                                        SetBVar(21 + curveBufGroup, 1);
+                                    }
                                     curveMode = 0;
                                     curveBufIdx = 0;
-                                    // curveBufGroup = 0;
-
-                                    // 通知JBI执行曲线
-                                    if (targetNum % 2 == 0)
-                                    {
-                                        SetBVar(19, 1);; // 1，3，5...的曲线标志位
-                                    }
-                                    else
-                                    {
-                                        SetBVar(20, 1);; // 2，4，6...的曲线标志位
-                                    }
+                                    curveSwingRefLoaded = 0;
                                     handled = 1;
                                 }
                                 //存储摆焊接参考点
-                                if ((targetNum != 0) && (CURR_SWING_METHOD != LINE_WELD) && (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_WELD)){
+                                if ((targetNum != 0) &&
+                                    (CURR_SWING_METHOD != LINE_WELD) &&
+                                    (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_WELD)&&
+                                    (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){
                                     if (targetNum % 2 == 0){
                                         valRet = setValP(swingRefTarget, 7); // 1，3，5...的摆焊参考点存进P007
                                         if (valRet < 0)
@@ -549,7 +600,7 @@ void socketRecv_Task(void) {  // 套接字接收
                                             break;
                                         }
 
-                                        SetIVar(3, (int)fbuff); // 1，3，5...的摆焊类型存进I003
+                                        // SetIVar(3, (int)fbuff); // 1，3，5...的摆焊类型存进I003
                                     }else{
                                         valRet = setValP(swingRefTarget, 8); // 2，4，6...的摆焊参考点存进P008
                                         if (valRet < 0)
@@ -563,7 +614,7 @@ void socketRecv_Task(void) {  // 套接字接收
                                             SetBVar(2, 0);
                                             break;
                                         }
-                                        SetIVar(4, (int)fbuff); // 2，4，6...的摆焊类型存进I004
+                                        // SetIVar(4, (int)fbuff); // 2，4，6...的摆焊类型存进I004
                                     }
                                 }
                                 if (handled == 0)
