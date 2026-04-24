@@ -87,9 +87,12 @@ void SettingWidget::renewSetting() {
     ui->lineEdit_PPFVEnd_Y_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalEnd_Y));
     ui->lineEdit_PPFVEnd_Z_Shift->setText(QString::number(settingPara->PlatePlateFilletVerticalEnd_Z));
     ui->lineEdit_PPFVWeld_WithdrawDistance->setText(QString::number(settingPara->PlatePlateFilletVerticalWithdrawDistance));
-    ui->lineEdit_TPFStartOffset->setText(QString::number(settingPara->TubePlatFilletStartOffset));
-    ui->lineEdit_TPFEndOffset->setText(QString::number(settingPara->TubePlatFilletEndOffset));
-    ui->lineEdit_TPFWeld_WithdrawDistance->setText(QString::number(settingPara->TubePlatFilletWithdrawDistance));
+    ui->lineEdit_TPFStartOffset->setText(QString::number(settingPara->TubePlateFilletStartOffset));
+    ui->lineEdit_TPFEndOffset->setText(QString::number(settingPara->TubePlateFilletEndOffset));
+    ui->lineEdit_TPFWeld_WithdrawDistance->setText(QString::number(settingPara->TubePlateFilletWithdrawDistance));
+    ui->lineEdit_TTFStartOffset->setText(QString::number(settingPara->TubeTubeFilletStartOffset));
+    ui->lineEdit_TTFEndOffset->setText(QString::number(settingPara->TubeTubeFilletEndOffset));
+    ui->lineEdit_TTFWeld_WithdrawDistance->setText(QString::number(settingPara->TubeTubeFilletWithdrawDistance));
 
     ui->lineEdit_WireCalibrationOffset->setText(QString::number(settingPara->wireCalibrationOffset));
     ui->lineEdit_ToolRadius->setText(QString::number(settingPara->toolRadius));
@@ -1261,21 +1264,21 @@ void SettingWidget::on_lineEdit_PPFVWeld_WithdrawDistance_editingFinished() {
 }
 
 void SettingWidget::on_lineEdit_TPFStartOffset_editingFinished() {
-    settingPara->TubePlatFilletStartOffset = ui->lineEdit_TPFStartOffset->text().toDouble();
-    settingPara->qSetting->setValue("GFSeamPosition/TubePlatFilletStartOffset", settingPara->TubePlatFilletStartOffset);
-    PLOGD << "TubePlatFilletStartOffset: " << settingPara->TubePlatFilletStartOffset;
+    settingPara->TubePlateFilletStartOffset = ui->lineEdit_TPFStartOffset->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubePlateFilletStartOffset", settingPara->TubePlateFilletStartOffset);
+    PLOGD << "TubePlateFilletStartOffset: " << settingPara->TubePlateFilletStartOffset;
 }
 
 void SettingWidget::on_lineEdit_TPFEndOffset_editingFinished() {
-    settingPara->TubePlatFilletEndOffset = ui->lineEdit_TPFEndOffset->text().toDouble();
-    settingPara->qSetting->setValue("GFSeamPosition/TubePlatFilletEndOffset", settingPara->TubePlatFilletEndOffset);
-    PLOGD << "TubePlatFilletEndOffset: " << settingPara->TubePlatFilletEndOffset;
+    settingPara->TubePlateFilletEndOffset = ui->lineEdit_TPFEndOffset->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubePlateFilletEndOffset", settingPara->TubePlateFilletEndOffset);
+    PLOGD << "TubePlateFilletEndOffset: " << settingPara->TubePlateFilletEndOffset;
 }
 
 void SettingWidget::on_lineEdit_TPFWeld_WithdrawDistance_editingFinished() {
-    settingPara->TubePlatFilletWithdrawDistance = ui->lineEdit_TPFWeld_WithdrawDistance->text().toDouble();
-    settingPara->qSetting->setValue("GFSeamPosition/TubePlatFilletWithdrawDistance", settingPara->TubePlatFilletWithdrawDistance);
-    PLOGD << "TubePlatFilletWithdrawDistance: " << settingPara->TubePlatFilletWithdrawDistance;
+    settingPara->TubePlateFilletWithdrawDistance = ui->lineEdit_TPFWeld_WithdrawDistance->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubePlateFilletWithdrawDistance", settingPara->TubePlateFilletWithdrawDistance);
+    PLOGD << "TubePlateFilletWithdrawDistance: " << settingPara->TubePlateFilletWithdrawDistance;
 }
 
 void SettingWidget::on_lineEdit_WireCalibrationOffset_editingFinished() {
@@ -1288,4 +1291,22 @@ void SettingWidget::on_lineEdit_ToolRadius_editingFinished() {
     settingPara->toolRadius = ui->lineEdit_ToolRadius->text().toDouble();
     settingPara->qSetting->setValue("Welding/toolRadius", settingPara->toolRadius);
     PLOGD << "toolRadius: " << settingPara->toolRadius;
+}
+
+void SettingWidget::on_lineEdit_TTFStartOffset_editingFinished() {
+    settingPara->TubeTubeFilletStartOffset = ui->lineEdit_TTFStartOffset->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeTubeFilletStartOffset", settingPara->TubeTubeFilletStartOffset);
+    PLOGD << "TubeTubeFilletStartOffset: " << settingPara->TubeTubeFilletStartOffset;
+}
+
+void SettingWidget::on_lineEdit_TTFEndOffset_editingFinished() {
+    settingPara->TubeTubeFilletEndOffset = ui->lineEdit_TTFEndOffset->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeTubeFilletEndOffset", settingPara->TubeTubeFilletEndOffset);
+    PLOGD << "TubeTubeFilletEndOffset: " << settingPara->TubeTubeFilletEndOffset;
+}
+
+void SettingWidget::on_lineEdit_TTFWeld_WithdrawDistance_editingFinished() {
+    settingPara->TubeTubeFilletWithdrawDistance = ui->lineEdit_TTFWeld_WithdrawDistance->text().toDouble();
+    settingPara->qSetting->setValue("GFSeamPosition/TubeTubeFilletWithdrawDistance", settingPara-> TubeTubeFilletWithdrawDistance);
+    PLOGD << "TubeTubeFilletWithdrawDistance: " << settingPara-> TubeTubeFilletWithdrawDistance;
 }

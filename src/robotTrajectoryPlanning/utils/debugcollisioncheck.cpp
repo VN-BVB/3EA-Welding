@@ -1,6 +1,98 @@
 ﻿#include "debugcollisioncheck.h"
 
 #include "utils/common/WeldSeamInfo.h"
+
+namespace {
+
+bool rayQuadraticIntersection(const Eigen::Matrix2f& A, const Eigen::Vector2f& b, float c, float theta, float& dist, Eigen::Vector2f& xy) {
+    Eigen::Vector2f dir(std::cos(theta), std::sin(theta));
+    float qa = dir.dot(A * dir);
+    float qb = b.dot(dir);
+
+    dist = std::numeric_limits<float>::infinity();
+
+    auto acceptRoot = [&](float r) {
+        if (std::isfinite(r) && r >= 0.0f && r < dist) {
+            dist = r;
+            xy = r * dir;
+        }
+    };
+
+    if (std::fabs(qa) < 1e-12f) {
+        if (std::fabs(qb) < 1e-12f) {
+            return false;
+        }
+
+        acceptRoot(-c / qb);
+        return std::isfinite(dist);
+    }
+
+    float disc = qb * qb - 4.0f * qa * c;
+    if (disc < -1e-5f) {
+        return false;
+    }
+
+    disc = std::max(0.0f, disc);
+    float sqrtDisc = std::sqrt(disc);
+    float denom = 2.0f * qa;
+
+    acceptRoot((-qb - sqrtDisc) / denom);
+    acceptRoot((-qb + sqrtDisc) / denom);
+
+    return std::isfinite(dist);
+}
+
+bool closestPointByRaySampling(const Eigen::Matrix2f& A, const Eigen::Vector2f& b, float c, float& bestDist, Eigen::Vector2f& bestXY) {
+    constexpr float PI = 3.14159265358979323846f;
+    constexpr int SAMPLE_COUNT = 720;
+
+    float bestTheta = 0.0f;
+    bool found = false;
+
+    for (int i = 0; i < SAMPLE_COUNT; ++i) {
+        float theta = 2.0f * PI * static_cast<float>(i) / static_cast<float>(SAMPLE_COUNT);
+        float dist = std::numeric_limits<float>::infinity();
+        Eigen::Vector2f xy;
+
+        if (rayQuadraticIntersection(A, b, c, theta, dist, xy) && dist < bestDist) {
+            bestDist = dist;
+            bestXY = xy;
+            bestTheta = theta;
+            found = true;
+        }
+    }
+
+    if (!found) {
+        return false;
+    }
+
+    float step = 2.0f * PI / static_cast<float>(SAMPLE_COUNT);
+    for (int iter = 0; iter < 24; ++iter) {
+        bool improved = false;
+
+        for (int side = -1; side <= 1; side += 2) {
+            float theta = bestTheta + static_cast<float>(side) * step;
+            float dist = std::numeric_limits<float>::infinity();
+            Eigen::Vector2f xy;
+
+            if (rayQuadraticIntersection(A, b, c, theta, dist, xy) && dist < bestDist) {
+                bestDist = dist;
+                bestXY = xy;
+                bestTheta = theta;
+                improved = true;
+            }
+        }
+
+        if (!improved) {
+            step *= 0.5f;
+        }
+    }
+
+    return true;
+}
+
+}  // namespace
+
 debugCollisionCheck::debugCollisionCheck() {}
 // ===============================
 // 评估当前 offset 是否干涉
@@ -26,9 +118,9 @@ CollisionResult debugCollisionCheck::evalCollisionAtOffset(const Eigen::Vector3f
     float c_line = n_plane_norm.dot(base) + d_plane;
 
     Eigen::Vector2f xyPlane;
-    Eigen::Vector3f planeHit;
-    out.distPlane = closestPointOnLineInToolPlane(base, U, a_line, c_line, xyPlane, planeHit);
-    out.planeHit = planeHit;
+    Eigen::Vector3f hitSec;
+    out.distSec = closestPointOnLineInToolPlane(base, U, a_line, c_line, xyPlane, hitSec);
+    out.hitSec = hitSec;
 
     // ---------------- 圆柱 ----------------
     Eigen::Vector3f a_cyl = cylAxis.normalized();
@@ -40,14 +132,14 @@ CollisionResult debugCollisionCheck::evalCollisionAtOffset(const Eigen::Vector3f
     float c2 = d0.transpose() * M * d0 - cylRadius * cylRadius;
 
     Eigen::Vector2f xyCyl;
-    Eigen::Vector3f cylHit;
-    out.distCyl = closestPointOnQuadraticInToolPlane(base, U, A2, b2, c2, xyCyl, cylHit);
-    out.cylHit = cylHit;
+    Eigen::Vector3f hitMain;
+    out.distMain = closestPointOnQuadraticInToolPlane(base, U, A2, b2, c2, xyCyl, hitMain);
+    out.hitMain = hitMain;
 
     // ---------------- 干涉判断 ----------------
-    bool isPlane = std::isfinite(out.distPlane) && (out.distPlane < toolRadius);
-    bool isCyl = std::isfinite(out.distCyl) && (out.distCyl < toolRadius);
-    out.isIntersect = isPlane || isCyl;
+    bool isSec = std::isfinite(out.distSec) && (out.distSec < toolRadius);
+    bool isMain = std::isfinite(out.distMain) && (out.distMain < toolRadius);
+    out.isIntersect = isSec || isMain;
 
     return out;
 }
@@ -101,7 +193,111 @@ float debugCollisionCheck::findSafeOffset(const Eigen::Vector3f& P, const Eigen:
 
     return hi;
 }
+CollisionResult debugCollisionCheck::evalCollisionTwoCylindersAtOffset(const Eigen::Vector3f& P, const Eigen::Vector3f& Z, float offset,
+                                                                       const Eigen::Vector3f& cylC1, const Eigen::Vector3f& cylAxis1,
+                                                                       float cylRadius1, const Eigen::Vector3f& cylC2,
+                                                                       const Eigen::Vector3f& cylAxis2, float cylRadius2, float toolRadius) {
+    CollisionResult out;
 
+    Eigen::Vector3f base = P - offset * Z;
+    Eigen::Vector3f toolN = Z.normalized();
+
+    Eigen::Vector3f u, v;
+    buildPlaneBasis(toolN, u, v);
+
+    Eigen::Matrix<float, 3, 2> U;
+    U.col(0) = u;
+    U.col(1) = v;
+
+    // ================= 圆柱1 =================
+    {
+        Eigen::Vector3f a_cyl = cylAxis1.normalized();
+        Eigen::Vector3f d0 = base - cylC1;
+
+        Eigen::Matrix3f M = Eigen::Matrix3f::Identity() - a_cyl * a_cyl.transpose();
+
+        Eigen::Matrix2f A2 = U.transpose() * M * U;
+        Eigen::Vector2f b2 = 2.0f * U.transpose() * M * d0;
+        float c2 = d0.transpose() * M * d0 - cylRadius1 * cylRadius1;
+
+        Eigen::Vector2f xyCyl;
+        Eigen::Vector3f hitMain;
+
+        out.distMain = closestPointOnQuadraticInToolPlane(base, U, A2, b2, c2, xyCyl, hitMain);
+        out.hitMain = hitMain;
+    }
+
+    // ================= 圆柱2 =================
+    {
+        Eigen::Vector3f a_cyl = cylAxis2.normalized();
+        Eigen::Vector3f d0 = base - cylC2;
+
+        Eigen::Matrix3f M = Eigen::Matrix3f::Identity() - a_cyl * a_cyl.transpose();
+
+        Eigen::Matrix2f A2 = U.transpose() * M * U;
+        Eigen::Vector2f b2 = 2.0f * U.transpose() * M * d0;
+        float c2 = d0.transpose() * M * d0 - cylRadius2 * cylRadius2;
+
+        Eigen::Vector2f xyCyl;
+        Eigen::Vector3f hitSec;
+
+        out.distSec = closestPointOnQuadraticInToolPlane(base, U, A2, b2, c2, xyCyl, hitSec);
+        out.hitSec = hitSec;
+    }
+
+    bool isMain = std::isfinite(out.distMain) && out.distMain < toolRadius;
+    bool isSec = std::isfinite(out.distSec) && out.distSec < toolRadius;
+
+    out.isIntersect = isMain || isSec;
+    return out;
+}
+
+float debugCollisionCheck::findSafeOffsetTwoCylinders(const Eigen::Vector3f& P, const Eigen::Vector3f& Z, float offset0, const Eigen::Vector3f& cylC1,
+                                                      const Eigen::Vector3f& cylAxis1, float cylRadius1, const Eigen::Vector3f& cylC2,
+                                                      const Eigen::Vector3f& cylAxis2, float cylRadius2, float toolRadius, float maxExtraOffset,
+                                                      float tolOffset) {
+    CollisionResult c0 = evalCollisionTwoCylindersAtOffset(P, Z, offset0, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2, toolRadius);
+
+    if (!c0.isIntersect) {
+        return offset0;
+    }
+
+    float lo = offset0;
+    float hi = offset0 + 1.0f;
+
+    while (hi <= offset0 + maxExtraOffset) {
+        CollisionResult ch = evalCollisionTwoCylindersAtOffset(P, Z, hi, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2, toolRadius);
+
+        if (!ch.isIntersect) {
+            break;
+        }
+
+        lo = hi;
+        hi = hi + std::max(1.0f, 0.5f * (hi - offset0));
+    }
+
+    if (hi > offset0 + maxExtraOffset) {
+        return std::numeric_limits<float>::quiet_NaN();
+    }
+
+    for (int k = 0; k < 60; ++k) {
+        if (std::fabs(hi - lo) < tolOffset) {
+            break;
+        }
+
+        float mid = 0.5f * (lo + hi);
+
+        CollisionResult cm = evalCollisionTwoCylindersAtOffset(P, Z, mid, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2, toolRadius);
+
+        if (cm.isIntersect) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+
+    return hi;
+}
 // ===============================
 // 建立工具平面基底
 // ===============================
@@ -154,10 +350,8 @@ float debugCollisionCheck::closestPointOnQuadraticInToolPlane(const Eigen::Vecto
     std::vector<float> lambdaCand = collectLambdaCandidates(Asym, b, c);
 
     const float VAL_EPS = 1e-3f;
-    const float ZERO_EPS = 1e-6f;
 
     float bestDist = std::numeric_limits<float>::infinity();
-    float bestVal = std::numeric_limits<float>::infinity();
 
     Eigen::Vector2f bestXY = Eigen::Vector2f::Constant(std::numeric_limits<float>::quiet_NaN());
 
@@ -170,22 +364,23 @@ float debugCollisionCheck::closestPointOnQuadraticInToolPlane(const Eigen::Vecto
         Eigen::Vector2f xy = -(lam / 2.0f) * lu.solve(b);
         if (!xy.allFinite()) continue;
 
-        float val = quadraticStationaryValue(lam, Asym, b, c);
+        float val = xy.dot(Asym * xy) + b.dot(xy) + c;
         if (!std::isfinite(val)) continue;
 
-        float absVal = std::fabs(val);
+        if (std::fabs(val) > VAL_EPS) continue;
+
         float d = xy.norm();
 
         // 禁止 xy = 0 假解
-        if (d < ZERO_EPS && std::fabs(c) > VAL_EPS) continue;
-
-        // 选择“最接近约束”的解（替代 fallback）
-        if (absVal < bestVal) {
-            bestVal = absVal;
+        if (d < bestDist) {
             bestDist = d;
             bestXY = xy;
         }
+
+        // 选择“最接近约束”的解（替代 fallback）
     }
+
+    closestPointByRaySampling(Asym, b, c, bestDist, bestXY);
 
     if (!std::isfinite(bestDist)) {
         xyBest.setConstant(std::numeric_limits<float>::quiet_NaN());
@@ -255,10 +450,22 @@ std::vector<float> debugCollisionCheck::collectLambdaCandidates(const Eigen::Mat
         }
 
         // 先收集接近 0 的点
+        float minAbsVal = std::numeric_limits<float>::infinity();
+        int minIdx = -1;
         for (int i = 0; i < N; ++i) {
-            if (std::isfinite(vals[i]) && std::fabs(vals[i]) < 1e-6f) {
-                lambdaCand.push_back(sample[i]);
+            if (!std::isfinite(vals[i])) {
+                continue;
             }
+
+            float absVal = std::fabs(vals[i]);
+            if (absVal < minAbsVal) {
+                minAbsVal = absVal;
+                minIdx = i;
+            }
+        }
+
+        if (minIdx >= 0 && minAbsVal < 1e-6f) {
+            lambdaCand.push_back(sample[minIdx]);
         }
 
         // 再收集符号变化的根

@@ -63,6 +63,7 @@ private:
     const float maxNormalOffset = 10.0f;   // 允许沿平面法向前后 10mm
     const float maxTangentialDist = 5.0f;  // 到“过理论点 T、方向 n 的直线”的最大横向距离
     const float maxEuclidDist = 6.0f;      // 兜底欧式距离阈值
+    float filletSeamsBlendWeight = 1.0f;   // 理论点与实际点权重
 
     std::vector<pcl::PointXYZ> filletSeamsTP;                // 焊缝的端点
     pcl::ModelCoefficients::Ptr cylinderCoeffsWithWeldSeam;  // 焊缝所在母材系数

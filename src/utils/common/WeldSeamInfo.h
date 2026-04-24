@@ -13,6 +13,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <limits>
 #include <memory>
 #include <opencv2/opencv.hpp>
 #include <string>
@@ -65,10 +66,13 @@ enum ARC_ACTION {
 };
 struct CollisionResult {
     bool isIntersect = false;
-    float distPlane = std::numeric_limits<float>::quiet_NaN();
-    float distCyl = std::numeric_limits<float>::quiet_NaN();
-    Eigen::Vector3f planeHit = Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
-    Eigen::Vector3f cylHit = Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
+
+    double distSec = std::numeric_limits<double>::quiet_NaN();
+    double distMain = std::numeric_limits<double>::quiet_NaN();
+
+    Eigen::Vector3f hitSec = Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
+    Eigen::Vector3f hitMain = Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
+
     double safeOffset = std::numeric_limits<double>::quiet_NaN();
     double extraOffset = 0.0;
 };

@@ -26,6 +26,13 @@ public:
     float quadraticStationaryValue(float lambda, const Eigen::Matrix2f &A, const Eigen::Vector2f &b, float c);
     template <typename Func>
     bool bisectRoot(Func f, float lo, float hi, float &root, int maxIter = 80);
+    CollisionResult evalCollisionTwoCylindersAtOffset(const Eigen::Vector3f &P, const Eigen::Vector3f &Z, float offset, const Eigen::Vector3f &cylC1,
+                                                      const Eigen::Vector3f &cylAxis1, float cylRadius1, const Eigen::Vector3f &cylC2,
+                                                      const Eigen::Vector3f &cylAxis2, float cylRadius2, float toolRadius);
+
+    float findSafeOffsetTwoCylinders(const Eigen::Vector3f &P, const Eigen::Vector3f &Z, float offset0, const Eigen::Vector3f &cylC1,
+                                     const Eigen::Vector3f &cylAxis1, float cylRadius1, const Eigen::Vector3f &cylC2, const Eigen::Vector3f &cylAxis2,
+                                     float cylRadius2, float toolRadius, float maxExtraOffset, float tolOffset);
 };
 
 #endif  // DEBUGCOLLISIONCHECK_H

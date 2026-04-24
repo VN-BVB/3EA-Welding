@@ -231,6 +231,12 @@ private slots:
 
     void on_lineEdit_ToolRadius_editingFinished();
 
+    void on_lineEdit_TTFStartOffset_editingFinished();
+
+    void on_lineEdit_TTFEndOffset_editingFinished();
+
+    void on_lineEdit_TTFWeld_WithdrawDistance_editingFinished();
+
 private:
     Ui::SettingWidget *ui;
 

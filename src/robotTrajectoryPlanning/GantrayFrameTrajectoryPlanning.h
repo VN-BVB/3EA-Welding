@@ -37,6 +37,7 @@ private:
     bool computePlatePlateFilletVerticalSwingPoints(const std::shared_ptr<WeldSeamInfo> &info, const robotPose &refPose,
                                                     std::vector<double> &swingPoints);  // 计算摆焊点
     bool computeTubePlateFilletSwingPoints(const std::shared_ptr<WeldSeamInfo> &info, const robotPose &basePose, std::vector<double> &swingPoints);
+    bool computeTubeTubeFilletSwingPoints(const std::shared_ptr<WeldSeamInfo> &info, const robotPose &basePose, std::vector<double> &swingPoints);
 
 private:
     WORKPIECE_SIDE_OF_ROBOT workpieceSide = WORKPIECE_SIDE_OF_ROBOT::FRONT;  // 当前工件位于机器人基座的方向pi
@@ -52,6 +53,8 @@ private:
     float platePlateFilletWeldPoseW_V = 0.45f;   // 板板垂直角接靠近焊缝方向向量权重 （变大-靠近Z，增大与地面角度）
     float tubePlateFilletPlanePoseW = 0.5f;      // 管板角接焊缝母材方向权重（变大，靠近圆柱，即朝着平面法向量偏）
     float tubePlateFilletWeldPoseW = 1.0f;       // 管板角接焊缝焊缝方向权重（为1时不偏，越小越向焊接方向偏移）
+    float tubeTubeFilletCylinderPoseW = 0.5f;    // 管管角接焊缝母材方向权重（ 越大：越偏向第二个圆柱径向向量）
+    float tubeTubeFilletWeldPoseW = 1.0f;        // 管管角接焊缝焊缝方向权重（为1时不偏，越小越向焊接方向偏移）
 
     double moveSpeed = 170 * 60;           // 过渡运动速度
     double weldingSpeedDefault = 5 * 60;   // 焊接速度(默认速度，宽度检测失败时用这个速度)

@@ -114,6 +114,7 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
     } else {
         PLOGD << "开始写入焊缝数据数量: " << weldSeamInfo.size();
     }
+
     moveSpeed = settingPara.Value_MoveSpeed * 60;
     weldingSpeedDefault = settingPara.Value_WeldingSpeed * 60;
     weldingCurrent = settingPara.Value_WeldingCurrent;
@@ -140,7 +141,9 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
     }
     for (const auto& info : weldSeamInfo) {
         if (!info || info->robotWeldPose.empty()) continue;
-        // 打印 weldType
+        if (info->weldCollisionResult.size() != info->robotWeldPose.size()) {
+            info->weldCollisionResult.resize(info->robotWeldPose.size());
+        }
 
         if (info->weldType == TubeSide_Plate_F_H) {
             const robotPose& startPose = info->robotWeldPose[0];
@@ -250,8 +253,18 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
             applyWeldGunWithdraw(endTransition, 20.0);
             writeWeldPoint(outfile, endTransition.x_, endTransition.y_, endTransition.z_ + 20.0, endTransition.a_, endTransition.b_, endTransition.c_,
                            moveSpeed, ARC_STOP, LINE_WELD, weldingCurrent, weldingVoltage);
-        } else if (info->weldType == Tube_Plate_Fillet) {
+        } else if (info->weldType == Tube_Plate_Fillet || info->weldType == Tube_Tube_Fillet) {
             if (info->robotWeldPose.size() < 2) continue;
+            // NOTE 后撤临时赋值
+            double withdrawBase =
+                (info->weldType == Tube_Plate_Fillet) ? settingPara.TubePlateFilletWithdrawDistance : settingPara.TubeTubeFilletWithdrawDistance;
+            const auto& v = info->swingReferencePoints;
+
+            SWING_WELD_ACTION CURR_WELD_METHOD = GANTRAY_FRAME_CURVE_SWING_WELD;
+            if (v.size() != 6) {
+                CURR_WELD_METHOD = GANTRAY_FRAME_CURVE_WELD;
+            }
+            if (info->weldType == Tube_Tube_Fillet) CURR_WELD_METHOD = GANTRAY_FRAME_CURVE_WELD;  // NOTE 临时debug
 
             int N = info->robotWeldPose.size();
 
@@ -264,24 +277,18 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
 
             // ================= 2. 起弧点 =================
             robotPose startWeld = info->robotWeldPose[0];
-            applyWeldGunWithdraw(startWeld, (settingPara.TubePlatFilletWithdrawDistance + info->weldCollisionResult[0].extraOffset));
+            applyWeldGunWithdraw(startWeld, (withdrawBase + info->weldCollisionResult[0].extraOffset));
 
             writeWeldPoint(outfile, startWeld.x_, startWeld.y_, startWeld.z_, startWeld.a_, startWeld.b_, startWeld.c_, moveSpeed, ARC_START,
                            LINE_WELD, weldingCurrent, weldingVoltage);
-            const auto& v = info->swingReferencePoints;
-
-            SWING_WELD_ACTION CURR_WELD_METHOD = GANTRAY_FRAME_CURVE_SWING_WELD;
-            if (v.size() != 6) {
-                CURR_WELD_METHOD = GANTRAY_FRAME_CURVE_WELD;
-            }
 
             // ================= 3. 中间轨迹点 =================
             for (int i = 0; i < N - 1; i++) {
                 robotPose midPose = info->robotWeldPose[i];
                 float extra = info->weldCollisionResult[i].extraOffset;
 
-                applyWeldGunWithdraw(midPose, (settingPara.TubePlatFilletWithdrawDistance + extra));
-                if (i == 0) {
+                applyWeldGunWithdraw(midPose, (withdrawBase + extra));
+                if (i == 0 && CURR_WELD_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD) {
                     writeWeldPoint(outfile, midPose.x_, midPose.y_, midPose.z_, midPose.a_, midPose.b_, midPose.c_, weldingSpeedDefault, ARC_START,
                                    CURR_WELD_METHOD, weldingCurrent, weldingVoltage, v[0], v[1], v[2], v[3], v[4], v[5]);
                 } else {
@@ -290,12 +297,12 @@ void GantrayFrameTrajectoryPlanning::write2File(const std::vector<std::shared_pt
                 }
             }
             robotPose endWeld = info->robotWeldPose[N - 1];
-            applyWeldGunWithdraw(endWeld, (settingPara.TubePlatFilletWithdrawDistance + info->weldCollisionResult[N - 1].extraOffset));
+            applyWeldGunWithdraw(endWeld, (withdrawBase + info->weldCollisionResult[N - 1].extraOffset));
             // 轨迹终点--退出曲线运动标志点
             writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_START, LINE_WELD,
                            weldingCurrent, weldingVoltage);
             // ================= 4. 熄弧终点 =================
-            applyWeldGunWithdraw(endWeld, (settingPara.TubePlatFilletWithdrawDistance + info->weldCollisionResult[N - 1].extraOffset));
+            applyWeldGunWithdraw(endWeld, (withdrawBase + info->weldCollisionResult[N - 1].extraOffset));
 
             writeWeldPoint(outfile, endWeld.x_, endWeld.y_, endWeld.z_, endWeld.a_, endWeld.b_, endWeld.c_, weldingSpeedDefault, ARC_STOP, LINE_WELD,
                            weldingCurrent, weldingVoltage);
@@ -550,11 +557,10 @@ void GantrayFrameTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<W
     Eigen::Vector3f ref(trajectoryConfig.matrixEnd2Base(0, 3), trajectoryConfig.matrixEnd2Base(1, 3), trajectoryConfig.matrixEnd2Base(2, 3));
     if (weldSeamInfo.empty()) return;
     // Eigen::Vector3f ref(0.0f, 0.0f, 0.0f);  // 基座
-    if (std::any_of(weldSeamInfo.begin(), weldSeamInfo.end(),
-                    [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == TubeSide_Plate_F; })) {
-        for (auto& info : weldSeamInfo) {
-            if (!info || !info->detectSuccFlag) continue;
-
+    for (auto& info : weldSeamInfo) {
+        if (!info || !info->detectSuccFlag) continue;
+        if (info->weldAreaType == TubeSide_Plate_F) {
+            // 离ref近的为起点
             if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() != 2) continue;
 
             auto& pts = *(info->weldEndPointsInRobot);
@@ -569,15 +575,7 @@ void GantrayFrameTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<W
             if (d0 > d1) {
                 std::swap(pts[0], pts[1]);
             }
-        }
-    } else if (std::any_of(weldSeamInfo.begin(), weldSeamInfo.end(),
-                           [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == Plate_Plate_F; })) {
-        planPlatePlateFilletSeamOrientation(weldSeamInfo);
-    } else if (std::any_of(weldSeamInfo.begin(), weldSeamInfo.end(),
-                           [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == Tube_Plate_F; })) {
-        for (auto& info : weldSeamInfo) {
-            if (!info || !info->detectSuccFlag) continue;
-
+        } else if (info->weldAreaType == Tube_Plate_F || info->weldAreaType == Tube_Tube_F) {
             if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) continue;
 
             auto& pts = *(info->weldEndPointsInRobot);
@@ -585,11 +583,15 @@ void GantrayFrameTrajectoryPlanning::transSeamsOri(std::vector<std::shared_ptr<W
             const auto& start = pts.front();
             const auto& end = pts.back();
 
-            // TODO--如果是倒装会不一样，Z大的应该是起点
+            // TODO 如果是倒装会不一样，目前Z大的应该是起点
             if (start.z < end.z) {
                 std::reverse(pts.begin(), pts.end());
             }
         }
+    }
+    if (std::any_of(weldSeamInfo.begin(), weldSeamInfo.end(),
+                    [](const std::shared_ptr<WeldSeamInfo>& s) { return s && s->weldAreaType == Plate_Plate_F; })) {
+        planPlatePlateFilletSeamOrientation(weldSeamInfo);
     }
 }
 void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
@@ -1004,7 +1006,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 if (hemi > 0.0f) {
                     // 上半圆：焊枪朝下
                     if (Z.dot(worldZ) > 0) Z = -Z;
-                } else if (hemi > 0.0f) {
+                } else if (hemi < 0.0f) {
                     // 下半圆：焊枪朝上
                     if (Z.dot(worldZ) < 0) Z = -Z;
                 } else {
@@ -1085,23 +1087,267 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 // PLOGI << "Position: (" << info->weldEndPointsInRobot->at(i).x << ", " << info->weldEndPointsInRobot->at(i).y << ", "
                 //       << info->weldEndPointsInRobot->at(i).z << ")";
             }
+        } else if (info->weldType == Tube_Tube_Fillet) {
+            if (!info->weldCoeff || info->weldCoeff->values.size() < 6) continue;
+            if (!info->weldEndPointsInRobot || info->weldEndPointsInRobot->size() < 2) continue;
+            if (info->otherSurface.empty()) continue;
+
+            int N = static_cast<int>(info->weldEndPointsInRobot->size());
+            info->robotWeldPose.clear();
+
+            // 圆柱1：默认使用 weldCoeff
+            Eigen::Vector3f C1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
+
+            Eigen::Vector3f axis1(info->weldCoeff->values[3], info->weldCoeff->values[4], info->weldCoeff->values[5]);
+
+            if (axis1.norm() < 1e-6f) {
+                PLOGE << "Tube_Tube_Fillet: cylinder1 axis invalid, area=" << info->areaNum;
+                continue;
+            }
+            axis1.normalize();
+
+            // 圆柱2：默认从 otherSurface 里找 size == 7 的圆柱
+            bool hasCylinder2 = false;
+            Eigen::Vector3f C2(0, 0, 0);
+            Eigen::Vector3f axis2(0, 0, 1);
+
+            for (auto& surf : info->otherSurface) {
+                if (!surf || surf->values.size() < 6) continue;
+
+                C2 = Eigen::Vector3f(surf->values[0], surf->values[1], surf->values[2]);
+
+                axis2 = Eigen::Vector3f(surf->values[3], surf->values[4], surf->values[5]);
+
+                if (axis2.norm() > 1e-6f) {
+                    axis2.normalize();
+                    hasCylinder2 = true;
+                    break;
+                }
+            }
+
+            if (!hasCylinder2) {
+                PLOGE << "Tube_Tube_Fillet: cylinder2 not found, area=" << info->areaNum;
+                continue;
+            }
+
+            // 权重保护
+            // tubeTubeFilletCylinderPoseW 越大越偏第二圆柱
+            // tubeTubeFilletWeldPoseW = 1 不向焊缝方向偏，越小越向 t 偏
+            float cylW = tubeTubeFilletCylinderPoseW;
+            if (cylW < 0.0f) cylW = 0.0f;
+            if (cylW > 1.0f) cylW = 1.0f;
+
+            float weldW = tubeTubeFilletWeldPoseW;
+            if (weldW < 0.0f) weldW = 0.0f;
+            if (weldW > 1.0f) weldW = 1.0f;
+
+            for (int i = 0; i < N; ++i) {
+                // 1. 当前焊点 P
+
+                Eigen::Vector3f P(info->weldEndPointsInRobot->at(i).x, info->weldEndPointsInRobot->at(i).y, info->weldEndPointsInRobot->at(i).z);
+
+                // 2. 焊缝切向 t
+
+                Eigen::Vector3f t(1, 0, 0);
+
+                if (N == 2) {
+                    Eigen::Vector3f P0(info->weldEndPointsInRobot->at(0).x, info->weldEndPointsInRobot->at(0).y, info->weldEndPointsInRobot->at(0).z);
+
+                    Eigen::Vector3f P1(info->weldEndPointsInRobot->at(1).x, info->weldEndPointsInRobot->at(1).y, info->weldEndPointsInRobot->at(1).z);
+
+                    t = P1 - P0;
+                } else {
+                    if (i == 0) {
+                        Eigen::Vector3f P_next(info->weldEndPointsInRobot->at(i + 1).x, info->weldEndPointsInRobot->at(i + 1).y,
+                                               info->weldEndPointsInRobot->at(i + 1).z);
+
+                        t = P_next - P;
+                    } else if (i == N - 1) {
+                        Eigen::Vector3f P_prev(info->weldEndPointsInRobot->at(i - 1).x, info->weldEndPointsInRobot->at(i - 1).y,
+                                               info->weldEndPointsInRobot->at(i - 1).z);
+
+                        t = P - P_prev;
+                    } else {
+                        Eigen::Vector3f P_prev(info->weldEndPointsInRobot->at(i - 1).x, info->weldEndPointsInRobot->at(i - 1).y,
+                                               info->weldEndPointsInRobot->at(i - 1).z);
+
+                        Eigen::Vector3f P_next(info->weldEndPointsInRobot->at(i + 1).x, info->weldEndPointsInRobot->at(i + 1).y,
+                                               info->weldEndPointsInRobot->at(i + 1).z);
+
+                        t = P_next - P_prev;
+                    }
+                }
+
+                if (t.norm() < 1e-6f) {
+                    PLOGE << "Tube_Tube_Fillet: tangent invalid, area=" << info->areaNum << ", idx=" << i;
+                    continue;
+                }
+                t.normalize();
+
+                // 3. 圆柱1径向向量 n1
+                //    n = P - axisProjection(P)
+
+                Eigen::Vector3f CP1 = P - C1;
+                Eigen::Vector3f n1 = CP1 - CP1.dot(axis1) * axis1;
+
+                if (n1.norm() < 1e-6f) {
+                    PLOGE << "Tube_Tube_Fillet: radial1 invalid, area=" << info->areaNum << ", idx=" << i;
+                    continue;
+                }
+                n1.normalize();
+
+                // 4. 圆柱2径向向量 n2
+
+                Eigen::Vector3f CP2 = P - C2;
+                Eigen::Vector3f n2 = CP2 - CP2.dot(axis2) * axis2;
+
+                if (n2.norm() < 1e-6f) {
+                    PLOGE << "Tube_Tube_Fillet: radial2 invalid, area=" << info->areaNum << ", idx=" << i;
+                    continue;
+                }
+                n2.normalize();
+
+                // 5. 两个圆柱径向方向融合
+                //    cylW = 0.5：角平分
+                //    cylW 越大：越偏向第二圆柱径向 n2
+
+                Eigen::Vector3f N_mid = ((1.0f - cylW) * n1 + cylW * n2);
+
+                // 如果两个径向几乎反向，直接相加可能接近 0，此时退回到 n1 或 n2
+                if (N_mid.norm() < 1e-6f) {
+                    if (cylW >= 0.5f) {
+                        N_mid = n2;
+                    } else {
+                        N_mid = n1;
+                    }
+                } else {
+                    N_mid.normalize();
+                }
+
+                // 6. 加入焊缝方向偏移
+                //    weldW = 1：不向 t 偏，完全使用 N_mid
+                //    weldW 越小：越向焊缝方向 t 偏
+
+                Eigen::Vector3f Z = weldW * N_mid + (1.0f - weldW) * t;
+
+                if (Z.norm() < 1e-6f) {
+                    Z = N_mid;
+                } else {
+                    Z.normalize();
+                }
+
+                // 7. Z方向约束
+                // 7. Z方向约束：参考圆柱上/下半圆
+                Eigen::Vector3f worldZ(0, 0, 1);
+
+                // 用融合后的径向方向判断当前焊点处于整体上/下半圆
+                float hemi = N_mid.dot(worldZ);
+
+                if (hemi > 0.0f) {
+                    // 上半圆：焊枪朝下
+                    if (Z.dot(worldZ) > 0.0f) {
+                        Z = -Z;
+                    }
+                } else if (hemi < 0.0f) {
+                    // 下半圆：焊枪朝上
+                    if (Z.dot(worldZ) < 0.0f) {
+                        Z = -Z;
+                    }
+                } else {
+                    // 一般状况都是：让Z与融合径向相反，朝向两个圆柱夹角内部
+                    if (Z.dot(N_mid) > 0.0f) {
+                        Z = -Z;
+                    }
+                }
+
+                // 8. Y轴：沿焊缝切向，并投影到垂直于 Z 的平面
+
+                Eigen::Vector3f Y = t - t.dot(Z) * Z;
+
+                if (Y.norm() < 1e-6f) {
+                    // fallback：用圆柱1轴向
+                    Y = axis1 - axis1.dot(Z) * Z;
+                }
+
+                if (Y.norm() < 1e-6f) {
+                    // 再 fallback：用圆柱2轴向
+                    Y = axis2 - axis2.dot(Z) * Z;
+                }
+
+                if (Y.norm() < 1e-6f) {
+                    Y = Eigen::Vector3f(0, -1, 0);
+                    Y = Y - Y.dot(Z) * Z;
+                }
+
+                Y.normalize();
+
+                // TODO Y 与世界 Y 反向
+                if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0.0f) {
+                    Y = -Y;
+                }
+
+                // 9. X轴：右手系
+
+                Eigen::Vector3f X = Y.cross(Z);
+
+                if (X.norm() < 1e-6f) {
+                    PLOGE << "Tube_Tube_Fillet: X invalid, area=" << info->areaNum << ", idx=" << i;
+                    continue;
+                }
+                X.normalize();
+
+                // 保持和你现有逻辑一致：X 尽量与世界 X 同向
+                if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0.0f) {
+                    X = -X;
+                    Y = -Y;
+                }
+
+                // 10. 重正交
+
+                Z = X.cross(Y);
+
+                if (Z.norm() < 1e-6f) {
+                    PLOGE << "Tube_Tube_Fillet: Z re-orthogonal invalid, area=" << info->areaNum << ", idx=" << i;
+                    continue;
+                }
+                Z.normalize();
+
+                // 11. 构造旋转矩阵
+
+                Eigen::Matrix3f R;
+                R.col(0) = X;
+                R.col(1) = Y;
+                R.col(2) = Z;
+
+                std::vector<double> currentABC = {trajectoryConfig.currentRobotPose.a_, trajectoryConfig.currentRobotPose.b_,
+                                                  trajectoryConfig.currentRobotPose.c_};
+
+                std::vector<double> targetABC = MyToolFunc::extractEulerZYX(R, currentABC);
+
+                // 12. 写入机器人姿态
+
+                robotPose pose;
+                pose.x_ = P.x();
+                pose.y_ = P.y();
+                pose.z_ = P.z();
+                pose.a_ = targetABC[0];
+                pose.b_ = targetABC[1];
+                pose.c_ = targetABC[2];
+
+                info->robotWeldPose.push_back(pose);
+            }
+            PLOGD << "========== Tube_Tube_Fillet 母材数据 ==========";
+            PLOGD << "areaNum = " << info->areaNum;
+
+            PLOGD << "圆柱1 weldCoeff: " << "C=(" << C1.x() << ", " << C1.y() << ", " << C1.z() << "), " << "axis=(" << axis1.x() << ", " << axis1.y()
+                  << ", " << axis1.z() << "), " << "R=" << info->weldCoeff->values[6];
+
+            PLOGD << "圆柱2 otherSurface: " << "C=(" << C2.x() << ", " << C2.y() << ", " << C2.z() << "), " << "axis=(" << axis2.x() << ", "
+                  << axis2.y() << ", " << axis2.z() << "), " << "R=" << (info->otherSurface.empty() ? -1.0f : info->otherSurface[0]->values[6]);
         }
-
-        // static int idx1 = 0;
-
-        // std::string file = "./matlab_full_" + std::to_string(idx1++) + ".m";
-
-        // pcl::ModelCoefficients::Ptr cylinder = nullptr;
-        // for (auto& s : info->otherSurface) {
-        //     if (s && s->values.size() == 7) {
-        //         cylinder = s;
-        //         break;
-        //     }
-        // }
-
-        // saveToMatlabFull(file, P0, P1, mid, X, Y, Z, info->weldPlane, cylinder);
     }
 }
+
 // 对所有焊缝进行后撤
 void GantrayFrameTrajectoryPlanning::applyWeldGunWithdraw(robotPose& pose, double withdrawDistance) {
     // PLOGD << "withdrawDistance" << withdrawDistance;
@@ -1323,6 +1569,13 @@ void GantrayFrameTrajectoryPlanning::compensateSeams(std::vector<std::shared_ptr
                     pt.z += 0.0f;
                 }
             }
+        } else if (info->weldType == Tube_Tube_Fillet) {
+            // TODO 管管角接微调未写
+            if (info->weldEndPointsInRobot) {
+                for (auto& pt : *(info->weldEndPointsInRobot)) {
+                    pt.z += 0.0f;
+                }
+            }
         }
     }
 }
@@ -1520,7 +1773,7 @@ void GantrayFrameTrajectoryPlanning::computeSwingReferencePointsForSeam(std::vec
                 extraOffset = info->weldCollisionResult[0].extraOffset;
             }
 
-            applyWeldGunWithdraw(startWeld, settingPara.TubePlatFilletWithdrawDistance + extraOffset);
+            applyWeldGunWithdraw(startWeld, settingPara.TubePlateFilletWithdrawDistance + extraOffset);
 
             std::vector<double> v;
             if (computeTubePlateFilletSwingPoints(info, startWeld, v) && v.size() == 6) {
@@ -1528,6 +1781,23 @@ void GantrayFrameTrajectoryPlanning::computeSwingReferencePointsForSeam(std::vec
             } else {
                 info->swingReferencePoints.clear();
                 PLOGE << "管板角接摆焊点计算失败。";
+            }
+        } else if (info->weldType == Tube_Tube_Fillet) {
+            robotPose startWeld = info->robotWeldPose[0];
+
+            float extraOffset = 0.0f;
+            if (!info->weldCollisionResult.empty()) {
+                extraOffset = info->weldCollisionResult[0].extraOffset;
+            }
+
+            applyWeldGunWithdraw(startWeld, settingPara.TubeTubeFilletWithdrawDistance + extraOffset);
+
+            std::vector<double> v;
+            if (computeTubeTubeFilletSwingPoints(info, startWeld, v) && v.size() == 6) {
+                info->swingReferencePoints = v;
+            } else {
+                info->swingReferencePoints.clear();
+                PLOGE << "管管角接摆焊点计算失败。";
             }
         } else {
             info->swingReferencePoints.clear();
@@ -1706,21 +1976,83 @@ bool GantrayFrameTrajectoryPlanning::computeTubePlateFilletSwingPoints(const std
 
     return true;
 }
+bool GantrayFrameTrajectoryPlanning::computeTubeTubeFilletSwingPoints(const std::shared_ptr<WeldSeamInfo>& info, const robotPose& basePose,
+                                                                      std::vector<double>& swingPoints) {
+    swingPoints.clear();
 
+    if (!info) {
+        PLOGE << "computeTubeTubeFilletSwingPoints: info 为空";
+        return false;
+    }
+
+    // 主圆柱参数，默认使用 weldCoeff
+    if (!info->weldCoeff || info->weldCoeff->values.size() < 7) {
+        PLOGE << "computeTubeTubeFilletSwingPoints: 主圆柱参数无效";
+        return false;
+    }
+
+    const auto& coeff = info->weldCoeff->values;
+
+    Eigen::Vector3f cylCenter(coeff[0], coeff[1], coeff[2]);
+    Eigen::Vector3f cylAxis(coeff[3], coeff[4], coeff[5]);
+    float cylRadius = coeff[6];
+
+    if (cylAxis.norm() < 1e-6f) {
+        PLOGE << "computeTubeTubeFilletSwingPoints: 主圆柱轴方向长度过小";
+        return false;
+    }
+
+    cylAxis.normalize();
+
+    // 基准点：通常是已经后撤后的焊接起点
+    Eigen::Vector3f P(basePose.x_, basePose.y_, basePose.z_);
+
+    // 点 P 到圆柱主轴的径向向量
+    Eigen::Vector3f CP = P - cylCenter;
+    Eigen::Vector3f radial = CP - CP.dot(cylAxis) * cylAxis;
+
+    if (radial.norm() < 1e-6f) {
+        PLOGE << "computeTubeTubeFilletSwingPoints: 基准点落在主圆柱轴附近，无法计算径向方向";
+        return false;
+    }
+
+    radial.normalize();
+
+    // 参考点距离
+    const float refDist = 20.0f;
+
+    // 参考点1：主圆柱径向方向
+    Eigen::Vector3f ref1 = P + refDist * radial;
+
+    // 参考点2：主圆柱轴向方向
+    Eigen::Vector3f ref2 = P + refDist * cylAxis;
+
+    swingPoints.resize(6);
+    swingPoints[0] = ref1.x();
+    swingPoints[1] = ref1.y();
+    swingPoints[2] = ref1.z();
+
+    swingPoints[3] = ref2.x();
+    swingPoints[4] = ref2.y();
+    swingPoints[5] = ref2.z();
+
+    PLOGD << "TubeTube refPoint1 : " << ref1.x() << ", " << ref1.y() << ", " << ref1.z();
+
+    PLOGD << "TubeTube refPoint2 : " << ref2.x() << ", " << ref2.y() << ", " << ref2.z();
+
+    return true;
+}
 void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     const float toolRadius = settingPara.toolRadius;
     const float maxExtraOffset = 300.0f;
     const float tolOffset = 1e-3f;
-
-    std::cout << "\n================ TubePlate Fillet Collision Check ================\n";
-
     for (size_t s = 0; s < weldSeamInfo.size(); ++s) {
         auto& info = weldSeamInfo[s];
 
         if (!info->weldCoeff || !info->weldEndPointsInRobot || info->weldEndPointsInRobot->empty() || info->otherSurface.empty()) continue;
 
         if (info->weldType == Tube_Plate_Fillet) {
-            const float offset0 = settingPara.wireCalibrationOffset + settingPara.TubePlatFilletWithdrawDistance;
+            const float offset0 = settingPara.wireCalibrationOffset + settingPara.TubePlateFilletWithdrawDistance;
             int N = info->weldEndPointsInRobot->size();
 
             // 防止越界
@@ -1792,8 +2124,8 @@ void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std:
                     std::cout << "\n[SeamIdx " << s << " | Area " << info->areaNum << " | Point " << i + 1 << "]\n";
 
                     std::cout << "  Base = [" << base.x() << " " << base.y() << " " << base.z() << "]\n";
-                    std::cout << "  dist_plane   = " << col.distPlane << "\n";
-                    std::cout << "  dist_cyl     = " << col.distCyl << "\n";
+                    std::cout << "  dist_plane   = " << col.distSec << "\n";
+                    std::cout << "  dist_cyl     = " << col.distMain << "\n";
                     std::cout << "  Intersect?   = " << (col.isIntersect ? 1 : 0) << "\n";
 
                     if (col.isIntersect) {
@@ -1802,6 +2134,250 @@ void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std:
                         } else {
                             std::cout << "  safeOffset   = " << col.safeOffset << "\n";
                             std::cout << "  extraOffset  = " << col.extraOffset << "\n";
+                        }
+                    }
+                }
+            }
+        } /*else if (info->weldType == Tube_Tube_Fillet) {
+            const float offset0 = settingPara.wireCalibrationOffset + settingPara.TubeTubeFilletWithdrawDistance;
+            int N = static_cast<int>(info->weldEndPointsInRobot->size());
+
+            if (info->robotWeldPose.size() != N) {
+                std::cout << "!!! robotWeldPose size mismatch\n";
+                continue;
+            }
+
+            if (info->otherSurface.empty() || !info->otherSurface[0]) {
+                std::cout << "!!! Tube_Tube_Fillet otherSurface empty\n";
+                continue;
+            }
+
+            info->weldCollisionResult.resize(N);
+
+            // ================= 圆柱1：weldCoeff =================
+            Eigen::Vector3f cylC1(info->weldCoeff->values[0], info->weldCoeff->values[1], info->weldCoeff->values[2]);
+
+            Eigen::Vector3f cylAxis1(info->weldCoeff->values[3], info->weldCoeff->values[4], info->weldCoeff->values[5]);
+            cylAxis1.normalize();
+
+            float cylRadius1 = info->weldCoeff->values[6];
+
+            // ================= 圆柱2：otherSurface[0] =================
+            Eigen::Vector3f cylC2(info->otherSurface[0]->values[0], info->otherSurface[0]->values[1], info->otherSurface[0]->values[2]);
+
+            Eigen::Vector3f cylAxis2(info->otherSurface[0]->values[3], info->otherSurface[0]->values[4], info->otherSurface[0]->values[5]);
+            cylAxis2.normalize();
+
+            float cylRadius2 = info->otherSurface[0]->values[6];
+
+            // ================= 从 robotPose 提取 Z =================
+            std::vector<Eigen::Vector3f> Zlist(N);
+
+            for (int i = 0; i < N; ++i) {
+                const robotPose& pose = info->robotWeldPose[i];
+
+                Eigen::Matrix4f T = MyToolFunc::createTransformationMatrixZYX(pose.x_, pose.y_, pose.z_, pose.a_, pose.b_, pose.c_);
+
+                Zlist[i] = T.block<3, 1>(0, 2).normalized();
+
+                // 和 MATLAB 保持一致：Z 与圆柱1径向向量相反
+                Eigen::Vector3f P(info->weldEndPointsInRobot->at(i).x, info->weldEndPointsInRobot->at(i).y, info->weldEndPointsInRobot->at(i).z);
+
+                Eigen::Vector3f v = P - cylC1;
+                Eigen::Vector3f foot = cylC1 + v.dot(cylAxis1) * cylAxis1;
+                Eigen::Vector3f radial1 = P - foot;
+
+                if (radial1.norm() > 1e-6f) {
+                    radial1.normalize();
+
+                    if (Zlist[i].dot(radial1) > 0.0f) {
+                        Zlist[i] = -Zlist[i];
+                    }
+                }
+            }
+
+            // ================= 碰撞检测 =================
+            for (int i = 0; i < N; ++i) {
+                Eigen::Vector3f P(info->weldEndPointsInRobot->at(i).x, info->weldEndPointsInRobot->at(i).y, info->weldEndPointsInRobot->at(i).z);
+
+                Eigen::Vector3f Z = Zlist[i];
+
+                CollisionResult col =
+                    checker.evalCollisionTwoCylindersAtOffset(P, Z, offset0, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2, toolRadius);
+
+                if (col.isIntersect) {
+                    float safeOffset = checker.findSafeOffsetTwoCylinders(P, Z, offset0, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2,
+                                                                          toolRadius, maxExtraOffset, tolOffset);
+
+                    if (std::isfinite(safeOffset)) {
+                        col.safeOffset = static_cast<double>(safeOffset);
+                        col.extraOffset = static_cast<double>(safeOffset - offset0);
+                    } else {
+                        col.safeOffset = std::numeric_limits<double>::quiet_NaN();
+                        col.extraOffset = 0.0;
+                    }
+                }
+
+                info->weldCollisionResult[i] = col;
+            }  // ================= 串行打印 =================
+            if ( 1) {//settingPara.bool_save_model
+            for (int i = 0; i < N; ++i) {
+                auto& col = info->weldCollisionResult[i];
+
+                Eigen::Vector3f P(info->weldEndPointsInRobot->at(i).x, info->weldEndPointsInRobot->at(i).y, info->weldEndPointsInRobot->at(i).z);
+
+                Eigen::Vector3f Z = Zlist[i];
+                Eigen::Vector3f base = P - offset0 * Z;
+
+                std::cout << "\n[SeamIdx " << s << " | Area " << info->areaNum << " | Point " << i + 1 << "]\n";
+
+                std::cout << "  P = [" << P.x() << " " << P.y() << " " << P.z() << "]\n";
+                std::cout << "  Z = [" << Z.x() << " " << Z.y() << " " << Z.z() << "]\n";
+                std::cout << "  Base = [" << base.x() << " " << base.y() << " " << base.z() << "]\n";
+
+                std::cout << "  dist_cyl1   = " << col.distMain << "\n";
+                std::cout << "  dist_cyl2   = " << col.distSec << "\n";
+                std::cout << "  dist_cyl    = " << col.distMain << "\n";
+                std::cout << "  Intersect?  = " << (col.isIntersect ? 1 : 0) << "\n";
+
+                if (col.isIntersect) {
+                    if (!std::isfinite(col.safeOffset)) {
+                        std::cout << "  safeOffset  = NOT FOUND\n";
+                    } else {
+                        std::cout << "  safeOffset  = " << col.safeOffset << "\n";
+                        std::cout << "  extraOffset = " << col.extraOffset << "\n";
+                    }
+                }
+            }
+        }
+    }*/
+        else if (info->weldType == Tube_Tube_Fillet) {
+            const float offset0 = 15.0f;  // 为了和 MATLAB offset = 15 完全一致
+            const float toolRadius = settingPara.toolRadius;
+
+            struct DebugPose {
+                float x, y, z;
+                float a, b, c;
+            };
+
+            std::vector<std::vector<DebugPose>> debugSeams(2);
+
+            debugSeams[0] = {
+                {927.446f, -70.312f,  1.64969f,  173.973f, -26.9743f, 1.92992f},
+                {927.720f, -38.8177f, -0.97226f, 168.853f, -21.3860f, 3.42380f},
+                {926.879f, -7.82796f, -6.43475f, 162.686f, -17.0534f, 6.16267f},
+                {925.586f, 19.1965f,  -14.3606f, 155.311f, -14.2825f, 7.57923f},
+                {924.663f, 50.3961f,  -27.9721f, 138.191f, -13.1012f, 7.52018f}
+            };
+
+            debugSeams[1] = {
+                {927.446f, -70.312f,  1.64969f,  176.610f,  -27.3972f, -3.83744f},
+                {925.538f, -101.798f, 1.25607f,  -174.679f, -34.4646f, -10.3431f},
+                {920.766f, -131.614f, -4.81146f, -154.165f, -40.8959f, -30.7657f},
+                {914.124f, -155.856f, -19.3470f, -120.305f, -34.5118f, -62.2088f},
+                {910.892f, -165.947f, -42.2892f, -91.9595f, -21.8792f, -78.1550f}
+            };
+
+            const int debugSeamIdx = static_cast<int>(s);
+            if (debugSeamIdx < 0 || debugSeamIdx >= static_cast<int>(debugSeams.size())) {
+                continue;
+            }
+
+            const auto& debugPoseList = debugSeams[debugSeamIdx];
+            const int N = static_cast<int>(debugPoseList.size());
+
+            info->weldCollisionResult.resize(N);
+
+            // ================= DEBUG：圆柱1 weldCoeff =================
+            Eigen::Vector3f cylC1(928.696f, -89.8235f, -49.5261f);
+            Eigen::Vector3f cylAxis1(-0.438828f, 0.897357f, -0.0467012f);
+            cylAxis1.normalize();
+            float cylRadius1 = 57.6241f;
+
+            // ================= DEBUG：圆柱2 otherSurface =================
+            Eigen::Vector3f cylC2(1006.25f, 56.6402f, -36.8684f);
+            Eigen::Vector3f cylAxis2(-0.0613377f, -0.998019f, -0.0140133f);
+            cylAxis2.normalize();
+            float cylRadius2 = 81.5506f;
+
+            // ================= 从 DEBUG pose 提取 Z =================
+            std::vector<Eigen::Vector3f> Zlist(N);
+
+            for (int i = 0; i < N; ++i) {
+                const DebugPose& dp = debugPoseList[i];
+
+                Eigen::Matrix4f T = MyToolFunc::createTransformationMatrixZYX(dp.x, dp.y, dp.z, dp.a, dp.b, dp.c);
+
+                Zlist[i] = T.block<3, 1>(0, 2).normalized();
+
+                Eigen::Vector3f P(dp.x, dp.y, dp.z);
+
+                Eigen::Vector3f v = P - cylC1;
+                Eigen::Vector3f foot = cylC1 + v.dot(cylAxis1) * cylAxis1;
+                Eigen::Vector3f radial1 = P - foot;
+
+                if (radial1.norm() > 1e-6f) {
+                    radial1.normalize();
+
+                    if (Zlist[i].dot(radial1) > 0.0f) {
+                        Zlist[i] = -Zlist[i];
+                    }
+                }
+            }
+
+            // ================= 碰撞检测 =================
+            for (int i = 0; i < N; ++i) {
+                const DebugPose& dp = debugPoseList[i];
+
+                Eigen::Vector3f P(dp.x, dp.y, dp.z);
+                Eigen::Vector3f Z = Zlist[i];
+
+                CollisionResult col =
+                    checker.evalCollisionTwoCylindersAtOffset(P, Z, offset0, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2, toolRadius);
+
+                if (col.isIntersect) {
+                    float safeOffset = checker.findSafeOffsetTwoCylinders(P, Z, offset0, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2,
+                                                                          toolRadius, maxExtraOffset, tolOffset);
+
+                    if (std::isfinite(safeOffset)) {
+                        col.safeOffset = static_cast<double>(safeOffset);
+                        col.extraOffset = static_cast<double>(safeOffset - offset0);
+                    } else {
+                        col.safeOffset = std::numeric_limits<double>::quiet_NaN();
+                        col.extraOffset = 0.0;
+                    }
+                }
+
+                info->weldCollisionResult[i] = col;
+            }
+
+            // ================= 串行打印：和 MATLAB 对比 =================
+            if (1) {
+                for (int i = 0; i < N; ++i) {
+                    const DebugPose& dp = debugPoseList[i];
+
+                    auto& col = info->weldCollisionResult[i];
+
+                    Eigen::Vector3f P(dp.x, dp.y, dp.z);
+                    Eigen::Vector3f Z = Zlist[i];
+                    Eigen::Vector3f base = P - offset0 * Z;
+
+                    std::cout << "\n[Seam " << debugSeamIdx + 1 << " | Point " << i + 1 << "]\n";
+
+                    std::cout << "  P    = [" << P.x() << " " << P.y() << " " << P.z() << "]\n";
+                    std::cout << "  Z    = [" << Z.x() << " " << Z.y() << " " << Z.z() << "]\n";
+                    std::cout << "  Base = [" << base.x() << " " << base.y() << " " << base.z() << "]\n";
+
+                    std::cout << "  dist_cyl1 = " << col.distMain << "\n";
+                    std::cout << "  dist_cyl2 = " << col.distSec << "\n";
+                    std::cout << "  Intersect? = " << (col.isIntersect ? 1 : 0) << "\n";
+
+                    if (col.isIntersect) {
+                        if (!std::isfinite(col.safeOffset)) {
+                            std::cout << "  safeOffset = NOT FOUND\n";
+                        } else {
+                            std::cout << "  safeOffset = " << col.safeOffset << "\n";
+                            std::cout << "  extraOffset = " << col.extraOffset << "\n";
                         }
                     }
                 }

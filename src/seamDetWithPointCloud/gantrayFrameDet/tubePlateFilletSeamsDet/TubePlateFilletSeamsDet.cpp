@@ -708,8 +708,8 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
     // =================  收缩并裁剪曲线 =================
     PtTheta new_start, new_end;
 
-    float start_offset = SettingPara::getInstance().TubePlatFilletStartOffset;
-    float end_offset = SettingPara::getInstance().TubePlatFilletEndOffset;
+    float start_offset = SettingPara::getInstance().TubePlateFilletStartOffset;
+    float end_offset = SettingPara::getInstance().TubePlateFilletEndOffset;
 
     // 防止非法
     if (start_offset < 0) start_offset = 0;
@@ -869,7 +869,7 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
             }
         }
 
-        // 默认沿平面法向方向找
+        // TODO 默认沿平面法向方向找
         Eigen::Vector3f refDir = n;
         // Eigen::Vector3f refDir = axis;
         bool ok = false;
@@ -884,7 +884,17 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
         }
     }
 
-    filletSeamsTP = filletSeamsActualTP;
+    for (size_t i = 0; i < filletSeamsActualTP.size(); ++i) {
+        const auto& T = filletSeamsTheoryTP[i];
+        const auto& A = filletSeamsActualTP[i];
+
+        pcl::PointXYZ P;
+        P.x = (1.0f - filletSeamsBlendWeight) * T.x + filletSeamsBlendWeight * A.x;
+        P.y = (1.0f - filletSeamsBlendWeight) * T.y + filletSeamsBlendWeight * A.y;
+        P.z = (1.0f - filletSeamsBlendWeight) * T.z + filletSeamsBlendWeight * A.z;
+
+        filletSeamsTP.push_back(P);
+    }
 
     // ================= 保存 =================
     if (saveFlag && seamEndPoints) {

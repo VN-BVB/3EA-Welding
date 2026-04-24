@@ -103,102 +103,50 @@ void SeamDetWithPointCloud::whenDetSeamWithPointCloudGF(std::vector<std::shared_
         }
     }
 }
-/* void SeamDetWithPointCloud::splitWeldSeamsInPlace(std::vector<std::shared_ptr<WeldSeamInfo>>& infos) {
-//     std::vector<std::shared_ptr<WeldSeamInfo>> newInfos;
-//     newInfos.reserve(infos.size() * 2);
-//     for (auto& info : infos) {
-//         if (!info) continue;
-//         std::vector<std::shared_ptr<WeldSeamInfo>> splitRes;
-//         if (info->weldType == Tube_Plate_Fillet) {
-//             if (!info->weldEndPointsInCamera || info->weldEndPointsInCamera->size() < 3) {
-//                 splitRes.push_back(info);
-//             } else {
-//                 const auto& pts = *(info->weldEndPointsInCamera);
-//                 int N = pts.size();
-
-//                 // ---------- 1. 找 Z 最小 ----------
-//                 int idx_min = 0;
-//                 float z_min = pts[0].z;
-
-//                 for (int i = 1; i < N; ++i) {
-//                     if (pts[i].z < z_min) {
-//                         z_min = pts[i].z;
-//                         idx_min = i;
-//                     }
-//                 }
-
-//                 // ---------- 2. 判断是否切分 ----------
-//                 int margin = 1;
-
-//                 if (idx_min <= margin || idx_min >= N - 1 - margin) {
-//                     splitRes.push_back(info);
-//                 } else {
-//                     // ---------- 3. 构造两段 ----------
-
-//                     // start → a
-//                     auto info1 = info->clone();
-//                     info1->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>(pts.begin(), pts.begin() + idx_min + 1);
-
-//                     // a → end
-//                     auto info2 = info->clone();
-//                     info2->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>(pts.begin() + idx_min, pts.end());
-
-//                     splitRes.push_back(info1);
-//                     splitRes.push_back(info2);
-//                 }
-//             }
-//         } else {
-//             splitRes.push_back(info);
-//         }
-
-//         newInfos.insert(newInfos.end(), splitRes.begin(), splitRes.end());
-//     }
-
-//     infos.swap(newInfos);
-// }*/
 
 void SeamDetWithPointCloud::splitWeldSeamsInPlace(std::vector<std::shared_ptr<WeldSeamInfo>>& infos) {
     std::vector<std::shared_ptr<WeldSeamInfo>> newInfos;
     newInfos.reserve(infos.size() * 2);
 
     for (auto& info : infos) {
-        if (!info) continue;
-
-        // 只处理管板角焊缝
-        if (info->weldType != Tube_Plate_Fillet || !info->weldEndPointsInCamera || info->weldEndPointsInCamera->size() < 3) {
+        if (!info || !info->weldEndPointsInCamera || info->weldEndPointsInCamera->size() < 3) {
             newInfos.push_back(info);
             continue;
         }
 
-        const auto& pts = *(info->weldEndPointsInCamera);
-        int N = pts.size();
+        if (info->weldType == Tube_Plate_Fillet || info->weldType == Tube_Tube_Fillet) {
+            const auto& pts = *(info->weldEndPointsInCamera);
+            int N = static_cast<int>(pts.size());
 
-        // ===== 中点 =====
-        int mid = N / 2;
+            int mid = N / 2;
 
-        // ===== 第一段：0 → mid =====
-        auto info1 = info->clone();
-        info1->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>(pts.begin(), pts.begin() + mid + 1);
+            auto info1 = info->clone();
+            info1->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>(pts.begin(), pts.begin() + mid + 1);
 
-        // ===== 第二段：mid → end =====
-        auto info2 = info->clone();
-        info2->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>(pts.begin() + mid, pts.end());
+            auto info2 = info->clone();
+            info2->weldEndPointsInCamera = std::make_shared<std::vector<pcl::PointXYZ>>(pts.begin() + mid, pts.end());
 
-        newInfos.push_back(info1);
-        newInfos.push_back(info2);
+            // ===== 只对当前 info 拆出来的两个段排序 =====
+            auto getBackX = [](const std::shared_ptr<WeldSeamInfo>& p) -> float {
+                if (!p || !p->weldEndPointsInCamera || p->weldEndPointsInCamera->empty()) {
+                    return std::numeric_limits<float>::max();
+                }
+                return p->weldEndPointsInCamera->back().x;
+            };
+
+            // x 小的在前
+            if (getBackX(info1) <= getBackX(info2)) {
+                newInfos.push_back(info1);
+                newInfos.push_back(info2);
+            } else {
+                newInfos.push_back(info2);
+                newInfos.push_back(info1);
+            }
+        } else {
+            newInfos.push_back(info);
+        }
     }
 
-    // ===== 按每个 info 最后一个点的 x 值降序排列（x小的在前）=====
-    std::sort(newInfos.begin(), newInfos.end(), [](const std::shared_ptr<WeldSeamInfo>& a, const std::shared_ptr<WeldSeamInfo>& b) {
-        if (!a || !a->weldEndPointsInCamera || a->weldEndPointsInCamera->empty()) return false;
-
-        if (!b || !b->weldEndPointsInCamera || b->weldEndPointsInCamera->empty()) return true;
-
-        const pcl::PointXYZ& pa = a->weldEndPointsInCamera->back();
-        const pcl::PointXYZ& pb = b->weldEndPointsInCamera->back();
-
-        return pa.x < pb.x;
-    });
     // // ===== DEBUG：只保留第二个 info 的起点和终点 =====
     // if (newInfos.size() >= 2) {
     //     std::vector<std::shared_ptr<WeldSeamInfo>> debugInfos;

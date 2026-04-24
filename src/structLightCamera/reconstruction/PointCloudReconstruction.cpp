@@ -687,7 +687,7 @@ void PointCloudReconstruction::pointCloudPostProcess(pcl::PointCloud<pcl::PointX
         MyToolFunc::passthroughFilter(pointCloud, pointCloud, SettingPara::getInstance().passthrough_Min,
                                       SettingPara::getInstance().passthrough_Max);  // 直通滤波
         MyToolFunc::customStatisticalFilter(pointCloud, pointCloud, SettingPara::getInstance().statistical_Pts,
-                                      SettingPara::getInstance().statistical_Std);  // 统计滤波
+                                            SettingPara::getInstance().statistical_Std);  // 统计滤波
         // 解决由于滤波后无序点云尺寸发生变化，height和width未被自动赋值导致的程序崩溃问题；
         pointCloud->height = 1;
         pointCloud->width = static_cast<uint32_t>(pointCloud->size());
@@ -802,11 +802,28 @@ void PointCloudReconstruction::reconstructForSeamArea() {
 
         // 4. 根据工作台平面参数，从原始点云中剔除背景点
         if (workbenchCoeff.head<3>().norm() > 1e-6) {
+            ScopedTimer t("根据工作台平面参数，从原始点云中剔除背景点");
             pcl::PointCloud<pcl::PointXYZ>::Ptr cloudRemovePlane(new pcl::PointCloud<pcl::PointXYZ>);
             cloudRemovePlane->reserve(reconstructPointCloud->size());
-            for (int i = 0; i < reconstructPointCloud->size(); i++) {
-                if (pcl::pointToPlaneDistance(reconstructPointCloud->points[i], workbenchCoeff) > workPlaneRemoveThreshold) {
-                    cloudRemovePlane->push_back(reconstructPointCloud->points[i]);
+            // for (int i = 0; i < reconstructPointCloud->size(); i++) {
+            //     if (pcl::pointToPlaneDistance(reconstructPointCloud->points[i], workbenchCoeff) > workPlaneRemoveThreshold) {
+            //         cloudRemovePlane->push_back(reconstructPointCloud->points[i]);
+            //     }
+            // }
+            const float A = workbenchCoeff[0];
+            const float B = workbenchCoeff[1];
+            const float C = workbenchCoeff[2];
+            const float D = workbenchCoeff[3];
+
+            const float invNorm = 1.0f / std::sqrt(A * A + B * B + C * C);
+
+            for (size_t i = 0; i < reconstructPointCloud->size(); ++i) {
+                const auto& p = reconstructPointCloud->points[i];
+
+                float dist = std::fabs(A * p.x + B * p.y + C * p.z + D) * invNorm;
+
+                if (dist > workPlaneRemoveThreshold) {
+                    cloudRemovePlane->push_back(p);
                 }
             }
             reconstructPointCloud->swap(*cloudRemovePlane);  // 用新点云替换原点云，swap 只是交换内部指针

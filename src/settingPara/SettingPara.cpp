@@ -66,9 +66,12 @@ void SettingPara::loadSetting() {
         PlatePlateFilletVerticalEnd_Z = qSetting->value("GFSeamPosition/PlatePlateFilletVerticalEnd_Z", PlatePlateFilletVerticalEnd_Z).toDouble();
         PlatePlateFilletVerticalWithdrawDistance =
             qSetting->value("GFSeamPosition/PlatePlateFilletVerticalWithdrawDistance", PlatePlateFilletVerticalWithdrawDistance).toDouble();
-        TubePlatFilletStartOffset = qSetting->value("GFSeamPosition/TubePlatFilletStartOffset", TubePlatFilletStartOffset).toDouble();
-        TubePlatFilletEndOffset = qSetting->value("GFSeamPosition/TubePlatFilletEndOffset", TubePlatFilletEndOffset).toDouble();
-        TubePlatFilletWithdrawDistance = qSetting->value("GFSeamPosition/TubePlatFilletWithdrawDistance", TubePlatFilletWithdrawDistance).toDouble();
+        TubePlateFilletStartOffset = qSetting->value("GFSeamPosition/TubePlateFilletStartOffset", TubePlateFilletStartOffset).toDouble();
+        TubePlateFilletEndOffset = qSetting->value("GFSeamPosition/TubePlateFilletEndOffset", TubePlateFilletEndOffset).toDouble();
+        TubePlateFilletWithdrawDistance = qSetting->value("GFSeamPosition/TubePlateFilletWithdrawDistance", TubePlateFilletWithdrawDistance).toDouble();
+        TubeTubeFilletStartOffset = qSetting->value("GFSeamPosition/TubeTubeFilletStartOffset", TubeTubeFilletStartOffset).toDouble();
+        TubeTubeFilletEndOffset = qSetting->value("GFSeamPosition/TubeTubeFilletEndOffset", TubeTubeFilletEndOffset).toDouble();
+        TubeTubeFilletWithdrawDistance = qSetting->value("GFSeamPosition/TubeTubeFilletWithdrawDistance", TubeTubeFilletWithdrawDistance).toDouble();
 
         wireCalibrationOffset = qSetting->value("Welding/wireCalibrationOffset", wireCalibrationOffset).toDouble();
         toolRadius = qSetting->value("Welding/toolRadius", toolRadius).toDouble();
