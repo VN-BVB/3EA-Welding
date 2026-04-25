@@ -82,12 +82,7 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeTubeFilletSeamsDet::solveSeamsEnd
         }
 
         detectSuccFlag = solveSeamEndPoints();
-        if (saveFlag) {
-            seamEndPoints->height = 1;
-            seamEndPoints->width = static_cast<uint32_t>(seamEndPoints->size());
-            pcl::io::savePCDFile("./data/seamDetWithPointCloud/tubeTubeFilletSeamsDet/seamEndPoints" + std::to_string(areaNum) + ".pcd",
-                                 *seamEndPoints);
-        }
+
         // detectSuccFlag = false;
         // 保存本次检测到的信息
         tempWeldSeamsInfo[i]->detectSuccFlag = detectSuccFlag;

@@ -870,8 +870,8 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
         }
 
         // TODO 默认沿平面法向方向找
-        Eigen::Vector3f refDir = n;
-        // Eigen::Vector3f refDir = axis;
+        // Eigen::Vector3f refDir = n;
+        Eigen::Vector3f refDir = axis;
         bool ok = false;
 
         {

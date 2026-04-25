@@ -83,7 +83,7 @@ private:
     double widthThreshRatio = 0.8;            // 筛选残留点云宽度阈值比例
     int sample_num = 3 + 3 * 2;               // 交线采样点数量，3是起点中点终点，乘2是中点两边
     // ===== 搜索阈值 =====
-    const float maxAxisOffset = 20.0f;    // 沿第一主轴方向允许前后搜索
+    const float maxAxisOffset = 30.0f;    // 沿第一主轴方向允许前后搜索
     const float maxPerpDist = 10.0f;      // 到“过理论点、方向为第一主轴的直线”的最大距离
     const float maxEuclidDist = 25.0f;    // 兜底欧式距离，管管缺口建议别太小
     float filletSeamsBlendWeight = 1.0f;  // 理论点与实际点权重

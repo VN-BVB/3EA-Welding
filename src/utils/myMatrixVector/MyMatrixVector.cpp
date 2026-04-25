@@ -202,16 +202,16 @@ std::vector<double> MyToolFunc::extractEulerZYX(const Eigen::Matrix3f &R, const 
     // =========================
     // 打印所有解
     // =========================
-    // PLOGD << "旋转矩阵求解欧拉角所有解";
-    // for (size_t i = 0; i < sols.size(); i++) {
-    //     std::cout << "  sol[" << i << "]: " << sols[i][0] << ", " << sols[i][1] << ", " << sols[i][2] << std::endl;
-    // }
+    PLOGD << "旋转矩阵求解欧拉角所有解";
+    for (size_t i = 0; i < sols.size(); i++) {
+        std::cout << "  sol[" << i << "]: " << sols[i][0] << ", " << sols[i][1] << ", " << sols[i][2] << std::endl;
+    }
 
-    // // =========================
-    // //  当前姿态
-    // // =========================
-    // PLOGD << " 当前姿态打印，筛选欧拉角解";
-    // PLOGD << "Current Euler (deg): [" << currentEulerDeg[0] << ", " << currentEulerDeg[1] << ", " << currentEulerDeg[2] << "]";
+    // =========================
+    //  当前姿态
+    // =========================
+    PLOGD << " 当前姿态打印，筛选欧拉角解";
+    PLOGD << "Current Euler (deg): [" << currentEulerDeg[0] << ", " << currentEulerDeg[1] << ", " << currentEulerDeg[2] << "]";
 
     // =========================
     // 选最优解

@@ -2138,7 +2138,7 @@ void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std:
                     }
                 }
             }
-        } /*else if (info->weldType == Tube_Tube_Fillet) {
+        } else if (info->weldType == Tube_Tube_Fillet) {
             const float offset0 = settingPara.wireCalibrationOffset + settingPara.TubeTubeFilletWithdrawDistance;
             int N = static_cast<int>(info->weldEndPointsInRobot->size());
 
@@ -2220,166 +2220,33 @@ void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std:
 
                 info->weldCollisionResult[i] = col;
             }  // ================= 串行打印 =================
-            if ( 1) {//settingPara.bool_save_model
-            for (int i = 0; i < N; ++i) {
-                auto& col = info->weldCollisionResult[i];
-
-                Eigen::Vector3f P(info->weldEndPointsInRobot->at(i).x, info->weldEndPointsInRobot->at(i).y, info->weldEndPointsInRobot->at(i).z);
-
-                Eigen::Vector3f Z = Zlist[i];
-                Eigen::Vector3f base = P - offset0 * Z;
-
-                std::cout << "\n[SeamIdx " << s << " | Area " << info->areaNum << " | Point " << i + 1 << "]\n";
-
-                std::cout << "  P = [" << P.x() << " " << P.y() << " " << P.z() << "]\n";
-                std::cout << "  Z = [" << Z.x() << " " << Z.y() << " " << Z.z() << "]\n";
-                std::cout << "  Base = [" << base.x() << " " << base.y() << " " << base.z() << "]\n";
-
-                std::cout << "  dist_cyl1   = " << col.distMain << "\n";
-                std::cout << "  dist_cyl2   = " << col.distSec << "\n";
-                std::cout << "  dist_cyl    = " << col.distMain << "\n";
-                std::cout << "  Intersect?  = " << (col.isIntersect ? 1 : 0) << "\n";
-
-                if (col.isIntersect) {
-                    if (!std::isfinite(col.safeOffset)) {
-                        std::cout << "  safeOffset  = NOT FOUND\n";
-                    } else {
-                        std::cout << "  safeOffset  = " << col.safeOffset << "\n";
-                        std::cout << "  extraOffset = " << col.extraOffset << "\n";
-                    }
-                }
-            }
-        }
-    }*/
-        else if (info->weldType == Tube_Tube_Fillet) {
-            const float offset0 = 15.0f;  // 为了和 MATLAB offset = 15 完全一致
-            const float toolRadius = settingPara.toolRadius;
-
-            struct DebugPose {
-                float x, y, z;
-                float a, b, c;
-            };
-
-            std::vector<std::vector<DebugPose>> debugSeams(2);
-
-            debugSeams[0] = {
-                {927.446f, -70.312f,  1.64969f,  173.973f, -26.9743f, 1.92992f},
-                {927.720f, -38.8177f, -0.97226f, 168.853f, -21.3860f, 3.42380f},
-                {926.879f, -7.82796f, -6.43475f, 162.686f, -17.0534f, 6.16267f},
-                {925.586f, 19.1965f,  -14.3606f, 155.311f, -14.2825f, 7.57923f},
-                {924.663f, 50.3961f,  -27.9721f, 138.191f, -13.1012f, 7.52018f}
-            };
-
-            debugSeams[1] = {
-                {927.446f, -70.312f,  1.64969f,  176.610f,  -27.3972f, -3.83744f},
-                {925.538f, -101.798f, 1.25607f,  -174.679f, -34.4646f, -10.3431f},
-                {920.766f, -131.614f, -4.81146f, -154.165f, -40.8959f, -30.7657f},
-                {914.124f, -155.856f, -19.3470f, -120.305f, -34.5118f, -62.2088f},
-                {910.892f, -165.947f, -42.2892f, -91.9595f, -21.8792f, -78.1550f}
-            };
-
-            const int debugSeamIdx = static_cast<int>(s);
-            if (debugSeamIdx < 0 || debugSeamIdx >= static_cast<int>(debugSeams.size())) {
-                continue;
-            }
-
-            const auto& debugPoseList = debugSeams[debugSeamIdx];
-            const int N = static_cast<int>(debugPoseList.size());
-
-            info->weldCollisionResult.resize(N);
-
-            // ================= DEBUG：圆柱1 weldCoeff =================
-            Eigen::Vector3f cylC1(928.696f, -89.8235f, -49.5261f);
-            Eigen::Vector3f cylAxis1(-0.438828f, 0.897357f, -0.0467012f);
-            cylAxis1.normalize();
-            float cylRadius1 = 57.6241f;
-
-            // ================= DEBUG：圆柱2 otherSurface =================
-            Eigen::Vector3f cylC2(1006.25f, 56.6402f, -36.8684f);
-            Eigen::Vector3f cylAxis2(-0.0613377f, -0.998019f, -0.0140133f);
-            cylAxis2.normalize();
-            float cylRadius2 = 81.5506f;
-
-            // ================= 从 DEBUG pose 提取 Z =================
-            std::vector<Eigen::Vector3f> Zlist(N);
-
-            for (int i = 0; i < N; ++i) {
-                const DebugPose& dp = debugPoseList[i];
-
-                Eigen::Matrix4f T = MyToolFunc::createTransformationMatrixZYX(dp.x, dp.y, dp.z, dp.a, dp.b, dp.c);
-
-                Zlist[i] = T.block<3, 1>(0, 2).normalized();
-
-                Eigen::Vector3f P(dp.x, dp.y, dp.z);
-
-                Eigen::Vector3f v = P - cylC1;
-                Eigen::Vector3f foot = cylC1 + v.dot(cylAxis1) * cylAxis1;
-                Eigen::Vector3f radial1 = P - foot;
-
-                if (radial1.norm() > 1e-6f) {
-                    radial1.normalize();
-
-                    if (Zlist[i].dot(radial1) > 0.0f) {
-                        Zlist[i] = -Zlist[i];
-                    }
-                }
-            }
-
-            // ================= 碰撞检测 =================
-            for (int i = 0; i < N; ++i) {
-                const DebugPose& dp = debugPoseList[i];
-
-                Eigen::Vector3f P(dp.x, dp.y, dp.z);
-                Eigen::Vector3f Z = Zlist[i];
-
-                CollisionResult col =
-                    checker.evalCollisionTwoCylindersAtOffset(P, Z, offset0, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2, toolRadius);
-
-                if (col.isIntersect) {
-                    float safeOffset = checker.findSafeOffsetTwoCylinders(P, Z, offset0, cylC1, cylAxis1, cylRadius1, cylC2, cylAxis2, cylRadius2,
-                                                                          toolRadius, maxExtraOffset, tolOffset);
-
-                    if (std::isfinite(safeOffset)) {
-                        col.safeOffset = static_cast<double>(safeOffset);
-                        col.extraOffset = static_cast<double>(safeOffset - offset0);
-                    } else {
-                        col.safeOffset = std::numeric_limits<double>::quiet_NaN();
-                        col.extraOffset = 0.0;
-                    }
-                }
-
-                info->weldCollisionResult[i] = col;
-            }
-
-            // ================= 串行打印：和 MATLAB 对比 =================
-            if (1) {
+            if (1) {  // settingPara.bool_save_model
                 for (int i = 0; i < N; ++i) {
-                    const DebugPose& dp = debugPoseList[i];
-
                     auto& col = info->weldCollisionResult[i];
 
-                    Eigen::Vector3f P(dp.x, dp.y, dp.z);
+                    Eigen::Vector3f P(info->weldEndPointsInRobot->at(i).x, info->weldEndPointsInRobot->at(i).y, info->weldEndPointsInRobot->at(i).z);
+
                     Eigen::Vector3f Z = Zlist[i];
                     Eigen::Vector3f base = P - offset0 * Z;
 
-                    std::cout << "\n[Seam " << debugSeamIdx + 1 << " | Point " << i + 1 << "]\n";
+                    // std::cout << "\n[SeamIdx " << s << " | Area " << info->areaNum << " | Point " << i + 1 << "]\n";
 
-                    std::cout << "  P    = [" << P.x() << " " << P.y() << " " << P.z() << "]\n";
-                    std::cout << "  Z    = [" << Z.x() << " " << Z.y() << " " << Z.z() << "]\n";
-                    std::cout << "  Base = [" << base.x() << " " << base.y() << " " << base.z() << "]\n";
+                    // std::cout << "  P = [" << P.x() << " " << P.y() << " " << P.z() << "]\n";
+                    // std::cout << "  Z = [" << Z.x() << " " << Z.y() << " " << Z.z() << "]\n";
+                    // std::cout << "  Base = [" << base.x() << " " << base.y() << " " << base.z() << "]\n";
 
-                    std::cout << "  dist_cyl1 = " << col.distMain << "\n";
-                    std::cout << "  dist_cyl2 = " << col.distSec << "\n";
-                    std::cout << "  Intersect? = " << (col.isIntersect ? 1 : 0) << "\n";
+                    // std::cout << "  dist_cyl1   = " << col.distMain << "\n";
+                    // std::cout << "  dist_cyl2   = " << col.distSec << "\n";
+                    // std::cout << "  Intersect?  = " << (col.isIntersect ? 1 : 0) << "\n";
 
-                    if (col.isIntersect) {
-                        if (!std::isfinite(col.safeOffset)) {
-                            std::cout << "  safeOffset = NOT FOUND\n";
-                        } else {
-                            std::cout << "  safeOffset = " << col.safeOffset << "\n";
-                            std::cout << "  extraOffset = " << col.extraOffset << "\n";
-                        }
-                    }
+                    // if (col.isIntersect) {
+                    //     if (!std::isfinite(col.safeOffset)) {
+                    //         std::cout << "  safeOffset  = NOT FOUND\n";
+                    //     } else {
+                    //         std::cout << "  safeOffset  = " << col.safeOffset << "\n";
+                    //         std::cout << "  extraOffset = " << col.extraOffset << "\n";
+                    //     }
+                    // }
                 }
             }
         }
