@@ -44,6 +44,8 @@ enum WELD_AREA_TYPE {     // 焊缝区域类型
     FRONT_DOWN_BEAM = 2,  // 正面倒立横梁
     BACK_BEAM = 3,        // 背面横梁
     FRONT_UP_BEAM = 4,    // 正面正立横梁
+    Back_Foot = 5,        // 背面立脚
+    Front_Foot = 6,       // 正面立脚
     // 龙门支架
     Plate_Plate_F = 100,
     TubeSide_Plate_F = 101,

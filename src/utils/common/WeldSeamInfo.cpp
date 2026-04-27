@@ -122,6 +122,10 @@ WELD_AREA_TYPE MyToolFunc::getWeldAreaType(int areaNum) {
             return WELD_AREA_TYPE::BACK_BEAM;
         case 4:
             return WELD_AREA_TYPE::FRONT_UP_BEAM;
+        case 5:
+            return WELD_AREA_TYPE::Back_Foot;
+        case 6:
+            return WELD_AREA_TYPE::Front_Foot;
         case 100:
             return WELD_AREA_TYPE::Plate_Plate_F;
         case 101:

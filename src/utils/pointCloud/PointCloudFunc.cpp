@@ -599,6 +599,7 @@ void MyToolFunc::projectCloudToCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr inpu
         output_cloud->points.emplace_back(P_proj.x(), P_proj.y(), P_proj.z());
     }
 }
+
 // 构造圆柱点云（理论点云）
 pcl::PointCloud<pcl::PointXYZ>::Ptr MyToolFunc::generateCylinderCloud(pcl::ModelCoefficients::Ptr cylinder) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);

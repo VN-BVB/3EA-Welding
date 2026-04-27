@@ -80,6 +80,50 @@ std::vector<std::shared_ptr<WeldSeamInfo>> TubeTubeFilletSeamsDet::solveSeamsEnd
                                      *axisRangeCloud);
             }
         }
+        {
+            // ScopedTimer t("morphologyFilterAxisRangeCloud");
+
+            pcl::PointCloud<pcl::PointXYZ>::Ptr morphCloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+            bool morphOk =
+                morphologyFilterAxisRangeCloud(axisRangeCloud, morphCloud, cylinderCoeffsPrimary, t_step, theta_step, erodeRadius, dilateRadius);
+
+            if (morphOk && morphCloud && !morphCloud->empty()) {
+                axisRangeCloud = morphCloud;
+
+                if (saveFlag) {
+                    axisRangeCloud->height = 1;
+                    axisRangeCloud->width = static_cast<uint32_t>(axisRangeCloud->size());
+                    pcl::io::savePCDFile(
+                        "./data/seamDetWithPointCloud/tubeTubeFilletSeamsDet/axisRangeCloud_morphology_" + std::to_string(areaNum) + ".pcd",
+                        *axisRangeCloud);
+                }
+            } else {
+                PLOGW << "axisRangeCloud形态学滤波失败，继续使用原始axisRangeCloud";
+            }
+        }
+        {
+            ScopedTimer t("alpha_shape_outer_boundary_2d");
+
+            pcl::PointCloud<pcl::PointXYZ>::Ptr alphaOuterCloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+            bool alphaOk = extractCylinderAlphaOuterBoundary2D(axisRangeCloud, alphaOuterCloud, cylinderCoeffsPrimary, Alpha_Radius);
+
+            if (alphaOk && alphaOuterCloud && !alphaOuterCloud->empty()) {
+                if (1) {
+                    alphaOuterCloud->height = 1;
+                    alphaOuterCloud->width = static_cast<uint32_t>(alphaOuterCloud->size());
+
+                    pcl::io::savePCDFile(
+                        "./data/seamDetWithPointCloud/tubeTubeFilletSeamsDet/axisRangeCloud_alphaOuter2D_" + std::to_string(areaNum) + ".pcd",
+                        *alphaOuterCloud);
+                }
+
+                axisRangeCloud = alphaOuterCloud;
+            } else {
+                PLOGW << "二维AlphaShape外轮廓提取失败";
+            }
+        }
 
         detectSuccFlag = solveSeamEndPoints();
 
@@ -111,6 +155,81 @@ void TubeTubeFilletSeamsDet::singleSeamReinitialize() {
     saveFlag = SettingPara::getInstance().bool_save_model;
     // saveFlag = true;
     detectSuccFlag = false;
+}
+bool TubeTubeFilletSeamsDet::unfoldCylinderCloudToPlane(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                                                        const pcl::ModelCoefficients::Ptr& cylinderCoeff,
+                                                        pcl::PointCloud<pcl::PointXYZ>::Ptr& unfoldCloud) {
+    if (!cloud || cloud->empty()) {
+        PLOGE << "unfoldCylinderCloudToPlane: cloud 为空";
+        return false;
+    }
+
+    if (!cylinderCoeff || cylinderCoeff->values.size() < 7) {
+        PLOGE << "unfoldCylinderCloudToPlane: cylinderCoeff 无效";
+        return false;
+    }
+
+    if (!unfoldCloud) {
+        unfoldCloud.reset(new pcl::PointCloud<pcl::PointXYZ>());
+    }
+    unfoldCloud->clear();
+    unfoldCloud->reserve(cloud->size());
+
+    Eigen::Vector3f C(cylinderCoeff->values[0], cylinderCoeff->values[1], cylinderCoeff->values[2]);
+
+    Eigen::Vector3f axis(cylinderCoeff->values[3], cylinderCoeff->values[4], cylinderCoeff->values[5]);
+
+    float R = cylinderCoeff->values[6];
+
+    if (axis.norm() < 1e-6f || R <= 1e-6f) {
+        PLOGE << "unfoldCylinderCloudToPlane: 圆柱轴或半径无效";
+        return false;
+    }
+
+    axis.normalize();
+
+    // 构造圆柱截面上的两个正交基 e1 / e2
+    Eigen::Vector3f tmp(0.0f, 0.0f, 1.0f);
+    if (std::fabs(axis.dot(tmp)) > 0.9f) {
+        tmp = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    }
+
+    Eigen::Vector3f e1 = axis.cross(tmp).normalized();
+    Eigen::Vector3f e2 = axis.cross(e1).normalized();
+
+    for (const auto& pt : cloud->points) {
+        Eigen::Vector3f P(pt.x, pt.y, pt.z);
+        Eigen::Vector3f v = P - C;
+
+        // 轴向坐标
+        float t = v.dot(axis);
+
+        // 径向向量
+        Eigen::Vector3f radial = v - t * axis;
+        if (radial.norm() < 1e-6f) {
+            continue;
+        }
+
+        radial.normalize();
+
+        float cosTheta = radial.dot(e1);
+        float sinTheta = radial.dot(e2);
+
+        float theta = std::atan2(sinTheta, cosTheta);
+
+        pcl::PointXYZ q;
+        q.x = t;          // 轴向展开坐标，单位 mm
+        q.y = R * theta;  // 圆周方向展开坐标，单位 mm
+        q.z = 0.0f;
+
+        unfoldCloud->push_back(q);
+    }
+
+    unfoldCloud->height = 1;
+    unfoldCloud->width = static_cast<uint32_t>(unfoldCloud->size());
+    unfoldCloud->is_dense = false;
+
+    return !unfoldCloud->empty();
 }
 void TubeTubeFilletSeamsDet::ransacCylinder() {
     if (!cloudInWeldArea || cloudInWeldArea->empty()) {
@@ -854,7 +973,531 @@ bool TubeTubeFilletSeamsDet::buildCylinderCache(const pcl::ModelCoefficients::Pt
 
     return true;
 }
+bool TubeTubeFilletSeamsDet::morphologyFilterAxisRangeCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& inputCloud,
+                                                            pcl::PointCloud<pcl::PointXYZ>::Ptr& outputCloud,
+                                                            const pcl::ModelCoefficients::Ptr& cylinderCoeff, float t_step, float theta_step,
+                                                            int erodeRadius, int dilateRadius) {
+    if (!inputCloud || inputCloud->empty()) {
+        PLOGE << "morphologyFilterAxisRangeCloud: inputCloud为空";
+        return false;
+    }
 
+    if (!outputCloud) {
+        outputCloud.reset(new pcl::PointCloud<pcl::PointXYZ>());
+    }
+    outputCloud->clear();
+
+    if (!cylinderCoeff || cylinderCoeff->values.size() < 7) {
+        PLOGE << "morphologyFilterAxisRangeCloud: cylinderCoeff无效";
+        return false;
+    }
+
+    if (t_step <= 1e-6f || theta_step <= 1e-6f) {
+        PLOGE << "morphologyFilterAxisRangeCloud: t_step/theta_step无效";
+        return false;
+    }
+
+    Eigen::Vector3f C(cylinderCoeff->values[0], cylinderCoeff->values[1], cylinderCoeff->values[2]);
+
+    Eigen::Vector3f axis(cylinderCoeff->values[3], cylinderCoeff->values[4], cylinderCoeff->values[5]);
+
+    if (axis.norm() < 1e-6f) {
+        PLOGE << "morphologyFilterAxisRangeCloud: 圆柱轴向无效";
+        return false;
+    }
+    axis.normalize();
+
+    // 构造圆柱截面上的两个正交方向 u, v
+    Eigen::Vector3f tmp(0.0f, 0.0f, 1.0f);
+    if (std::fabs(axis.dot(tmp)) > 0.9f) {
+        tmp = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    }
+
+    Eigen::Vector3f u = axis.cross(tmp).normalized();
+    Eigen::Vector3f v = axis.cross(u).normalized();
+
+    struct CellKey {
+        int ti;
+        int ai;
+
+        bool operator<(const CellKey& other) const {
+            if (ti != other.ti) return ti < other.ti;
+            return ai < other.ai;
+        }
+    };
+
+    std::vector<float> tValues;
+    std::vector<float> thetaValues;
+    tValues.reserve(inputCloud->size());
+    thetaValues.reserve(inputCloud->size());
+
+    float minT = std::numeric_limits<float>::max();
+    float maxT = -std::numeric_limits<float>::max();
+
+    for (size_t i = 0; i < inputCloud->size(); ++i) {
+        const pcl::PointXYZ& p = inputCloud->points[i];
+
+        Eigen::Vector3f P(p.x, p.y, p.z);
+        Eigen::Vector3f CP = P - C;
+
+        float t = CP.dot(axis);
+        Eigen::Vector3f radial = CP - t * axis;
+
+        float x = radial.dot(u);
+        float y = radial.dot(v);
+        float theta = std::atan2(y, x);
+
+        if (theta < 0.0f) {
+            theta += 2.0f * static_cast<float>(M_PI);
+        }
+
+        tValues.push_back(t);
+        thetaValues.push_back(theta);
+
+        if (t < minT) minT = t;
+        if (t > maxT) maxT = t;
+    }
+
+    const int thetaBins = static_cast<int>(std::ceil(2.0f * static_cast<float>(M_PI) / theta_step));
+    const int tBins = static_cast<int>(std::ceil((maxT - minT) / t_step)) + 1;
+
+    if (thetaBins <= 0 || tBins <= 0) {
+        PLOGE << "morphologyFilterAxisRangeCloud: 栅格尺寸无效";
+        return false;
+    }
+
+    // 每个栅格保存原始点索引
+    std::map<CellKey, std::vector<int>> cellPointIndices;
+    std::set<CellKey> occupiedCells;
+
+    for (int i = 0; i < static_cast<int>(inputCloud->size()); ++i) {
+        int ti = static_cast<int>(std::floor((tValues[i] - minT) / t_step));
+        int ai = static_cast<int>(std::floor(thetaValues[i] / theta_step));
+
+        if (ti < 0) ti = 0;
+        if (ti >= tBins) ti = tBins - 1;
+
+        if (ai < 0) ai = 0;
+        if (ai >= thetaBins) ai = thetaBins - 1;
+
+        CellKey key{ti, ai};
+        occupiedCells.insert(key);
+        cellPointIndices[key].push_back(i);
+    }
+
+    // ================= 腐蚀 =================
+    std::set<CellKey> erodedCells;
+
+    for (const auto& cell : occupiedCells) {
+        bool keep = true;
+
+        for (int dt = -erodeRadius; dt <= erodeRadius && keep; ++dt) {
+            for (int da = -erodeRadius; da <= erodeRadius; ++da) {
+                int nt = cell.ti + dt;
+                int na = cell.ai + da;
+
+                if (nt < 0 || nt >= tBins) {
+                    keep = false;
+                    break;
+                }
+
+                // theta方向是环形的
+                if (na < 0) na += thetaBins;
+                if (na >= thetaBins) na -= thetaBins;
+
+                CellKey nkey{nt, na};
+                if (occupiedCells.find(nkey) == occupiedCells.end()) {
+                    keep = false;
+                    break;
+                }
+            }
+        }
+
+        if (keep) {
+            erodedCells.insert(cell);
+        }
+    }
+
+    // ================= 膨胀 =================
+    std::set<CellKey> dilatedCells;
+
+    for (const auto& cell : erodedCells) {
+        for (int dt = -dilateRadius; dt <= dilateRadius; ++dt) {
+            for (int da = -dilateRadius; da <= dilateRadius; ++da) {
+                int nt = cell.ti + dt;
+                int na = cell.ai + da;
+
+                if (nt < 0 || nt >= tBins) {
+                    continue;
+                }
+
+                if (na < 0) na += thetaBins;
+                if (na >= thetaBins) na -= thetaBins;
+
+                CellKey nkey{nt, na};
+
+                // 重点：只保留原来有真实点的栅格
+                if (cellPointIndices.find(nkey) != cellPointIndices.end()) {
+                    dilatedCells.insert(nkey);
+                }
+            }
+        }
+    }
+
+    // ================= 恢复原始点云 =================
+    std::vector<char> used(inputCloud->size(), 0);
+
+    for (const auto& cell : dilatedCells) {
+        auto it = cellPointIndices.find(cell);
+        if (it == cellPointIndices.end()) {
+            continue;
+        }
+
+        const std::vector<int>& indices = it->second;
+        for (int idx : indices) {
+            if (idx < 0 || idx >= static_cast<int>(inputCloud->size())) {
+                continue;
+            }
+
+            if (used[idx]) {
+                continue;
+            }
+
+            outputCloud->push_back(inputCloud->points[idx]);
+            used[idx] = 1;
+        }
+    }
+
+    outputCloud->height = 1;
+    outputCloud->width = static_cast<uint32_t>(outputCloud->size());
+    outputCloud->is_dense = inputCloud->is_dense;
+
+    // PLOGD << "morphologyFilterAxisRangeCloud: input = " << inputCloud->size() << ", occupiedCells = " << occupiedCells.size()
+    //       << ", erodedCells = " << erodedCells.size() << ", dilatedCells = " << dilatedCells.size() << ", output = " << outputCloud->size();
+
+    return !outputCloud->empty();
+}
+bool TubeTubeFilletSeamsDet::extractCylinderAlphaOuterBoundary2D(const pcl::PointCloud<pcl::PointXYZ>::Ptr& inputCloud,
+                                                                 pcl::PointCloud<pcl::PointXYZ>::Ptr& outerBoundaryCloud,
+                                                                 const pcl::ModelCoefficients::Ptr& cylinderCoeff, double alphaRadius) {
+    if (!inputCloud || inputCloud->empty()) {
+        PLOGE << "extractCylinderAlphaOuterBoundary2D: inputCloud为空";
+        return false;
+    }
+
+    if (!outerBoundaryCloud) {
+        outerBoundaryCloud.reset(new pcl::PointCloud<pcl::PointXYZ>());
+    }
+    outerBoundaryCloud->clear();
+
+    if (!cylinderCoeff || cylinderCoeff->values.size() < 7) {
+        PLOGE << "extractCylinderAlphaOuterBoundary2D: cylinderCoeff无效";
+        return false;
+    }
+
+    if (alphaRadius <= 1e-6) {
+        PLOGE << "extractCylinderAlphaOuterBoundary2D: alphaRadius无效";
+        return false;
+    }
+
+    Eigen::Vector3f C(cylinderCoeff->values[0], cylinderCoeff->values[1], cylinderCoeff->values[2]);
+
+    Eigen::Vector3f axis(cylinderCoeff->values[3], cylinderCoeff->values[4], cylinderCoeff->values[5]);
+
+    const float R = cylinderCoeff->values[6];
+
+    if (axis.norm() < 1e-6f || R <= 1e-6f) {
+        PLOGE << "extractCylinderAlphaOuterBoundary2D: 圆柱轴向或半径无效";
+        return false;
+    }
+
+    axis.normalize();
+
+    Eigen::Vector3f tmp(0.0f, 0.0f, 1.0f);
+    if (std::fabs(axis.dot(tmp)) > 0.9f) {
+        tmp = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    }
+
+    Eigen::Vector3f u = axis.cross(tmp).normalized();
+    Eigen::Vector3f v = axis.cross(u).normalized();
+
+    const int N = static_cast<int>(inputCloud->size());
+
+    std::vector<float> tList(N);
+    std::vector<float> thetaList(N);
+
+    double sumSin = 0.0;
+    double sumCos = 0.0;
+
+    for (int i = 0; i < N; ++i) {
+        const pcl::PointXYZ& p = inputCloud->points[i];
+
+        Eigen::Vector3f P(p.x, p.y, p.z);
+        Eigen::Vector3f CP = P - C;
+
+        float t = CP.dot(axis);
+        Eigen::Vector3f radial = CP - t * axis;
+
+        float x = radial.dot(u);
+        float y = radial.dot(v);
+
+        float theta = std::atan2(y, x);
+
+        tList[i] = t;
+        thetaList[i] = theta;
+
+        sumSin += std::sin(theta);
+        sumCos += std::cos(theta);
+    }
+
+    float thetaCenter = static_cast<float>(std::atan2(sumSin, sumCos));
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2d(new pcl::PointCloud<pcl::PointXYZ>());
+    cloud2d->resize(N);
+
+#pragma omp parallel for schedule(static)
+    for (int i = 0; i < N; ++i) {
+        float theta = thetaList[i] - thetaCenter;
+
+        while (theta > static_cast<float>(M_PI)) {
+            theta -= 2.0f * static_cast<float>(M_PI);
+        }
+
+        while (theta < -static_cast<float>(M_PI)) {
+            theta += 2.0f * static_cast<float>(M_PI);
+        }
+
+        pcl::PointXYZ p2;
+        p2.x = tList[i];
+        p2.y = theta * R;
+        p2.z = 0.0f;
+
+        cloud2d->points[i] = p2;
+    }
+
+    cloud2d->height = 1;
+    cloud2d->width = static_cast<uint32_t>(cloud2d->size());
+    cloud2d->is_dense = false;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr hull2d(new pcl::PointCloud<pcl::PointXYZ>());
+    std::vector<pcl::Vertices> polygons;
+
+    pcl::ConcaveHull<pcl::PointXYZ> alphaShape;
+    alphaShape.setInputCloud(cloud2d);
+    alphaShape.setAlpha(alphaRadius);
+    alphaShape.setDimension(2);
+    alphaShape.reconstruct(*hull2d, polygons);
+
+    if (!hull2d || hull2d->empty() || polygons.empty()) {
+        PLOGW << "extractCylinderAlphaOuterBoundary2D: AlphaShape结果为空";
+        return false;
+    }
+
+    int bestPolyIdx = -1;
+    double bestArea = -1.0;
+
+    for (int i = 0; i < static_cast<int>(polygons.size()); ++i) {
+        const pcl::Vertices& poly = polygons[i];
+
+        if (poly.vertices.size() < 3) {
+            continue;
+        }
+
+        double area = 0.0;
+
+        for (size_t j = 0; j < poly.vertices.size(); ++j) {
+            int id0 = static_cast<int>(poly.vertices[j]);
+            int id1 = static_cast<int>(poly.vertices[(j + 1) % poly.vertices.size()]);
+
+            if (id0 < 0 || id0 >= static_cast<int>(hull2d->size())) continue;
+            if (id1 < 0 || id1 >= static_cast<int>(hull2d->size())) continue;
+
+            const pcl::PointXYZ& p0 = hull2d->points[id0];
+            const pcl::PointXYZ& p1 = hull2d->points[id1];
+
+            area += static_cast<double>(p0.x) * static_cast<double>(p1.y) - static_cast<double>(p1.x) * static_cast<double>(p0.y);
+        }
+
+        area = std::fabs(area) * 0.5;
+
+        if (area > bestArea) {
+            bestArea = area;
+            bestPolyIdx = i;
+        }
+    }
+
+    if (bestPolyIdx < 0) {
+        PLOGW << "extractCylinderAlphaOuterBoundary2D: 未找到有效外轮廓";
+        return false;
+    }
+
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree2d;
+    kdtree2d.setInputCloud(cloud2d);
+
+    const pcl::Vertices& outerPoly = polygons[bestPolyIdx];
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr outerBoundaryCloud2dRaw(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr outerBoundaryCloud3dRaw(new pcl::PointCloud<pcl::PointXYZ>());
+
+    std::vector<int> orderedOriginalIndex;
+    orderedOriginalIndex.reserve(outerPoly.vertices.size());
+
+    std::set<int> usedOriginalIndex;
+
+    for (size_t i = 0; i < outerPoly.vertices.size(); ++i) {
+        int hullIdx = static_cast<int>(outerPoly.vertices[i]);
+
+        if (hullIdx < 0 || hullIdx >= static_cast<int>(hull2d->size())) {
+            continue;
+        }
+
+        const pcl::PointXYZ& hp = hull2d->points[hullIdx];
+
+        std::vector<int> nnIdx(1);
+        std::vector<float> nnDist(1);
+
+        if (kdtree2d.nearestKSearch(hp, 1, nnIdx, nnDist) <= 0) {
+            continue;
+        }
+
+        int originalIdx = nnIdx[0];
+
+        if (originalIdx < 0 || originalIdx >= N) {
+            continue;
+        }
+
+        if (usedOriginalIndex.insert(originalIdx).second) {
+            outerBoundaryCloud2dRaw->push_back(cloud2d->points[originalIdx]);
+            outerBoundaryCloud3dRaw->push_back(inputCloud->points[originalIdx]);
+            orderedOriginalIndex.push_back(originalIdx);
+        }
+    }
+
+    if (outerBoundaryCloud2dRaw->size() < 3) {
+        PLOGW << "extractCylinderAlphaOuterBoundary2D: 外轮廓点太少";
+        return false;
+    }
+
+    outerBoundaryCloud2dRaw->height = 1;
+    outerBoundaryCloud2dRaw->width = static_cast<uint32_t>(outerBoundaryCloud2dRaw->size());
+    outerBoundaryCloud2dRaw->is_dense = false;
+
+    // ============================================================
+    // 二维边缘插值补偿
+    // 规则：
+    // 1. AlphaShape 的 polygon 顶点本身已经是边界顺序；
+    // 2. 对每一段 Pi -> Pi+1 判断距离；
+    // 3. 用当前点附近前后各25个点，总计约50个点，计算平均相邻距离；
+    // 4. 如果当前段距离 > gapScale * 局部平均距离，则认为是大间隙；
+    // 5. 线性插值 按1mm间距插值补点；
+    // ============================================================
+    const int M = static_cast<int>(outerBoundaryCloud2dRaw->size());
+
+    std::vector<float> segDist(M, 0.0f);
+
+#pragma omp parallel for schedule(static)
+    for (int i = 0; i < M; ++i) {
+        const pcl::PointXYZ& p0 = outerBoundaryCloud2dRaw->points[i];
+        const pcl::PointXYZ& p1 = outerBoundaryCloud2dRaw->points[(i + 1) % M];
+
+        float dx = p1.x - p0.x;
+        float dy = p1.y - p0.y;
+        segDist[i] = std::sqrt(dx * dx + dy * dy);
+    }
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr outerBoundaryCloud2dInterp(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr outerBoundaryCloud3dInterp(new pcl::PointCloud<pcl::PointXYZ>());
+
+    outerBoundaryCloud2dInterp->reserve(M * 2);
+    outerBoundaryCloud3dInterp->reserve(M * 2);
+
+    for (int i = 0; i < M; ++i) {
+        const pcl::PointXYZ& p0 = outerBoundaryCloud2dRaw->points[i];
+        const pcl::PointXYZ& p1 = outerBoundaryCloud2dRaw->points[(i + 1) % M];
+
+        // 原始点先加入
+        outerBoundaryCloud2dInterp->push_back(p0);
+
+        int originalIdx0 = orderedOriginalIndex[i];
+        outerBoundaryCloud3dInterp->push_back(inputCloud->points[originalIdx0]);
+
+        // ===== 局部平均距离 =====
+        float localAvgDist = 0.0f;
+        int localCount = 0;
+
+        for (int k = -halfWindow; k < halfWindow; ++k) {
+            int idx = i + k;
+
+            while (idx < 0) idx += M;
+            while (idx >= M) idx -= M;
+
+            if (segDist[idx] > 1e-6f) {
+                localAvgDist += segDist[idx];
+                ++localCount;
+            }
+        }
+
+        if (localCount <= 0) continue;
+
+        localAvgDist /= static_cast<float>(localCount);
+
+        const float currDist = segDist[i];
+        const float gapThresh = localAvgDist * gapScale;
+
+        // ===== 判断是否需要补点 =====
+        if (currDist <= gapThresh || currDist <= insertStep * 1.5f) {
+            continue;
+        }
+
+        // ===== 线性插值 =====
+        int insertNum = static_cast<int>(std::floor(currDist / insertStep));
+
+        if (insertNum <= 1) continue;
+
+        for (int k = 1; k < insertNum; ++k) {
+            float alpha = static_cast<float>(k) / static_cast<float>(insertNum);
+
+            // ---------- 2D线性 ----------
+            pcl::PointXYZ p2d;
+            p2d.x = (1.0f - alpha) * p0.x + alpha * p1.x;
+            p2d.y = (1.0f - alpha) * p0.y + alpha * p1.y;
+            p2d.z = 0.0f;
+
+            // ---------- 反投影到3D ----------
+            float t = p2d.x;
+            float theta = p2d.y / R + thetaCenter;
+
+            while (theta > static_cast<float>(M_PI)) theta -= 2.0f * static_cast<float>(M_PI);
+            while (theta < -static_cast<float>(M_PI)) theta += 2.0f * static_cast<float>(M_PI);
+
+            Eigen::Vector3f P3 = C + t * axis + R * (std::cos(theta) * u + std::sin(theta) * v);
+
+            pcl::PointXYZ p3d;
+            p3d.x = P3.x();
+            p3d.y = P3.y();
+            p3d.z = P3.z();
+
+            outerBoundaryCloud2dInterp->push_back(p2d);
+            outerBoundaryCloud3dInterp->push_back(p3d);
+        }
+    }
+
+    outerBoundaryCloud2dInterp->height = 1;
+    outerBoundaryCloud2dInterp->width = static_cast<uint32_t>(outerBoundaryCloud2dInterp->size());
+    outerBoundaryCloud2dInterp->is_dense = false;
+
+    outerBoundaryCloud3dInterp->height = 1;
+    outerBoundaryCloud3dInterp->width = static_cast<uint32_t>(outerBoundaryCloud3dInterp->size());
+    outerBoundaryCloud3dInterp->is_dense = false;
+
+    *outerBoundaryCloud = *outerBoundaryCloud3dInterp;
+
+    // PLOGD << "extractCylinderAlphaOuterBoundary2D: input = " << inputCloud->size() << ", cloud2d = " << cloud2d->size()
+    //       << ", hull2d = " << hull2d->size() << ", polygons = " << polygons.size() << ", bestArea = " << bestArea
+    //       << ", outerRaw = " << outerBoundaryCloud3dRaw->size() << ", outerInterp = " << outerBoundaryCloud->size() << ", alpha = " << alphaRadius;
+
+    return !outerBoundaryCloud->empty();
+}
 bool TubeTubeFilletSeamsDet::solveSeamEndPoints() {
     if (!cylinderCloudPrimary || cylinderCloudPrimary->empty() || !cylinderCoeffsPrimary || !cylinderCoeffsSecondary) {
         PLOGE << "solveSeamEndPoints: 输入参数无效";

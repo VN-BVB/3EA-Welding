@@ -52,9 +52,17 @@ private:
                                                   pcl::PointCloud<pcl::PointXYZI>::Ptr& outCloud);
     bool projectPointToCylinderByFixedRadialDir(const Eigen::Vector3f& point, const Eigen::Vector3f& theoryPt, const CylinderModelCache& cyl,
                                                 Eigen::Vector3f& projPoint);
+    bool morphologyFilterAxisRangeCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& inputCloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& outputCloud,
+                                        const pcl::ModelCoefficients::Ptr& cylinderCoeff, float t_step, float theta_step, int erodeRadius,
+                                        int dilateRadius);
+    bool extractCylinderAlphaOuterBoundary2D(const pcl::PointCloud<pcl::PointXYZ>::Ptr& inputCloud,
+                                             pcl::PointCloud<pcl::PointXYZ>::Ptr& outerBoundaryCloud,
+                                             const pcl::ModelCoefficients::Ptr& cylinderCoeff, double alphaRadius);
     bool refineTheoryPointsToActualPoints(const std::vector<pcl::PointXYZ>& theoryPts, const pcl::PointCloud<pcl::PointXYZ>::Ptr& refCloud,
                                           const Eigen::Vector3f& searchDirInput, const CylinderModelCache& projectCylinder,
                                           std::vector<pcl::PointXYZ>& actualPts);
+    bool unfoldCylinderCloudToPlane(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, const pcl::ModelCoefficients::Ptr& cylinderCoeff,
+                                    pcl::PointCloud<pcl::PointXYZ>::Ptr& unfoldCloud);
 
 private:
     bool saveFlag = false;
@@ -78,11 +86,20 @@ private:
     int Statistic_NeighPoints = 20;           // 统计滤波近邻点数
     float Statistic_sigma = 6.0;              // 统计滤波系数
     double extendCylinderInPlaneArea = 15.0;  // 选取焊缝区域衍生
-    float t_step = 1.0f;                      // 轴向分辨率（mm）
-    float theta_step = 2.0f * M_PI / 180.0f;  // n°一格
     double widthThreshRatio = 0.8;            // 筛选残留点云宽度阈值比例
     int sample_num = 3 + 3 * 2;               // 交线采样点数量，3是起点中点终点，乘2是中点两边
-    // ===== 搜索阈值 =====
+    // ===== 焊渣腐蚀膨胀 =====
+    float t_step = 1.0f;                      // 轴向分辨率（mm）
+    float theta_step = 1.0f * M_PI / 180.0f;  // n°一格
+    int erodeRadius = 1;                      // 腐蚀半径
+    int dilateRadius = 1;                     // 膨胀半径
+    // 焊点坑补偿
+    const double Alpha_Radius = 10.0;             // AlphaShape半径
+    const int localNeighborNum = 50;              // 用于判断“局部点间距”的邻域点数量
+    const int halfWindow = localNeighborNum / 2;  // 半窗口大小（前后各多少个点）
+    const float gapScale = 1.0f;                  // 判断“是否为异常大间隔”的倍率系数
+    const float insertStep = 1.0f;                // 插值步长（单位：mm）
+    // ===== 焊点校正搜索阈值 =====
     const float maxAxisOffset = 30.0f;    // 沿第一主轴方向允许前后搜索
     const float maxPerpDist = 10.0f;      // 到“过理论点、方向为第一主轴的直线”的最大距离
     const float maxEuclidDist = 25.0f;    // 兜底欧式距离，管管缺口建议别太小

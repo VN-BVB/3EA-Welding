@@ -603,8 +603,8 @@ void PointCloudReconstruction::calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Pt
     double Ap21 = Ap.at<double>(2, 1);
     double Ap22 = Ap.at<double>(2, 2);
     double Ap23 = Ap.at<double>(2, 3);
-
-#pragma omp parallel num_threads(12)
+    int maxThreads = omp_get_max_threads();
+#pragma omp parallel num_threads(maxThreads)
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr recons_cloud_private(new pcl::PointCloud<pcl::PointXYZ>);  // 重建点云
         cv::Mat A(3, 3, CV_64FC1);

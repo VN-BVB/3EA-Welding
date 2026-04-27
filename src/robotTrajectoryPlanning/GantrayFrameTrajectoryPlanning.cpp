@@ -2044,7 +2044,6 @@ bool GantrayFrameTrajectoryPlanning::computeTubeTubeFilletSwingPoints(const std:
 }
 void GantrayFrameTrajectoryPlanning::debugWeldingCollisionCheck(std::vector<std::shared_ptr<WeldSeamInfo>>& weldSeamInfo) {
     const float toolRadius = settingPara.toolRadius;
-    const float maxExtraOffset = 300.0f;
     const float tolOffset = 1e-3f;
     for (size_t s = 0; s < weldSeamInfo.size(); ++s) {
         auto& info = weldSeamInfo[s];

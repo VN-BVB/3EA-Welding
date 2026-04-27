@@ -45,6 +45,7 @@ private:
     std::fstream outfile;  // 读取存在mask坐标的txt文件
     std::string outfile_name = "./data/SeamCoordinate.txt";
     debugCollisionCheck checker;
+    const float maxExtraOffset = 300.0f;  // 碰撞检测最高抬起限制
 
     float tubeSidePlateFilletPlanePoseW = 0.7f;  // 管侧与板角接焊缝靠近三角肘板平面法向量权重
     float platePlateFilletPlanePoseW_H = 0.5f;   // 板板水平角接靠近立板法向量权重（变大--靠近底）
@@ -62,6 +63,7 @@ private:
     double weldingCurrent_Vertical = 130;  // 焊接电流(竖直焊缝用这个电流)
     double weldingVoltage = 24;            // 焊接电压(默认焊接电压)
     double weldingVoltage_Vertical = 18;   // 焊接电压(竖直焊缝用这个电压)
+
     friend class RailWeldingSystem;
 };
 #endif  // GANTRAYFRAMETRAJECTORYPLANNING_H
