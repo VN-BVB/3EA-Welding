@@ -14,7 +14,7 @@
 #include "structLightCamera/StructLightCamera.h"
 #include "structLightCamera/config/StructLightConfig.h"
 #include "utils/common/WeldSeamInfo.h"
-// #include "workpieceCoarseLocalization/WorkpieceCoarseLocalization.h"
+#include "workpieceCoarseLocalization/WorkpieceCoarseLocalization.h"
 #include "settingPara/SettingPara.h"
 // #include "photoPlanner/PhotoPlanner.h"
 // clang-format on
@@ -173,6 +173,16 @@ void RailWeldingSystem::initRobot() {
         } else {
             PLOGE << "机器人类初始化失败";
         }
+    }
+}
+// 初始化工件粗定位类 (由于工件粗定位是通过依赖注入的方式获得实例, 该初始化函数由外部调用)
+void RailWeldingSystem::initWorkpieceCoarseLoc() {
+    if (workpieceCoarseLocalization) {
+        connect(workpieceCoarseLocalization, &WorkpieceCoarseLocalization::sendCoarseLoc, this, &RailWeldingSystem::whenGetCoarseLocalization);
+
+        PLOGD << "工件粗定位类初始化成功";
+    } else {
+        PLOGE << "工件粗定位类初始化失败";
     }
 }
 // 连接结构光相机
@@ -363,4 +373,155 @@ void RailWeldingSystem::whenTrajectoryPlanOver() {
     if (weldMode == WELD_MODE::AUTO_WELD) {
         emit sendWelding();
     }
+}
+// 收到工件粗定位完成信息, 准备表格信息, 规划拍照位置和次数
+void RailWeldingSystem::whenGetCoarseLocalization(std::shared_ptr<workpieceBoxInWorld> res) {
+    PLOGD << "获取到所有粗定位信息";
+    this->coarseLocRes = res;
+    int num = 1;
+    std::vector<std::vector<QTableWidgetItem*>> coarseLocalizationInfo;
+    workpiecePosition.clear();
+
+    PLOGD << "coarseLocRes->workpieceInfoInWorld.size(): " << coarseLocRes->workpieceInfoInWorld.size();
+
+    for (auto& info : coarseLocRes->workpieceInfoInWorld) {
+        std::vector<QTableWidgetItem*> singleWorkpieceInfo;
+
+        // 工件中心点信息
+        QTableWidgetItem* numItem = new QTableWidgetItem;
+        numItem->setText(QString::number(num++));
+        numItem->setTextAlignment(Qt::AlignCenter);
+        singleWorkpieceInfo.push_back(numItem);
+        QTableWidgetItem* centerItem = new QTableWidgetItem;
+        centerItem->setText(QString("(%1, %2, %3)")
+                                .arg(info.workpieceAreaRect.first.x, 0, 'f', 0)
+                                .arg(info.workpieceAreaRect.first.y, 0, 'f', 0)
+                                .arg(info.workpieceAreaRect.first.z, 0, 'f', 0));
+        centerItem->setTextAlignment(Qt::AlignCenter);
+        singleWorkpieceInfo.push_back(centerItem);
+        std::cout << "\n工件中心点: " << std::endl;
+        std::cout << info.workpieceAreaRect.first.x << " " << info.workpieceAreaRect.first.y << " " << info.workpieceAreaRect.first.z << std::endl;
+
+        // 焊缝区域数量信息
+        QTableWidgetItem* weldAreaNumItem = new QTableWidgetItem;
+        weldAreaNumItem->setText(QString::number(info.weldAreaRect.size()));
+        weldAreaNumItem->setTextAlignment(Qt::AlignCenter);
+        singleWorkpieceInfo.push_back(weldAreaNumItem);
+
+        // 自动焊接工件位置
+        workpiecePosition.push_back(std::abs(info.workpieceAreaRect.first.x * railScaleWith5000));
+
+        // 焊缝区域位置信息
+        QString weldAreaStr;
+        std::cout << "焊缝区域信息: (" << info.weldAreaRect.size() << ")个" << std::endl;
+        for (int i = 0; i < info.weldAreaRect.size(); ++i) {
+            weldAreaStr += QString("(%1, %2) ")
+                               .arg(info.weldAreaRect[i].x + (info.weldAreaRect[i].width / 2), 0, 'f', 0)
+                               .arg(info.weldAreaRect[i].y + (info.weldAreaRect[i].height / 2), 0, 'f', 0);
+            std::cout << info.weldAreaRect[i].x + (info.weldAreaRect[i].width / 2) << " "
+                      << info.weldAreaRect[i].y + (info.weldAreaRect[i].height / 2) << " " << info.weldAreaRect[i].width << " "
+                      << info.weldAreaRect[i].height;
+            if (info.workpiece_weld_Obj.second.size() > i) {
+                std::cout << "  类型: " << info.workpiece_weld_Obj.second[i].label << std::endl;
+            } else {
+                std::cout << " " << std::endl;
+            }
+        }
+        QTableWidgetItem* weldAreaItem = new QTableWidgetItem;
+        weldAreaItem->setText(weldAreaStr);
+        weldAreaItem->setTextAlignment(Qt::AlignCenter);
+        singleWorkpieceInfo.push_back(weldAreaItem);
+
+        // 当前时间
+        QTableWidgetItem* detTimeItem = new QTableWidgetItem;
+        QDateTime current = QDateTime::currentDateTime();
+        QString timestamp = current.toString("yyyy-MM-dd HH:mm:ss");
+        detTimeItem->setText(timestamp);
+        detTimeItem->setTextAlignment(Qt::AlignCenter);
+        singleWorkpieceInfo.push_back(detTimeItem);
+
+        // 单一工件多次拍照规划
+        std::vector<cv::Rect_<double>> roughRegions;  // 粗定位目标框
+        for (int i = 0; i < info.weldAreaRect.size(); ++i) {
+            roughRegions.push_back(info.weldAreaRect[i]);
+        }
+        std::vector<cv::Point2d> photoPlanRes = photoPlanner->plan(roughRegions);  // 规划
+        // 根据目标检测框与工件中心之间的相对位置关系调整拍照位置
+        std::vector<cv::Rect_<double>> singlePhotoPosRect;
+        for (int i = 0; i < photoPlanRes.size(); ++i) {
+            singlePhotoPosRect.clear();
+            cv::Rect_<double> photoArea(photoPlanRes[i].x - photoRangeWidth / 2, photoPlanRes[i].y - photoRangeHeight / 2, photoRangeWidth,
+                                        photoRangeHeight);
+            for (int j = 0; j < roughRegions.size(); ++j) {
+                if (photoPlanner->isFullyCovered(photoArea, roughRegions[j])) {
+                    singlePhotoPosRect.push_back(roughRegions[j]);
+                }
+            }
+            info.rectOfPhotoPos.push_back(singlePhotoPosRect);
+
+            // 如果只有一个拍照区域, 进行拍照位置偏移, 避免点云重建所需特征不足
+            PLOGD << "拍照位置覆盖的目标区域数量: " << info.rectOfPhotoPos[i].size();
+            if (info.rectOfPhotoPos[i].size() == 1) {
+                // double newX = (photoPlanRes[i].x + info.workpieceAreaRect.first.x) / 2;
+                double newX = photoPlanRes[i].x;
+                double newY = photoPlanRes[i].y;
+
+                // 偏移量循环判断
+                short photoWithWorkpieceOri;  // 拍照位置与工件中心之间的位置关系
+                photoWithWorkpieceOri =
+                    (photoPlanRes[i].x - info.workpieceAreaRect.first.x) / std::abs(photoPlanRes[i].x - info.workpieceAreaRect.first.x);
+                PLOGD << "photoWithWorkpieceOri: " << photoWithWorkpieceOri;
+                int extraX = photoPosOffsetExtraX;
+                if (info.rectOfPhotoPos[i].size() > 0) {
+                    while (extraX > 0) {
+                        cv::Rect_<double> photoAreaNew((newX - extraX * photoWithWorkpieceOri) - photoRangeWidth / 2, newY - photoRangeHeight / 2,
+                                                       photoRangeWidth, photoRangeHeight);
+                        std::cout << "photoAreaNew: " << photoAreaNew << std::endl;
+                        std::cout << "info.rectOfPhotoPos[i][0]: " << info.rectOfPhotoPos[i][0] << std::endl << std::endl;
+                        if (photoPlanner->isFullyCovered(photoAreaNew, info.rectOfPhotoPos[i][0])) {
+                            newX -= extraX * photoWithWorkpieceOri;
+                            break;
+                        } else {
+                            extraX -= 10;
+                        }
+                    }
+                }
+
+                // 保存新的拍照位置
+                PLOGD << "当前拍照位置只有一个检测框, 调整拍照位置: " << photoPlanRes[i].x << " -> " << newX << "   " << photoPlanRes[i].y << " -> "
+                      << newY;
+                photoPlanRes[i].x = newX;
+                photoPlanRes[i].y = newY;
+            }
+        }
+
+        // PLOGD << "规划结果: ";
+        for (int i = 0; i < photoPlanRes.size(); ++i) {
+            // 拍照偏移
+            photoPlanRes[i].x += photoPosOffsetX;
+            photoPlanRes[i].y = (std::abs(photoPlanRes[i].y) + photoPosOffsetY) * ((photoPlanRes[i].y > 0) ? 1 : -1);
+            // PLOGD << photoPlanRes[i].x << "  " << photoPlanRes[i].y;
+        }
+        // 表格显示内容
+        QTableWidgetItem* photoTimesItem = new QTableWidgetItem;
+        photoTimesItem->setText(QString::number(photoPlanRes.size()));
+        photoTimesItem->setTextAlignment(Qt::AlignCenter);
+        singleWorkpieceInfo.push_back(photoTimesItem);
+        QTableWidgetItem* photoTimesResidualItem = new QTableWidgetItem;
+        photoTimesResidualItem->setText(QString::number(photoPlanRes.size()));
+        photoTimesResidualItem->setTextAlignment(Qt::AlignCenter);
+        singleWorkpieceInfo.push_back(photoTimesResidualItem);
+        // 存储拍照位置
+        PLOGD << "拍照位置: ";
+        for (auto& p : photoPlanRes) {
+            info.photoPos.push_back(cv::Point3d(p.x, p.y, info.workpieceAreaRect.first.z + photoPosOffsetZ));
+            PLOGD << info.photoPos[info.photoPos.size() - 1].x << "(-" << std::to_string(photoPosOffsetX) << ")  "
+                  << info.photoPos[info.photoPos.size() - 1].y << "(-" << std::to_string((std::abs(p.y) + photoPosOffsetY) * ((p.y > 0) ? 1 : -1))
+                  << ")  " << info.photoPos[info.photoPos.size() - 1].z << "(-" << std::to_string(photoPosOffsetZ) << ")";
+        }
+
+        coarseLocalizationInfo.push_back(singleWorkpieceInfo);
+    }
+
+    emit sendWeldCoarseLocInfo(coarseLocalizationInfo);
 }

@@ -1880,32 +1880,32 @@ bool GantrayFrameTrajectoryPlanning::computePlatePlateFilletVerticalSwingPoints(
     swingPoints.push_back(refPoint2.x());
     swingPoints.push_back(refPoint2.y());
     swingPoints.push_back(refPoint2.z());
-    PLOGD << "========== Swing Debug (Plate_Plate_Fillet_V) ==========";
+    // PLOGD << "========== Swing Debug (Plate_Plate_Fillet_V) ==========";
 
-    // 原点（后撤点）
-    PLOGD << "P_ref: " << P_ref.x() << ", " << P_ref.y() << ", " << P_ref.z();
+    // // 原点（后撤点）
+    // PLOGD << "P_ref: " << P_ref.x() << ", " << P_ref.y() << ", " << P_ref.z();
 
-    // seamDir
-    PLOGD << "seamDir: " << seamDir.x() << ", " << seamDir.y() << ", " << seamDir.z();
+    // // seamDir
+    // PLOGD << "seamDir: " << seamDir.x() << ", " << seamDir.y() << ", " << seamDir.z();
 
-    // 法向
-    PLOGD << "n1 (main plane): " << n1.x() << ", " << n1.y() << ", " << n1.z();
+    // // 法向
+    // PLOGD << "n1 (main plane): " << n1.x() << ", " << n1.y() << ", " << n1.z();
 
-    PLOGD << "n2 (other plane): " << n2.x() << ", " << n2.y() << ", " << n2.z();
+    // PLOGD << "n2 (other plane): " << n2.x() << ", " << n2.y() << ", " << n2.z();
 
-    // 第一方向（主平面摆动方向）
-    PLOGD << "verticalDir (ref1 dir): " << verticalDir.x() << ", " << verticalDir.y() << ", " << verticalDir.z();
+    // // 第一方向（主平面摆动方向）
+    // PLOGD << "verticalDir (ref1 dir): " << verticalDir.x() << ", " << verticalDir.y() << ", " << verticalDir.z();
 
-    // 第二方向（另一板摆动方向）
-    PLOGD << "horizontalDir (ref2 dir): " << horizontalDir.x() << ", " << horizontalDir.y() << ", " << horizontalDir.z();
+    // // 第二方向（另一板摆动方向）
+    // PLOGD << "horizontalDir (ref2 dir): " << horizontalDir.x() << ", " << horizontalDir.y() << ", " << horizontalDir.z();
 
-    // 第一参考点
-    PLOGD << "refPoint1: " << refPoint1.x() << ", " << refPoint1.y() << ", " << refPoint1.z();
+    // // 第一参考点
+    // PLOGD << "refPoint1: " << refPoint1.x() << ", " << refPoint1.y() << ", " << refPoint1.z();
 
-    // 第二参考点
-    PLOGD << "refPoint2: " << refPoint2.x() << ", " << refPoint2.y() << ", " << refPoint2.z();
+    // // 第二参考点
+    // PLOGD << "refPoint2: " << refPoint2.x() << ", " << refPoint2.y() << ", " << refPoint2.z();
 
-    PLOGD << "=======================================================";
+    // PLOGD << "=======================================================";
 
     return true;
 }

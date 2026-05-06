@@ -9,6 +9,8 @@
 #include <QScrollBar>
 #include <QWheelEvent>
 
+#include "workpieceCoarseLocalization/include/maskImageProcessConfig.hpp"
+
 class ScalableGraphicsView : public QGraphicsView {
     Q_OBJECT
 public:

@@ -20,4 +20,5 @@ include( ./projectFactory/projectFactory.pri )
 include( ./structLightCamera/structLightCamera.pri )
 include( ./seamDetWithPointCloud/seamDetWithPointCloud.pri )
 include( ./robotTrajectoryPlanning/robotTrajectoryPlanning.pri )
+include(./workpieceCoarseLocalization/workpieceCoarseLocalization.pri)
 

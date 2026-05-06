@@ -42,6 +42,7 @@ public:
     void initStructLightCamera();
     void initSeamDetWithPointCloud();
     void initSeamDetWithSeg();
+    void initWorkpieceCoarseLoc();
 
     void connectRobot();
     void disconnectRobot();
@@ -54,30 +55,31 @@ public slots:
     void whenGetFinalSeams(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);  // 获取到最终的焊缝
     void whenAutoWelding();                                                           // 自动焊接信号
     // void whenRailAbsActionFinished();                                          // 地轨绝对定位完成
-    void whenTrajectoryPlanOver();                          // 机器人轨迹规划完成
-    void whenRobotWeldOver();                               // 机器人焊接完成
-    void whenRobotMoveOver();                               // 机器人运动完成
-    void whenGetRobotMoveLData(robotPose p, double speed);  // 机器人直线运动到位姿
-    void whenGetRobotCurrentPose(robotPose p);              // 收到机器人当前位姿
-    void whenGetRobotCurrentJointAngle(robotJointAngle j);  // 收到机器人当前关节角
-    void whenGetRobotPose2Save(robotPose p);                // 收到需要保存的机器人位姿
-    // void whenGetCoarseLocalization(std::shared_ptr<workpieceBoxInWorld> res);  // 收到工件粗定位完成信息
+    void whenTrajectoryPlanOver();                                             // 机器人轨迹规划完成
+    void whenRobotWeldOver();                                                  // 机器人焊接完成
+    void whenRobotMoveOver();                                                  // 机器人运动完成
+    void whenGetRobotMoveLData(robotPose p, double speed);                     // 机器人直线运动到位姿
+    void whenGetRobotCurrentPose(robotPose p);                                 // 收到机器人当前位姿
+    void whenGetRobotCurrentJointAngle(robotJointAngle j);                     // 收到机器人当前关节角
+    void whenGetRobotPose2Save(robotPose p);                                   // 收到需要保存的机器人位姿
+    void whenGetCoarseLocalization(std::shared_ptr<workpieceBoxInWorld> res);  // 收到工件粗定位完成信息
 
 signals:
-    void sendMessage2Ui(QString message);                                          // 发送信息到UI界面
-    void sendFinalSeams(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);  // 发送最终的焊缝
-    void sendConnectRobot();                                                       // 连接机器人
-    void sendDisconnectRobot();                                                    // 断开机器人
-    void sendWelding();                                                            // 机器人焊接
-    void sendRobotMoveLData(robotPose p, double speed);                            // 发出机器人直线运动到位姿
-    void sendRobotCurrentPose(robotPose p);                                        // 发送机器人当前位姿
-    void sendRobotCurrentJointAngle(robotJointAngle j);                            // 发送机器人当前关节角
-    void sendUpdataWorkbench();                                                    // 发送扫描工作台
+    void sendMessage2Ui(QString message);                                           // 发送信息到UI界面
+    void sendFinalSeams(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);   // 发送最终的焊缝
+    void sendConnectRobot();                                                        // 连接机器人
+    void sendDisconnectRobot();                                                     // 断开机器人
+    void sendWelding();                                                             // 机器人焊接
+    void sendRobotMoveLData(robotPose p, double speed);                             // 发出机器人直线运动到位姿
+    void sendRobotCurrentPose(robotPose p);                                         // 发送机器人当前位姿
+    void sendRobotCurrentJointAngle(robotJointAngle j);                             // 发送机器人当前关节角
+    void sendUpdataWorkbench();                                                     // 发送扫描工作台
+    void sendWeldCoarseLocInfo(std::vector<std::vector<QTableWidgetItem *>> info);  // 发出粗定位信息用于显示在表格
 
 private:
-    std::shared_ptr<StructLightCamera> structLightCamera{nullptr};  // 『结构光相机』
-    QThread *structLightCameraThread = new QThread;                 // 结构光相机线程
-    std::shared_ptr<AbstractCameraFactory> cameraFactory{nullptr};  // 相机工厂 (通过依赖注入的方式注入需要的类)
+    std::shared_ptr<StructLightCamera> structLightCamera{nullptr};        // 『结构光相机』
+    QThread *structLightCameraThread = new QThread;                       // 结构光相机线程
+    std::shared_ptr<AbstractCameraFactory> cameraFactory{nullptr};        // 相机工厂 (通过依赖注入的方式注入需要的类)
     std::shared_ptr<AbstractProjectorFactory> projectorFactory{nullptr};  // 投影仪工厂 (通过依赖注入的方式注入需要的类)
 
     std::shared_ptr<SeamDetWithPointCloud> seamDetWithPointCloud{nullptr};         // 『点云方法焊缝检测』
@@ -93,12 +95,11 @@ private:
 
     // Rail *rail = nullptr;  // 『地轨』对象 (通过依赖注入初始化)
 
-    // WorkpieceCoarseLocalization *workpieceCoarseLocalization = nullptr;  // 工件粗定位类
+    WorkpieceCoarseLocalization *workpieceCoarseLocalization = nullptr;  // 工件粗定位类
 
     const double photoRangeWidth = 500;
-    const double photoRangeHeight = 280;  // 投影仪
-    std::shared_ptr<PhotoPlanner> photoPlanner =
-        std::make_shared<PhotoPlanner>(photoRangeWidth, photoRangeHeight);  // 单一工件拍照位置规划类
+    const double photoRangeHeight = 280;                                                                             // 投影仪
+    std::shared_ptr<PhotoPlanner> photoPlanner = std::make_shared<PhotoPlanner>(photoRangeWidth, photoRangeHeight);  // 单一工件拍照位置规划类
 
     // 焊接数据
     std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo;  // 焊缝区域点云

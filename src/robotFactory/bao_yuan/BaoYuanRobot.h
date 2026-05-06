@@ -28,7 +28,7 @@ protected:
 private:
     SC2 sc;
 
-    friend class RailWeldingMainWindow;
+    friend class WeldingMainWindow;
 };
 
 #endif  // BAOYUANROBOT_H

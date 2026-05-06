@@ -18,11 +18,12 @@
 WeldingMainWindow::WeldingMainWindow(QWidget* parent)
     : QMainWindow(parent), ui(new Ui::WeldingMainWindow), railWeldingSystem(std::make_shared<RailWeldingSystem>(nullptr)) {
     ui->setupUi(this);
-    setWindowState(Qt::WindowMaximized);  // 设置全屏
-    this->initIcon();                     // 初始化图标
-    this->initVtkWindow();                // 初始化点云显示页面
-    this->initStatusLight();              // 初始化指示灯
-    this->initRailWeldingSystem();        // 初始化地轨焊接系统
+    setWindowState(Qt::WindowMaximized);         // 设置全屏
+    this->initIcon();                            // 初始化图标
+    this->initVtkWindow();                       // 初始化点云显示页面
+    this->initStatusLight();                     // 初始化指示灯
+    this->workpieceCoarseLocDependencyInject();  // 工件粗定位依赖注入
+    this->initRailWeldingSystem();               // 初始化地轨焊接系统
 
     PLOGD << "三轴焊接系统软件启动成功";
 }
@@ -50,6 +51,29 @@ void WeldingMainWindow::initVtkWindow() {
     pclVisualizer->addPointCloud(cloud_visual, "cloud");
     ui->qvtkWidget->SetRenderWindow(pclVisualizer->getRenderWindow());
     pclVisualizer->setupInteractor(ui->qvtkWidget->GetInteractor(), ui->qvtkWidget->GetRenderWindow());
+}
+// 工件粗定位依赖注入
+void WeldingMainWindow::workpieceCoarseLocDependencyInject() {
+    this->railWeldingSystem->workpieceCoarseLocalization = ui->workpieceCoarseLocWidget;
+    PLOGD << "工件粗定位对象注入完成";
+
+    // 完成工件粗定位类的初始化
+    railWeldingSystem->initWorkpieceCoarseLoc();
+    connect(ui->workpieceCoarseLocWidget->fittingWorkpieceCoordinate, &FittingWorkpieceCoordinate::sendWorkpieceResultToMainWindow, this,
+            &WeldingMainWindow::whenGetWorkpieceRailMap);
+    connect(ui->graphicsViewCoarseLoc, &ScalableGraphicsView::senderSignalPixelCoordinates,
+            this->railWeldingSystem->workpieceCoarseLocalization->fittingWorkpieceCoordinate, &FittingWorkpieceCoordinate::handleClickEvent);
+    connect(ui->graphicsViewCoarseLoc, &ScalableGraphicsView::senderSignalPixelCoordinates, this, &WeldingMainWindow::whenGetWorkPieceCoord);
+
+    connect(ui->workpieceCoarseLocWidget, &WorkpieceCoarseLocalization::sendCameraComboBox, this, &WeldingMainWindow::whenGetCoarseCameraSerial);
+    connect(ui->workpieceCoarseLocWidget->baslerControl, &CoarsePositioningCamera::sendImageToView, this, &WeldingMainWindow::whenGetImg2Ui);
+    connect(ui->workpieceCoarseLocWidget, &WorkpieceCoarseLocalization::sendCoarseLocWorkpieceNum, this,
+            &WeldingMainWindow::whenGetCoarseLocWorkpieceNum);
+    connect(ui->workpieceCoarseLocWidget, &WorkpieceCoarseLocalization::sendImg2MainWindow, this, &WeldingMainWindow::whenGetImg2Ui);
+    connect(ui->workpieceCoarseLocWidget, &WorkpieceCoarseLocalization::sendMessage2MainWindow, this, &WeldingMainWindow::whenGetMessage);
+
+    ui->tabWidget_CoarseLoc->setCurrentIndex(0);
+    // ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_coarseLoc));  // 移除工件粗定位页面
 }
 // 初始化地轨焊接系统
 void WeldingMainWindow::initRailWeldingSystem() {
@@ -135,8 +159,31 @@ void WeldingMainWindow::whenRobotStatusRenew(QString color) { ui->labelRobotStat
 // 更新地轨指示灯
 void WeldingMainWindow::whenRailStatusRenew(QString color) { ui->labelRailStatusLight->setStyleSheet(color); }
 
-// // 更新粗定位相机指示灯
-// void WeldingMainWindow::whenCoarseLocCameraStatusRenew(std::vector<COARES_LOC_CAMERA> device, std::vector<QString> color) {}
+// 更新粗定位相机指示灯
+void WeldingMainWindow::whenCoarseLocCameraStatusRenew(std::vector<COARES_LOC_CAMERA> device, std::vector<QString> color) {
+    for (int i = 0; i < device.size(); ++i) {
+        if (device[i] == COARES_LOC_CAMERA::CAMERA_1 && color.size() > i) {
+            ui->labelCoarseLocCamera1->setStyleSheet(color[i]);
+        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_2 && color.size() > i) {
+            ui->labelCoarseLocCamera2->setStyleSheet(color[i]);
+        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_3 && color.size() > i) {
+            ui->labelCoarseLocCamera3->setStyleSheet(color[i]);
+        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_4 && color.size() > i) {
+            ui->labelCoarseLocCamera4->setStyleSheet(color[i]);
+        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_5 && color.size() > i) {
+            ui->labelCoarseLocCamera5->setStyleSheet(color[i]);
+        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_6 && color.size() > i) {
+            ui->labelCoarseLocCamera6->setStyleSheet(color[i]);
+        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_UNCONNECTED) {
+            ui->labelCoarseLocCamera1->setStyleSheet(MY_COLOR::RED);
+            ui->labelCoarseLocCamera2->setStyleSheet(MY_COLOR::RED);
+            ui->labelCoarseLocCamera3->setStyleSheet(MY_COLOR::RED);
+            ui->labelCoarseLocCamera4->setStyleSheet(MY_COLOR::RED);
+            ui->labelCoarseLocCamera5->setStyleSheet(MY_COLOR::RED);
+            ui->labelCoarseLocCamera6->setStyleSheet(MY_COLOR::RED);
+        }
+    }
+}
 
 // 获取到工作台点云
 void WeldingMainWindow::whenGetWorkbenchPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
@@ -167,7 +214,7 @@ void WeldingMainWindow::whenGetSeamInfo(std::vector<std::shared_ptr<WeldSeamInfo
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr visualCloud(new pcl::PointCloud<pcl::PointXYZ>);  // 用于显示的点云
     std::set<int> seamAreaPointCloudNum;
-   
+
     for (auto& info : weldAreaInfo) {
         if (info->detectSuccFlag == true && info->weldAreaPointCloudInRobot && !info->weldAreaPointCloudInRobot->empty()) {
             if (seamAreaPointCloudNum.find(info->areaNum) == seamAreaPointCloudNum.end()) {  // 当前区域点云还未显示
@@ -213,7 +260,53 @@ void WeldingMainWindow::whenGetRobotCurrentJointAngle(robotJointAngle j) {
 
     ui->systemMirrorWidget->setRobotJointAngle(j);
 }
+//======================粗定位=================
+// 获得工件粗定位结果图
+void WeldingMainWindow::whenGetWorkpieceRailMap(cv::Mat res) {
+    // cv::imwrite("./data/paper/cImg.bmp", res);
 
+    QImage img = QImage(res.data, res.cols, res.rows, res.step, QImage::Format_RGB888);
+
+    QGraphicsScene* scene = ui->graphicsViewCoarseLoc->scene();                          // 获取 graphicsViewCoarseLoc 的场景
+    QGraphicsPixmapItem* pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(img));  // 创建 QGraphicsPixmapItem 并将图像添加到场景中
+
+    // 清空场景并添加新的图像项到场景
+    scene->clear();              // 清空场景上的所有项
+    scene->addItem(pixmapItem);  // 添加图像项到场景
+    ui->graphicsViewCoarseLoc->setOriginalImageInfo(res.cols, res.rows, railMapRotationAngle);
+
+    // 更新视图 (如果没有立即显示，尝试刷新视图)
+    ui->graphicsViewCoarseLoc->setScene(scene);  // 确保场景设置正确
+}
+// 获得粗定位界面点击位置
+void WeldingMainWindow::whenGetWorkPieceCoord(int x, int y) { ui->label_coordinateLabel->setText(QString("X: %1, Y: %2").arg(x).arg(y)); }
+// 获得粗定位相机序列号
+void WeldingMainWindow::whenGetCoarseCameraSerial(std::vector<std::string> serialNum) {
+    ui->comboBoxCoarseLocCamera->clear();
+    for (auto& num : serialNum) {
+        ui->comboBoxCoarseLocCamera->addItem(QString::fromStdString(num));
+    }
+}
+void WeldingMainWindow::whenGetCoarseLocWorkpieceNum(int num) {
+    ui->comboBoxCoarseLocInfo->clear();
+    for (int i = 1; i <= num; ++i) {
+        ui->comboBoxCoarseLocInfo->addItem(QString::number(i));
+    }
+}
+// 获得粗定位信息用于显示在表格
+void WeldingMainWindow::whenGetWeldCoarseLocInfo(std::vector<std::vector<QTableWidgetItem*>> info) {
+    ui->tableWidgetCoarseLoc->clearContents();
+
+    PLOGD << "收到粗定位表格信息";
+    for (int i = 0; i < info.size(); ++i) {
+        for (int j = 0; j < info[i].size(); ++j) {
+            ui->tableWidgetCoarseLoc->setItem(i, j, info[i][j]);
+        }
+    }
+    ui->tableWidgetCoarseLoc->resizeColumnsToContents();  // 自适应宽度
+    ui->tableWidgetCoarseLoc->setCurrentCell(0, 0);
+}
+//----按钮----
 void WeldingMainWindow::on_btnConnectStructLight_clicked() { emit connectStructLightCamera(); }
 
 void WeldingMainWindow::on_btnDisConnectStructLight_clicked() { emit disconnectStructLightCamera(); }

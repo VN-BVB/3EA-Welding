@@ -2,8 +2,6 @@
 
 #include <QDebug>
 
-#include "workpieceCoarseLocalization/include/maskImageProcessConfig.hpp"
-
 // ScalableGraphicsView::ScalableGraphicsView(QGraphicsScene* scene, QWidget* parent)
 //     // : QGraphicsView(scene, parent)
 // {
