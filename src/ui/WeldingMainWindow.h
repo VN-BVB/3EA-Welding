@@ -14,6 +14,7 @@ class WeldingMainWindow;
 }
 QT_END_NAMESPACE
 enum COARES_LOC_CAMERA;
+enum Axis;
 class WeldingMainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -29,9 +30,9 @@ public:
 public slots:
     void whenStructLightStatusRenew(std::vector<DEVICE> device, std::vector<QString> color);  // 更新结构光指示灯
     void whenRobotStatusRenew(QString color);                                                 // 更新机器人指示灯
-    void whenRailStatusRenew(QString color);                                                  // 更新地轨指示灯
-    void whenCoarseLocCameraStatusRenew(std::vector<COARES_LOC_CAMERA> device,
-                                        std::vector<QString> color);                   // 更新粗定位相机指示灯
+    void whenRailStatusRenew(QString color, Axis axis);                                       // 更新三轴指示灯
+    // void whenCoarseLocCameraStatusRenew(std::vector<COARES_LOC_CAMERA> device,
+    //                                     std::vector<QString> color);                   // 更新粗定位相机指示灯
     void whenGetWorkbenchPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);        // 获取到工作台点云
     void whenGetSeamInfo(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo);     // 获取到检测完成的焊缝信息
     void whenGetMessage(QString message);                                              // 获取到需要显示的信息

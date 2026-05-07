@@ -30,6 +30,7 @@ signals:
     void sendText(QString state);
     void connectionStatusChanged(bool state);
     void errorOccurred(QString errorMsg);
+    void sendRailStatus(QString color);  // 地轨设备状态信号
 
 private:
     modbus_t *modbusTcp = nullptr;

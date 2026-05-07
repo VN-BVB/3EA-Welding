@@ -12,7 +12,7 @@
 /* =========================
  *  轴枚举
  * ========================= */
-enum class Axis : uint8_t { X = 0, Y = 1, Z = 2 };
+enum class Axis : uint8_t { X = 0, Y = 1, Z = 2, ALL = 3 };
 
 constexpr int axisIndex(Axis axis) { return static_cast<int>(axis); }
 

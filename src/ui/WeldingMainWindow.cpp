@@ -99,7 +99,7 @@ void WeldingMainWindow::initRailWeldingSystem() {
         // 更新『硬件状态指示灯』信号槽
         connect(railWeldingSystem->structLightCamera.get(), &StructLightCamera::sendStructLightStatus, this, &WeldingMainWindow::whenStructLightStatusRenew);
         connect(railWeldingSystem->robot.get(), &AbstractRobot::sendRobotStatus, this, &WeldingMainWindow::whenRobotStatusRenew);
-        // connect(railWeldingSystem->rail, &Rail::sendRailStatus, this, &WeldingMainWindow::whenRailStatusRenew);
+        connect(railWeldingSystem->rail, &Rail::sendRailStatus, this, &WeldingMainWindow::whenRailStatusRenew);
         // connect(ui->workpieceCoarseLocWidget->baslerControl, &CoarsePositioningCamera::sendCameraStatus, this, &WeldingMainWindow::whenCoarseLocCameraStatusRenew);
 
         // 获取到『点云或图像』信号槽
@@ -157,33 +157,48 @@ void WeldingMainWindow::whenStructLightStatusRenew(std::vector<DEVICE> device, s
 void WeldingMainWindow::whenRobotStatusRenew(QString color) { ui->labelRobotStatusLight->setStyleSheet(color); }
 
 // 更新地轨指示灯
-void WeldingMainWindow::whenRailStatusRenew(QString color) { ui->labelRailStatusLight->setStyleSheet(color); }
-
-// 更新粗定位相机指示灯
-void WeldingMainWindow::whenCoarseLocCameraStatusRenew(std::vector<COARES_LOC_CAMERA> device, std::vector<QString> color) {
-    for (int i = 0; i < device.size(); ++i) {
-        if (device[i] == COARES_LOC_CAMERA::CAMERA_1 && color.size() > i) {
-            ui->labelCoarseLocCamera1->setStyleSheet(color[i]);
-        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_2 && color.size() > i) {
-            ui->labelCoarseLocCamera2->setStyleSheet(color[i]);
-        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_3 && color.size() > i) {
-            ui->labelCoarseLocCamera3->setStyleSheet(color[i]);
-        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_4 && color.size() > i) {
-            ui->labelCoarseLocCamera4->setStyleSheet(color[i]);
-        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_5 && color.size() > i) {
-            ui->labelCoarseLocCamera5->setStyleSheet(color[i]);
-        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_6 && color.size() > i) {
-            ui->labelCoarseLocCamera6->setStyleSheet(color[i]);
-        } else if (device[i] == COARES_LOC_CAMERA::CAMERA_UNCONNECTED) {
-            ui->labelCoarseLocCamera1->setStyleSheet(MY_COLOR::RED);
-            ui->labelCoarseLocCamera2->setStyleSheet(MY_COLOR::RED);
-            ui->labelCoarseLocCamera3->setStyleSheet(MY_COLOR::RED);
-            ui->labelCoarseLocCamera4->setStyleSheet(MY_COLOR::RED);
-            ui->labelCoarseLocCamera5->setStyleSheet(MY_COLOR::RED);
-            ui->labelCoarseLocCamera6->setStyleSheet(MY_COLOR::RED);
-        }
+void WeldingMainWindow::whenRailStatusRenew(QString color, Axis axis) {
+    switch (axis) {
+        case Axis::X:
+            ui->labelConnectStatusLight_X->setStyleSheet(color);
+            break;
+        case Axis::Y:
+            ui->labelConnectStatusLight_Y->setStyleSheet(color);
+            break;
+        case Axis::Z:
+            ui->labelConnectStatusLight_Z->setStyleSheet(color);
+            break;
+        case Axis::ALL:
+            ui->labelRailStatusLight->setStyleSheet(color);
+            break;
     }
 }
+
+// // 更新粗定位相机指示灯
+// void WeldingMainWindow::whenCoarseLocCameraStatusRenew(std::vector<COARES_LOC_CAMERA> device, std::vector<QString> color) {
+//     for (int i = 0; i < device.size(); ++i) {
+//         if (device[i] == COARES_LOC_CAMERA::CAMERA_1 && color.size() > i) {
+//             ui->labelCoarseLocCamera1->setStyleSheet(color[i]);
+//         } else if (device[i] == COARES_LOC_CAMERA::CAMERA_2 && color.size() > i) {
+//             ui->labelCoarseLocCamera2->setStyleSheet(color[i]);
+//         } else if (device[i] == COARES_LOC_CAMERA::CAMERA_3 && color.size() > i) {
+//             ui->labelCoarseLocCamera3->setStyleSheet(color[i]);
+//         } else if (device[i] == COARES_LOC_CAMERA::CAMERA_4 && color.size() > i) {
+//             ui->labelCoarseLocCamera4->setStyleSheet(color[i]);
+//         } else if (device[i] == COARES_LOC_CAMERA::CAMERA_5 && color.size() > i) {
+//             ui->labelCoarseLocCamera5->setStyleSheet(color[i]);
+//         } else if (device[i] == COARES_LOC_CAMERA::CAMERA_6 && color.size() > i) {
+//             ui->labelCoarseLocCamera6->setStyleSheet(color[i]);
+//         } else if (device[i] == COARES_LOC_CAMERA::CAMERA_UNCONNECTED) {
+//             ui->labelCoarseLocCamera1->setStyleSheet(MY_COLOR::RED);
+//             ui->labelCoarseLocCamera2->setStyleSheet(MY_COLOR::RED);
+//             ui->labelCoarseLocCamera3->setStyleSheet(MY_COLOR::RED);
+//             ui->labelCoarseLocCamera4->setStyleSheet(MY_COLOR::RED);
+//             ui->labelCoarseLocCamera5->setStyleSheet(MY_COLOR::RED);
+//             ui->labelCoarseLocCamera6->setStyleSheet(MY_COLOR::RED);
+//         }
+//     }
+// }
 
 // 获取到工作台点云
 void WeldingMainWindow::whenGetWorkbenchPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
