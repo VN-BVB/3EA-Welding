@@ -99,7 +99,7 @@ void WeldingMainWindow::initRailWeldingSystem() {
         // 更新『硬件状态指示灯』信号槽
         connect(railWeldingSystem->structLightCamera.get(), &StructLightCamera::sendStructLightStatus, this, &WeldingMainWindow::whenStructLightStatusRenew);
         connect(railWeldingSystem->robot.get(), &AbstractRobot::sendRobotStatus, this, &WeldingMainWindow::whenRobotStatusRenew);
-        connect(railWeldingSystem->rail, &Rail::sendRailStatus, this, &WeldingMainWindow::whenRailStatusRenew);
+        // connect(railWeldingSystem->rail, &Rail::sendRailStatus, this, &WeldingMainWindow::whenRailStatusRenew);
         // connect(ui->workpieceCoarseLocWidget->baslerControl, &CoarsePositioningCamera::sendCameraStatus, this, &WeldingMainWindow::whenCoarseLocCameraStatusRenew);
 
         // 获取到『点云或图像』信号槽

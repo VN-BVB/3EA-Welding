@@ -2216,7 +2216,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="QLabel" name="labelConnectState_X">
+            <widget class="QLabel" name="labelConnectStatusLight_X">
              <property name="styleSheet">
               <string notr="true">background-color: rgb(246, 246, 246);
 border-width: 1px;
@@ -2236,7 +2236,7 @@ border-radius: 10px;</string>
             </widget>
            </item>
            <item row="2" column="2">
-            <widget class="QLabel" name="labelConnectState_Y">
+            <widget class="QLabel" name="labelConnectStatusLight_Y">
              <property name="styleSheet">
               <string notr="true">background-color: rgb(246, 246, 246);
 border-width: 1px;
@@ -2256,7 +2256,7 @@ border-radius: 10px;</string>
             </widget>
            </item>
            <item row="2" column="3">
-            <widget class="QLabel" name="labelConnectState_Z">
+            <widget class="QLabel" name="labelConnectStatusLight_Z">
              <property name="styleSheet">
               <string notr="true">background-color: rgb(246, 246, 246);
 border-width: 1px;
