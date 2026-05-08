@@ -4,17 +4,16 @@
 #include <QMainWindow>
 
 #include "robotFactory/AbstractRobot.h"
+#include "src/rail/concrete_axis/axis_register.h"
 #include "src/stable.h"
 #include "structLightCamera/StructLightCamera.h"
 #include "workpieceCoarseLocalization/src/camera_control/basler/CoarsePositioningCamera.h"
-
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class WeldingMainWindow;
 }
 QT_END_NAMESPACE
 enum COARES_LOC_CAMERA;
-enum Axis;
 class WeldingMainWindow : public QMainWindow {
     Q_OBJECT
 

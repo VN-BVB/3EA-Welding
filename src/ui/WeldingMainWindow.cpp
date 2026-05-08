@@ -168,7 +168,7 @@ void WeldingMainWindow::whenRailStatusRenew(QString color, Axis axis) {
         case Axis::Z:
             ui->labelConnectStatusLight_Z->setStyleSheet(color);
             break;
-        case Axis::ALL:
+        default:
             ui->labelRailStatusLight->setStyleSheet(color);
             break;
     }
