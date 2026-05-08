@@ -102,5 +102,6 @@ private:
     QThread *m_xAxisThread = new QThread();
     QThread *m_yAxisThread = new QThread();
     QThread *m_zAxisThread = new QThread();
+    friend class WeldingMainWindow;
 };
 #endif  // RAILWIDGET_H

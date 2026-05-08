@@ -83,6 +83,16 @@ private slots:
 
     void on_combWorkpiece_currentTextChanged(const QString &arg1);
 
+    void on_btnConnectRail_clicked();
+
+    void on_btnDisconnectRail_clicked();
+
+    void on_btnRailReset_clicked();
+
+    void on_btnRailRegressOrigin_clicked();
+
+    void on_checkBoxImmediateStop_toggled(bool checked);
+
 private:
     boost::shared_ptr<pcl::visualization::PCLVisualizer> pclVisualizer;  // 点云可视化界面
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_visual;

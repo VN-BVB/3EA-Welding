@@ -39,14 +39,14 @@
         <item row="0" column="0">
          <widget class="QPushButton" name="btn_contectRail">
           <property name="text">
-           <string>连接地轨</string>
+           <string>连接三轴</string>
           </property>
          </widget>
         </item>
         <item row="0" column="1">
          <widget class="QPushButton" name="btn_discontectRail">
           <property name="text">
-           <string>断开地轨</string>
+           <string>断开三轴</string>
           </property>
          </widget>
         </item>

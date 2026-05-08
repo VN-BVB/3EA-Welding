@@ -483,8 +483,16 @@ void WeldingMainWindow::on_combWorkpiece_currentTextChanged(const QString& arg1)
     }
 }
 
-void WeldingMainWindow::on_btnConnectRail_clicked()
-{
+void WeldingMainWindow::on_btnConnectRail_clicked() { ui->railWidget->connectRail(); }
 
+void WeldingMainWindow::on_btnDisconnectRail_clicked() { ui->railWidget->disconnectRail(); }
+
+void WeldingMainWindow::on_btnRailReset_clicked() { ui->railWidget->on_btn_chk_Rest_clicked(); }
+
+void WeldingMainWindow::on_btnRailRegressOrigin_clicked() {
+    ui->railWidget->on_btn_X_regressOrigin_clicked();
+    ui->railWidget->on_btn_Y_regressOrigin_clicked();
+    ui->railWidget->on_btn_Z_regressOrigin_clicked();
 }
 
+void WeldingMainWindow::on_checkBoxImmediateStop_toggled(bool checked) { ui->railWidget->on_chk_ImmediateStop_toggled(checked); }

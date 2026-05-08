@@ -1779,23 +1779,48 @@ border-radius: 15px;</string>
                <number>0</number>
               </property>
               <item row="0" column="0">
-               <widget class="QCheckBox" name="checkBoxImmediateStop">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>35</height>
-                 </size>
-                </property>
+               <widget class="QPushButton" name="checkBoxImmediateStop">
                 <property name="font">
                  <font>
-                  <pointsize>12</pointsize>
+                  <family>Microsoft YaHei UI</family>
+                  <pointsize>-1</pointsize>
+                  <bold>true</bold>
                  </font>
                 </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
+                <property name="cursor">
+                 <cursorShape>PointingHandCursor</cursorShape>
+                </property>
+                <property name="autoFillBackground">
+                 <bool>true</bool>
                 </property>
                 <property name="styleSheet">
-                 <string notr="true">color: rgb(0, 0, 0);</string>
+                 <string notr="true">QPushButton {
+    background-color: #e53935;
+    color: white;
+    border: 2px solid #b71c1c;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 8px 10px;
+}
+
+QPushButton:hover {
+    background-color: #f44336;
+}
+
+QPushButton:pressed {
+    background-color: #8b0000;
+}
+
+QPushButton:checked {
+    background-color: #7f0000;
+    border: 2px solid #4a0000;
+    color: white;
+}
+
+QPushButton:checked:hover {
+    background-color: #9a0000;
+}</string>
                 </property>
                 <property name="text">
                  <string>急停</string>
@@ -1806,7 +1831,13 @@ border-radius: 15px;</string>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="tristate">
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
+                </property>
+                <property name="default">
                  <bool>false</bool>
                 </property>
                </widget>
