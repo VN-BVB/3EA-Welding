@@ -64,7 +64,7 @@ QTabBar::tab:!selected {  /* 未选中的标签页 */
 }</string>
         </property>
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="tab_3">
          <attribute name="title">
@@ -1815,7 +1815,7 @@ border-radius: 15px;</string>
             </widget>
            </item>
            <item row="6" column="2">
-            <widget class="QLabel" name="label_X_CurrentSpeed_2">
+            <widget class="QLabel" name="label_Y_CurrentSpeed">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -1928,7 +1928,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </font>
              </property>
              <property name="text">
-              <string>断开地轨</string>
+              <string>断开三轴</string>
              </property>
             </widget>
            </item>
@@ -1952,7 +1952,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
             </widget>
            </item>
            <item row="5" column="3">
-            <widget class="QLabel" name="label_X_CurrentPosition_4">
+            <widget class="QLabel" name="label_Z_CurrentPosition">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -2078,7 +2078,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
             </widget>
            </item>
            <item row="5" column="2">
-            <widget class="QLabel" name="label_X_CurrentPosition_3">
+            <widget class="QLabel" name="label_Y_CurrentPosition">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -2141,7 +2141,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
             </widget>
            </item>
            <item row="6" column="3">
-            <widget class="QLabel" name="label_X_CurrentSpeed_3">
+            <widget class="QLabel" name="label_Z_CurrentSpeed">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -2192,7 +2192,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </font>
              </property>
              <property name="text">
-              <string>连接地轨</string>
+              <string>连接三轴</string>
              </property>
             </widget>
            </item>

@@ -15,7 +15,7 @@ class WeldSeamInfo;
 class ErrorSave;
 class AbstractRobot;
 class AbstractRobotFactory;
-class Rail;
+class RailWidget;
 class WorkpieceCoarseLocalization;
 struct workpieceBoxInWorld;
 class robotPose;
@@ -43,6 +43,7 @@ public:
     void initSeamDetWithPointCloud();
     void initSeamDetWithSeg();
     void initWorkpieceCoarseLoc();
+    void initRail();  // 初始化地轨类 (由于地轨是通过依赖注入的方式获得实例, 该初始化函数由外部调用)
 
     void connectRobot();
     void disconnectRobot();
@@ -93,7 +94,7 @@ private:
     QThread *robotThread = new QThread;                           // 机器人线程
     std::shared_ptr<AbstractRobotFactory> robotFactory{nullptr};  // 机器人工厂
 
-    // Rail *rail = nullptr;  // 『地轨』对象 (通过依赖注入初始化)
+    RailWidget *rail = nullptr;  // 『地轨』对象 (通过依赖注入初始化)
 
     WorkpieceCoarseLocalization *workpieceCoarseLocalization = nullptr;  // 工件粗定位类
 

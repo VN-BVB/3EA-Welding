@@ -22,6 +22,7 @@ public:
     ~WeldingMainWindow();
     void initIcon();                            // 初始化图标
     void initStatusLight();                     // 初始化指示灯
+    void railDependencyInject();                // 地轨类依赖注入
     void initRailWeldingSystem();               // 初始化焊接系统
     void initVtkWindow();                       // 初始化点云显示页面
     void workpieceCoarseLocDependencyInject();  // 工件粗定位依赖注入
@@ -30,6 +31,8 @@ public slots:
     void whenStructLightStatusRenew(std::vector<DEVICE> device, std::vector<QString> color);  // 更新结构光指示灯
     void whenRobotStatusRenew(QString color);                                                 // 更新机器人指示灯
     void whenRailStatusRenew(QString color, Axis axis);                                       // 更新三轴指示灯
+    void whenRailAMStateRenew(const QString messageAxis, const QString messageMotion, Axis axis);
+    void whenRailPositionAndSpeedRenew(float position, float speed, Axis axis);
     // void whenCoarseLocCameraStatusRenew(std::vector<COARES_LOC_CAMERA> device,
     //                                     std::vector<QString> color);                   // 更新粗定位相机指示灯
     void whenGetWorkbenchPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);        // 获取到工作台点云

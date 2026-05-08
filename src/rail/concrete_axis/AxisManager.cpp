@@ -3,6 +3,7 @@
 #include <QDebug>
 
 #include "../PLCCommunication.h"
+#include "utils/stateLight/StateLight.h"
 
 AxisManager::AxisManager(Axis axis, PLCCommunication *comm, QObject *parent) : AbstractAxis(comm, parent), m_axis(axis) {
     m_previousCoilStatuses = QVector<bool>(32, false);
@@ -98,6 +99,7 @@ void AxisManager::enableServo(bool enable) {
         m_previousCoilStatuses = QVector<bool>(32, false);
         stopMonitoring();
         m_isEnable = false;
+        emit sendRailStatus(MY_COLOR::RED, m_axis);
     }
 }
 
@@ -230,6 +232,8 @@ void AxisManager::sendAxisState(int coilIndex) {
             break;
         case 27:
             messageAxis = axisName + u8"去使能状态";
+            emit sendRailStatus(MY_COLOR::RED, m_axis);
+
             break;
         case 28:
             messageAxis = axisName + u8"使能非运行";
@@ -252,12 +256,15 @@ void AxisManager::sendAxisState(int coilIndex) {
             break;
         case 5:
             message = axisName + u8"使能完成";
+            emit sendRailStatus(MY_COLOR::GREEN, m_axis);
+
             break;
         case 6:
             message = axisName + u8"停止完成";
             break;
         case 7:
             message = axisName + u8"复位完成";
+            emit sendRailStatus(MY_COLOR::GREEN, m_axis);
             m_communication->writeCoils(addr(m_axis, RegB::Reset), {false});
             break;
         case 8:
@@ -274,6 +281,8 @@ void AxisManager::sendAxisState(int coilIndex) {
             break;
         case 22:
             message = axisName + u8"急停完成";
+            emit sendRailStatus(MY_COLOR::RED, m_axis);
+
             break;
             // 轴报警 (Axis Alarms)
         case 1:
@@ -311,5 +320,8 @@ void AxisManager::sendAxisState(int coilIndex) {
 
     if (!message.isEmpty()) {
         emit sendText(message);
+    }
+    if (!messageErro.isEmpty()) {
+        emit sendRailStatus(MY_COLOR::RED, m_axis);
     }
 }

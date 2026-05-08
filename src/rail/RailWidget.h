@@ -4,6 +4,8 @@
 #include <QMetaType>
 #include <QThread>
 #include <QWidget>
+#include <memory>
+#include <unordered_map>
 
 #include "concrete_axis/axis_register.h"
 QT_BEGIN_NAMESPACE
@@ -25,6 +27,9 @@ public:
     void setEditAbsPosition(QString position, Axis axis = Axis::X);  // 添加轴参数，默认为X轴
     void setEditSpeed(QString speed, Axis axis = Axis::X);           // 添加轴参数，默认为X轴
     double getCurrentPosition(Axis axis = Axis::X) const;            // 修改为通用函数，默认为X轴
+
+    PLCCommunication *communication() const;
+    const std::unordered_map<Axis, std::shared_ptr<AbstractAxis>> &axes() const;
 
 signals:
     void sendConnectToPLC(QString ip, int port);
@@ -88,9 +93,9 @@ private:
     std::unique_ptr<PLCCommunication> m_communication_;  // 通信层独占指针
 
     // 三轴管理器
-    std::shared_ptr<AbstractAxis> m_xAxis;  // X轴共享指针
-    std::shared_ptr<AbstractAxis> m_yAxis;  // Y轴共享指针
-    std::shared_ptr<AbstractAxis> m_zAxis;  // Z轴共享指针
+    std::unordered_map<Axis, std::shared_ptr<AbstractAxis>> m_axes;
+    // 初始化三轴管理器
+    std::vector<Axis> axisList = {Axis::X, Axis::Y, Axis::Z};
 
     // 线程管理
     QThread *m_commThread = new QThread();

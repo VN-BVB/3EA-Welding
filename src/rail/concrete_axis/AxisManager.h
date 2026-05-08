@@ -54,6 +54,8 @@ private:
     void processCoilStatus(const QVector<bool> &status);
     QVector<quint16> floatToQuint16(float value);
     float quint16ToFloat(const QVector<quint16> &values);
+signals:
+    void sendRailStatus(QString color, Axis axis);
 };
 
 #endif  // AXISMANAGER_H

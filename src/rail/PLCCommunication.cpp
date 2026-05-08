@@ -6,6 +6,8 @@
 #include <QDebug>
 #include <QString>
 
+#include "utils/stateLight/StateLight.h"
+
 PLCCommunication::PLCCommunication(QObject *parent) : QObject(parent) {}
 
 PLCCommunication::~PLCCommunication() { whenDisconnectFromPLC(); }
@@ -33,6 +35,8 @@ void PLCCommunication::whenConnectToPLC(const QString &ip, int port) {
     if (modbus_connect(modbusTcp) == -1) {
         QString errorStr = QString::fromLocal8Bit(modbus_strerror(errno));
         emit errorOccurred(QString(u8"连接失败：%1").arg(errorStr));
+        emit sendRailStatus(MY_COLOR::RED);
+        emit connectionStatusChanged(false);
         modbus_free(modbusTcp);
         modbusTcp = nullptr;
         return;
@@ -40,6 +44,7 @@ void PLCCommunication::whenConnectToPLC(const QString &ip, int port) {
 
     m_isConnected = true;
     emit sendText(QString(u8"Modbus 状态:协议连接成功，等待使能完成。"));
+    emit sendRailStatus(MY_COLOR::GREEN);
     emit connectionStatusChanged(true);
 }
 
@@ -50,6 +55,8 @@ void PLCCommunication::whenDisconnectFromPLC() {
         modbusTcp = nullptr;
     }
     m_isConnected = false;
+    emit sendRailStatus(MY_COLOR::RED);
+    emit connectionStatusChanged(false);
     emit sendText(QString(u8"Modbus 状态: 断开连接"));
 }
 

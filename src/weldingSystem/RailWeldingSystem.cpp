@@ -16,6 +16,7 @@
 #include "utils/common/WeldSeamInfo.h"
 #include "workpieceCoarseLocalization/WorkpieceCoarseLocalization.h"
 #include "settingPara/SettingPara.h"
+#include "rail/RailWidget.h"
 // #include "photoPlanner/PhotoPlanner.h"
 // clang-format on
 RailWeldingSystem::RailWeldingSystem(QObject* parent)
@@ -173,6 +174,17 @@ void RailWeldingSystem::initRobot() {
         } else {
             PLOGE << "机器人类初始化失败";
         }
+    }
+}
+// 初始化地轨类 (由于地轨是通过依赖注入的方式获得实例, 该初始化函数由外部调用)
+void RailWeldingSystem::initRail() {
+    if (rail) {
+        // connect(this, &RailWeldingSystem::sendRailMove2AbsPosition, rail, &Rail::whenMove2AbsPosition);
+        // connect(rail, &Rail::sendAbsFinished, this, &RailWeldingSystem::whenRailAbsActionFinished);
+
+        PLOGD << "地轨类初始化成功";
+    } else {
+        PLOGE << "地轨类初始化失败";
     }
 }
 // 初始化工件粗定位类 (由于工件粗定位是通过依赖注入的方式获得实例, 该初始化函数由外部调用)

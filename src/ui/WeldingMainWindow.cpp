@@ -1,9 +1,15 @@
 ﻿#include "WeldingMainWindow.h"
 
+#include <cmath>
+
 #include "ui_WeldingMainWindow.h"
 
 // clang-format off
 #include "cameraFactory/AbstractCamera.h"
+#include "rail/AbstractAxis.h"
+#include "rail/PLCCommunication.h"
+#include "rail/RailWidget.h"
+#include "rail/concrete_axis/AxisManager.h"
 #include "robotFactory/AbstractRobot.h"
 #include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
 #include "settingPara/SettingPara.h"
@@ -22,6 +28,7 @@ WeldingMainWindow::WeldingMainWindow(QWidget* parent)
     this->initIcon();                            // 初始化图标
     this->initVtkWindow();                       // 初始化点云显示页面
     this->initStatusLight();                     // 初始化指示灯
+    this->railDependencyInject();                // 三轴类依赖注入
     this->workpieceCoarseLocDependencyInject();  // 工件粗定位依赖注入
     this->initRailWeldingSystem();               // 初始化地轨焊接系统
 
@@ -43,6 +50,37 @@ void WeldingMainWindow::initStatusLight() {
     color.push_back(MY_COLOR::GRAY);
 
     this->whenStructLightStatusRenew(device, color);  // 初始化指示灯状态
+}
+// 地轨类依赖注入
+void WeldingMainWindow::railDependencyInject() {
+    this->whenRailStatusRenew(MY_COLOR::GRAY, Axis::ALL);
+    this->whenRailStatusRenew(MY_COLOR::GRAY, Axis::X);
+    this->whenRailStatusRenew(MY_COLOR::GRAY, Axis::Y);
+    this->whenRailStatusRenew(MY_COLOR::GRAY, Axis::Z);
+    this->railWeldingSystem->rail = ui->railWidget;
+    PLOGD << "地轨对象注入完成";
+
+    // 完成地轨类的初始化
+    railWeldingSystem->initRail();
+    connect(railWeldingSystem->rail->communication(), &PLCCommunication::connectionStatusChanged, this, [this](bool connected) {
+        if (!connected) {
+            whenRailAMStateRenew(u8"断开连接", u8"断开连接", Axis::X);
+            whenRailAMStateRenew(u8"断开连接", u8"断开连接", Axis::Y);
+            whenRailAMStateRenew(u8"断开连接", u8"断开连接", Axis::Z);
+        }
+    });
+    for (const auto& pair : railWeldingSystem->rail->axes()) {
+        const Axis axisType = pair.first;
+        const auto& axisPtr = pair.second;
+        connect(axisPtr.get(), &AbstractAxis::sendTextState, this, [this, axisType](const QString& messageAxis, const QString& messageMotion) {
+            whenRailAMStateRenew(messageAxis, messageMotion, axisType);
+        });
+        connect(axisPtr.get(), &AbstractAxis::sendPositionAndSpeed, this,
+                [this, axisType](float position, float speed) { whenRailPositionAndSpeedRenew(position, speed, axisType); });
+    }
+    // connect(railWeldingSystem->rail, &Rail::sendPositionAndSpeed, this, &RailWeldingMainWindow::whenGetRailPositionAndSpeed);
+
+    // ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_rail));  // 移除地轨页面
 }
 // 初始化点云显示页面
 void WeldingMainWindow::initVtkWindow() {
@@ -99,7 +137,15 @@ void WeldingMainWindow::initRailWeldingSystem() {
         // 更新『硬件状态指示灯』信号槽
         connect(railWeldingSystem->structLightCamera.get(), &StructLightCamera::sendStructLightStatus, this, &WeldingMainWindow::whenStructLightStatusRenew);
         connect(railWeldingSystem->robot.get(), &AbstractRobot::sendRobotStatus, this, &WeldingMainWindow::whenRobotStatusRenew);
-        // connect(railWeldingSystem->rail, &Rail::sendRailStatus, this, &WeldingMainWindow::whenRailStatusRenew);
+        connect(railWeldingSystem->rail->communication(), &PLCCommunication::sendRailStatus, this,
+                [this](QString color) { whenRailStatusRenew(color, Axis::ALL); });
+
+        for (const auto& pair : railWeldingSystem->rail->axes()) {
+            AxisManager* axisManager = qobject_cast<AxisManager*>(pair.second.get());
+            if (axisManager) {
+                connect(axisManager, &AxisManager::sendRailStatus, this, &WeldingMainWindow::whenRailStatusRenew);
+            }
+        }
         // connect(ui->workpieceCoarseLocWidget->baslerControl, &CoarsePositioningCamera::sendCameraStatus, this, &WeldingMainWindow::whenCoarseLocCameraStatusRenew);
 
         // 获取到『点云或图像』信号槽
@@ -199,7 +245,69 @@ void WeldingMainWindow::whenRailStatusRenew(QString color, Axis axis) {
 //         }
 //     }
 // }
+// 更新三轴状态栏信息
+void WeldingMainWindow::whenRailAMStateRenew(const QString messageAxis, const QString messageMotion, Axis axis) {
+    if (!messageAxis.isEmpty()) {
+        switch (axis) {
+            case Axis::X:
+                ui->edit_AxisState_X->clear();
+                ui->edit_AxisState_X->append(messageAxis);
+                break;
+            case Axis::Y:
+                ui->edit_AxisState_Y->clear();
+                ui->edit_AxisState_Y->append(messageAxis);
+                break;
+            case Axis::Z:
+                ui->edit_AxisState_Z->clear();
+                ui->edit_AxisState_Z->append(messageAxis);
+                break;
+            default:
+                break;
+        }
+    }
 
+    if (!messageMotion.isEmpty()) {
+        switch (axis) {
+            case Axis::X:
+                ui->edit_MotionState_X->clear();
+                ui->edit_MotionState_X->append(messageMotion);
+                break;
+            case Axis::Y:
+                ui->edit_MotionState_Y->clear();
+                ui->edit_MotionState_Y->append(messageMotion);
+                break;
+            case Axis::Z:
+                ui->edit_MotionState_Z->clear();
+                ui->edit_MotionState_Z->append(messageMotion);
+                break;
+            default:
+                break;
+        }
+    }
+}
+// 更新三轴运动信息
+void WeldingMainWindow::whenRailPositionAndSpeedRenew(float position, float speed, Axis axis) {
+    const bool readOk = !std::isnan(position) && !std::isnan(speed);
+    const QString positionText = readOk ? QString::number(position, 'f', 3) : "Read failed!";
+    const QString speedText = readOk ? QString::number(speed, 'f', 3) : "Read failed!";
+
+    switch (axis) {
+        case Axis::X:
+            ui->label_X_CurrentPosition->setText(positionText);
+            ui->label_X_CurrentSpeed->setText(speedText);
+            break;
+        case Axis::Y:
+            ui->label_Y_CurrentPosition->setText(positionText);
+            ui->label_Y_CurrentSpeed->setText(speedText);
+            break;
+        case Axis::Z:
+            ui->label_Z_CurrentPosition->setText(positionText);
+            ui->label_Z_CurrentSpeed->setText(speedText);
+            break;
+        default:
+            break;
+    }
+}
 // 获取到工作台点云
 void WeldingMainWindow::whenGetWorkbenchPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
     if (cloud) {
@@ -374,3 +482,9 @@ void WeldingMainWindow::on_combWorkpiece_currentTextChanged(const QString& arg1)
         this->railWeldingSystem->switchTrajectoryPlanning(WORKPIECE_TYPE::GANTRAY_FRAME);
     }
 }
+
+void WeldingMainWindow::on_btnConnectRail_clicked()
+{
+
+}
+
