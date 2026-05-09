@@ -9,20 +9,30 @@ SystemMirrorWidget::SystemMirrorWidget(QObject* parent) {
     (void)parent;
 }
 
-// 设置地轨位置
-void SystemMirrorWidget::setRailPosition(float position) {
+// 设置X位置
+void SystemMirrorWidget::setXAxisPosition(float position) {
     parameter[1].assembly->SetPosition(position, 0, 0);
+    this->GetRenderWindow()->Render();
+}
+// 设置Y位置
+void SystemMirrorWidget::setYAxisPosition(float position) {
+    parameter[4].assembly->SetPosition(0, position, 0);
+    this->GetRenderWindow()->Render();
+}
+// 设置Z位置
+void SystemMirrorWidget::setZAxisPosition(float position) {
+    parameter[5].assembly->SetPosition(0, 0, position);
     this->GetRenderWindow()->Render();
 }
 
 // 设置机器人关节角
 void SystemMirrorWidget::setRobotJointAngle(robotJointAngle angle) {
-    parameter[0].assembly->SetOrientation(0, 0, angle.joint1);
-    parameter[1].assembly->SetOrientation(0, angle.joint2 - 90, 0);
-    parameter[2].assembly->SetOrientation(0, -angle.joint3, 0);
-    parameter[3].assembly->SetOrientation(0, 0, angle.joint4);
-    parameter[4].assembly->SetOrientation(0, -angle.joint5, 0);
-    parameter[5].assembly->SetOrientation(0, 0, angle.joint6);
+    parameter[7].assembly->SetOrientation(0, 0, angle.joint1);
+    parameter[8].assembly->SetOrientation(0, angle.joint2 - 90, 0);
+    parameter[9].assembly->SetOrientation(0, -angle.joint3, 0);
+    parameter[10].assembly->SetOrientation(0, 0, angle.joint4);
+    parameter[11].assembly->SetOrientation(0, -angle.joint5, 0);
+    parameter[12].assembly->SetOrientation(0, 0, angle.joint6);
 
     this->GetRenderWindow()->Render();
 }
@@ -30,17 +40,20 @@ void SystemMirrorWidget::setRobotJointAngle(robotJointAngle angle) {
 // 加载各模块模型
 void SystemMirrorWidget::importSTL() {
     parameter = {
-        // {rail,  "./data/3D_Models/rail/STL/rail.stl",              {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {1.0, 1.0,
-        // 0.85} },
-        // {link0, "./data/3D_Models/robot/an_chuan_STL/newBase.stl", {0, 0, 0},      {0, 0, 0},   {0, 0, 0},      {1.0, 0.85,
-        // 0.85}},
-        {link1, "./data/3D_Models/robot/an_chuan_STL/Link 1.stl",  {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.2, 0.45, 1.0}},
-        {link2, "./data/3D_Models/robot/an_chuan_STL/Link 2.stl",  {155, 0, 450},  {90, 0, 0},    {155, 0, 450},  {0.2, 0.45, 1.0}},
-        {link3, "./data/3D_Models/robot/an_chuan_STL/Link 3.stl",  {769, 0, 450},  {90, 0, 0},    {769, 0, 450},  {0.2, 0.45, 1.0}},
-        {link4, "./data/3D_Models/robot/an_chuan_STL/Link 4.stl",  {969, 0, -190}, {180, 0, 0},   {969, 0, -190}, {0.2, 0.45, 1.0}},
-        {link5, "./data/3D_Models/robot/an_chuan_STL/Link 5.stl",  {969, 0, -190}, {90, 0, 0},    {969, 0, -190}, {0.2, 0.45, 1.0}},
-        {link6, "./data/3D_Models/robot/an_chuan_STL/Link 6.stl",  {969, 0, -190}, {180, 0, 0},   {969, 0, -190}, {0.2, 0.45, 1.0}},
-        {Tlink, "./data/3D_Models/robot/an_chuan_STL/weldgun.stl", {969, 0, -290}, {180, -90, 0}, {969, 0, -290}, {0.4, 0.4, 0.4} },
+        {externalAxis_X_Bottom,     "./data/3D_Models/3ea/STL/3EA_WR_01_X_Bottom.stl",    {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.90, 0.60, 0.60}},
+        {externalAxis_X_MovePlate,  "./data/3D_Models/3ea/STL/3EA_WR_02_X_MovePlate.stl", {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.45, 0.8, 0.55} },
+        {externalAxis_Y_Pillar,     "./data/3D_Models/3ea/STL/3EA_WR_03_Y_Pillar.stl",    {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.90, 0.60, 0.60}},
+        {externalAxis_Y_Beam,       "./data/3D_Models/3ea/STL/3EA_WR_04_Y_Beam.stl",      {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.90, 0.60, 0.60}},
+        {externalAxis_Y_MovePlate,  "./data/3D_Models/3ea/STL/3EA_WR_05_Y_MovePlate.stl", {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.45, 0.8, 0.55} },
+        {externalAxis_Z_MovePillar, "./data/3D_Models/3ea/STL/3EA_WR_06_Z_Pillar.stl",    {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.45, 0.8, 0.55} },
+        {link0,                     "./data/3D_Models/robot/an_chuan_STL/link base.stl",  {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.2, 0.45, 1.0}  },
+        {link1,                     "./data/3D_Models/robot/an_chuan_STL/Link 1.stl",     {0, 0, 0},      {0, 0, 0},     {0, 0, 0},      {0.2, 0.45, 1.0}  },
+        {link2,                     "./data/3D_Models/robot/an_chuan_STL/Link 2.stl",     {155, 0, 450},  {90, 0, 0},    {155, 0, 450},  {0.2, 0.45, 1.0}  },
+        {link3,                     "./data/3D_Models/robot/an_chuan_STL/Link 3.stl",     {769, 0, 450},  {90, 0, 0},    {769, 0, 450},  {0.2, 0.45, 1.0}  },
+        {link4,                     "./data/3D_Models/robot/an_chuan_STL/Link 4.stl",     {969, 0, -190}, {180, 0, 0},   {969, 0, -190}, {0.2, 0.45, 1.0}  },
+        {link5,                     "./data/3D_Models/robot/an_chuan_STL/Link 5.stl",     {969, 0, -190}, {90, 0, 0},    {969, 0, -190}, {0.2, 0.45, 1.0}  },
+        {link6,                     "./data/3D_Models/robot/an_chuan_STL/Link 6.stl",     {969, 0, -190}, {180, 0, 0},   {969, 0, -190}, {0.2, 0.45, 1.0}  },
+        {Tlink,                     "./data/3D_Models/robot/an_chuan_STL/weldgun.stl",    {969, 0, -290}, {180, -90, 0}, {969, 0, -290}, {0.4, 0.4, 0.4}   },
     };
 
     // 连接各模块
@@ -51,22 +64,27 @@ void SystemMirrorWidget::importSTL() {
         }
         parameter[i].assembly->SetOrigin(parameter[i].Origin);
     }
-    renderer->AddActor(link1);
+    renderer->AddActor(externalAxis_X_Bottom);
 
     renderer->SetBackground(0.85, 0.85, 0.85);
     this->GetRenderWindow()->AddRenderer(renderer);
     setRobotJointAngle(robotJointAngle(0, 0, 0, 0, 0, 0));
 
-    setCameraPos(-3500, -1000, 1000, 2600, 0, 200);  // 设置画面相机拍照位置
+    setCameraPos(-3300, 3360, -1280, 2250, -915, 1500, 0.2, -0.37, -0.9);  // 设置画面相机拍照位置
+    // 实时显示相机位置
+    //  vtkSmartPointer<CameraPrintCallback> cameraCallback = vtkSmartPointer<CameraPrintCallback>::New();
 
+    // cameraCallback->SetRenderer(renderer);
+
+    // this->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::InteractionEvent, cameraCallback);
     this->GetRenderWindow()->Render();
 }
 
 // 设置画面相机拍照位置
-void SystemMirrorWidget::setCameraPos(int fromX, int fromY, int fromZ, int toX, int toY, int toZ) {
+void SystemMirrorWidget::setCameraPos(int fromX, int fromY, int fromZ, int toX, int toY, int toZ, float upX, float upY, float upZ) {
     renderer->GetActiveCamera()->SetPosition(fromX, fromY, fromZ);  // 相机在哪拍
     renderer->GetActiveCamera()->SetFocalPoint(toX, toY, toZ);      // 相机往哪拍
-    renderer->GetActiveCamera()->SetViewUp(0, 0, 1);
+    renderer->GetActiveCamera()->SetViewUp(upX, upY, upZ);
     renderer->ResetCameraClippingRange();
 
     this->GetRenderWindow()->Render();
@@ -98,6 +116,8 @@ void SystemMirrorWidget::displayPointCloud(const pcl::PointCloud<pcl::PointXYZ>:
     actor->GetProperty()->SetOpacity(0.1);
 
     renderer->AddActor(actor);
+    // 挂到 link0 下面
+    // parameter[6].assembly->AddPart(actor);
     pointCloudActors.push_back(actor);  // 保存点云Actor
 }
 
@@ -163,6 +183,8 @@ void SystemMirrorWidget::clearPointCloud() {
 
     for (const auto& actor : pointCloudActors) {
         renderer->RemoveActor(actor);
+        // parameter[6].assembly->RemovePart(actor);
+        // renderer->RemoveActor(actor); // 保留也没问题，防止旧的世界actor。
     }
     pointCloudActors.clear();  // 清空保存的引用
 }

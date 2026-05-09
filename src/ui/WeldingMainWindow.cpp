@@ -295,18 +295,25 @@ void WeldingMainWindow::whenRailPositionAndSpeedRenew(float position, float spee
         case Axis::X:
             ui->label_X_CurrentPosition->setText(positionText);
             ui->label_X_CurrentSpeed->setText(speedText);
+            ui->systemMirrorWidget->setXAxisPosition(position);
             break;
         case Axis::Y:
             ui->label_Y_CurrentPosition->setText(positionText);
             ui->label_Y_CurrentSpeed->setText(speedText);
+            ui->systemMirrorWidget->setYAxisPosition(position);
             break;
         case Axis::Z:
             ui->label_Z_CurrentPosition->setText(positionText);
             ui->label_Z_CurrentSpeed->setText(speedText);
+            ui->systemMirrorWidget->setZAxisPosition(position);
             break;
         default:
             break;
     }
+    // railPosition = position;
+    // ui->systemMirrorWidget->railPosition = position;
+    // this->railWeldingSystem->railPosition = position;
+    // ui->workpieceCoarseLocWidget->fittingWorkpieceCoordinate->railPosition = position;
 }
 // 获取到工作台点云
 void WeldingMainWindow::whenGetWorkbenchPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
