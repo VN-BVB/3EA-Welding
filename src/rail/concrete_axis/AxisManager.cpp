@@ -59,8 +59,9 @@ void AxisManager::whenMove2AbsPosition(float vel, float pos) {
     // 发送命令,此处加入重复触发逻辑
     int cmdReg = addr(m_axis, RegB::AbsPositionCommand);
     m_communication->writeCoils(cmdReg, {false});
-    QThread::msleep(100);  // 短暂延时
+    // QThread::msleep(100);  // 短暂延时
     m_communication->writeCoils(cmdReg, {true});
+    // emit sendPositionAndSpeed(pos, vel);
 }
 
 void AxisManager::moveForward(float vel, bool checked) {

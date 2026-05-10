@@ -246,7 +246,61 @@ void RailWeldingSystem::disconnectRobot() { emit sendDisconnectRobot(); }
 void RailWeldingSystem::welding() { emit sendWelding(); }
 
 // 移动到选中的工件
-void RailWeldingSystem::move2SelectedWorkpiece(int tableRow) {}
+void RailWeldingSystem::move2SelectedWorkpiece(int tableRow) {
+    currTableRow = tableRow;
+    if (workpiecePosition.size() > tableRow && coarseLocRes->workpieceInfoInWorld.size() > tableRow &&
+        coarseLocRes->workpieceInfoInWorld.size() > tableRow && coarseLocRes->workpieceInfoInWorld[tableRow].photoPos.size() > 0 &&
+        coarseLocRes->workpieceInfoInWorld[tableRow].rectOfPhotoPos.size() > 0) {
+        // 地轨移动到工件面前, 与此同时, 机器人也运动到拍照位置
+        if (currentRobotPose.y_ * coarseLocRes->workpieceInfoInWorld[tableRow].workpieceAreaRect.first.y >= 0) {  // 机器人不需要换面且剩余拍照位置
+            // 控制地轨移动到对应位置
+            emit sendMessage2Ui(u8"移动到第" + QString::fromStdString(std::to_string(tableRow + 1)) + u8"行的工件...");
+            // emit sendRailMove2AbsPosition(rail->vel, coarseLocRes->workpieceInfoInWorld[tableRow].photoPos[0].x - photoPosOffsetX);
+
+            // 获取拍照位置点
+            double x = photoPosOffsetX;
+            double y = coarseLocRes->workpieceInfoInWorld[tableRow].photoPos[0].y;
+            double z = coarseLocRes->workpieceInfoInWorld[tableRow].photoPos[0].z;
+            coarseLocRes->workpieceInfoInWorld[tableRow].photoPos.erase(coarseLocRes->workpieceInfoInWorld[tableRow].photoPos.begin());
+            double a = 180, b = 0, c = 0;
+            if (coarseLocRes->workpieceInfoInWorld[tableRow].workpieceAreaRect.first.y > 0) {
+                a = robotTrajectoryPlanning->trajectoryConfig.takePhotoA_LEFT;
+                b = robotTrajectoryPlanning->trajectoryConfig.takePhotoB_LEFT;
+                c = robotTrajectoryPlanning->trajectoryConfig.takePhotoC_LEFT;
+            } else {
+                a = robotTrajectoryPlanning->trajectoryConfig.takePhotoA_RIGHT;
+                b = robotTrajectoryPlanning->trajectoryConfig.takePhotoB_RIGHT;
+                c = robotTrajectoryPlanning->trajectoryConfig.takePhotoC_RIGHT;
+            }
+            robotPose p(x, y, z, a, b, c);
+
+            // 计算末端(工具)到基坐标系的转换矩阵
+            robotTrajectoryPlanning->trajectoryConfig.matrixEnd2Base = MyToolFunc::createTransformationMatrixZYX(x, y, z, a, b, c);
+
+            // 暂存当前粗定位框信息, 便于筛选目标焊缝
+            this->rectOfPhotoPos = coarseLocRes->workpieceInfoInWorld[tableRow].rectOfPhotoPos[0];
+            this->rectOfPhotoPosFlag = true;
+            coarseLocRes->workpieceInfoInWorld[tableRow].rectOfPhotoPos.erase(coarseLocRes->workpieceInfoInWorld[tableRow].rectOfPhotoPos.begin());
+
+            // 控制机器人移动到对应位置
+            PLOGD << "机器人拍照位置: " << p.x_ << " " << p.y_ << " " << p.z_ << " " << p.a_ << " " << p.b_ << " " << p.c_;
+            this->whenGetRobotMoveLData(p, SettingPara::getInstance().Value_MoveSpeed);
+            emit sendWorkpieceResidualPhotoPos(tableRow, coarseLocRes->workpieceInfoInWorld[tableRow].photoPos.size());  // 发出工件剩余拍照次数
+
+            // 当前工件没有待拍照区域, 到下一个工件
+            if (coarseLocRes->workpieceInfoInWorld[tableRow].photoPos.size() == 0 && coarseLocRes->workpieceInfoInWorld.size() > tableRow + 1) {
+                emit sendRenewTableRow(tableRow + 1);  // 表格下移一行
+            }
+        } else {  // 机器人需要换面
+            PLOGW << "机器人需要换面, 请先进行换面操作. currentRobotPose.y_: " << currentRobotPose.y_
+                  << " workpieceAreaRect.first.y: " << coarseLocRes->workpieceInfoInWorld[tableRow].workpieceAreaRect.first.y;
+            emit sendMessage2Ui(u8"机器人需要换面, 请先进行换面操作");
+        }
+    } else {
+        PLOGE << "移动到指定工件出错, 工件位置数量不足, 或拍照位置不足";
+        emit sendMessage2Ui(u8"移动到指定工件出错, 工件位置数量不足, 或拍照位置不足");
+    }
+}
 void RailWeldingSystem::whenGetRobotMoveLData(robotPose p, double speed) {
     // PLOGD << "收到机器人直线运动数据: " << p.x_ << " " << p.y_ << " " << p.z_ << " " << p.a_ << " " << p.b_ << " " << p.c_;
     emit sendRobotMoveLData(p, speed);
@@ -329,33 +383,34 @@ void RailWeldingSystem::whenRobotMoveOver() {
     PLOGD << "机器人运动完成";
     emit sendMessage2Ui(u8"机器人运动完成");
 
-    // // 如果是自动焊接模式, 直接开始扫描工作台
-    // if (weldMode == WELD_MODE::AUTO_WELD) {
-    //     robotMoveLFinishedFlag = true;
+    // 如果是自动焊接模式, 直接开始扫描工作台
+    if (weldMode == WELD_MODE::AUTO_WELD) {
+        robotMoveLFinishedFlag = true;
 
-    //     if (railAbsActionFinishedFlag == true && robotMoveLFinishedFlag == true) {
-    //         emit sendUpdataWorkbench();
+        if (railAbsActionFinishedFlag == true && robotMoveLFinishedFlag == true) {
+            emit sendUpdataWorkbench();
 
-    //         railAbsActionFinishedFlag = false;
-    //         robotMoveLFinishedFlag = false;
-    //     }
-    // }
+            railAbsActionFinishedFlag = false;
+            robotMoveLFinishedFlag = false;
+        }
+    }
 }
 // 自动焊接信号
 void RailWeldingSystem::whenAutoWelding() {
-    // PLOGD << "自动焊接... ...";
-    // emit sendMessage2Ui(u8"自动焊接...");
-    // weldMode = WELD_MODE::AUTO_WELD;  // 切换焊接模式为自动焊接
+    PLOGD << "自动焊接... ...";
+    emit sendMessage2Ui(u8"自动焊接...");
+    weldMode = WELD_MODE::AUTO_WELD;  // 切换焊接模式为自动焊接
 
-    // if (coarseLocRes && coarseLocRes->workpieceInfoInWorld.size() > currTableRow &&
-    //     coarseLocRes->workpieceInfoInWorld[currTableRow].photoPos.size() > 0) {
-    //     emit sendMove2NextWorkpiece();
-    // } else {  // 不存在待焊工件, 则回到手动模式
-    //     weldMode = WELD_MODE::MANUAL_WELD;
-    //     currTableRow = 0;
+    if (coarseLocRes && coarseLocRes->workpieceInfoInWorld.size() > currTableRow &&
+        coarseLocRes->workpieceInfoInWorld[currTableRow].photoPos.size() > 0) {
+        emit sendMove2NextWorkpiece();
+    } else {  // 不存在待焊工件, 则回到手动模式
+        weldMode = WELD_MODE::MANUAL_WELD;
+        currTableRow = 0;
 
-    //     PLOGD << "自动焊接完成";
-    //     emit sendMessage2Ui(u8"自动焊接完成");
+        PLOGD << "自动焊接完成";
+        emit sendMessage2Ui(u8"自动焊接完成");
+    }
 }
 // 获取到最终的焊缝
 void RailWeldingSystem::whenGetFinalSeams(std::vector<std::shared_ptr<WeldSeamInfo>> weldAreaInfo) {

@@ -71,11 +71,15 @@ signals:
     void sendConnectRobot();                                                        // 连接机器人
     void sendDisconnectRobot();                                                     // 断开机器人
     void sendWelding();                                                             // 机器人焊接
+    void sendRailMove2AbsPosition(float vel, float pos);                            // 运动到绝对位置
     void sendRobotMoveLData(robotPose p, double speed);                             // 发出机器人直线运动到位姿
     void sendRobotCurrentPose(robotPose p);                                         // 发送机器人当前位姿
     void sendRobotCurrentJointAngle(robotJointAngle j);                             // 发送机器人当前关节角
     void sendUpdataWorkbench();                                                     // 发送扫描工作台
     void sendWeldCoarseLocInfo(std::vector<std::vector<QTableWidgetItem *>> info);  // 发出粗定位信息用于显示在表格
+    void sendWorkpieceResidualPhotoPos(int workpieceNum, int photoTimes);           // 发出工件剩余拍照次数
+    void sendRenewTableRow(int index);                                              // 更新当前表格行号
+    void sendMove2NextWorkpiece();                                                  // 移动到下一工件
 
 private:
     std::shared_ptr<StructLightCamera> structLightCamera{nullptr};        // 『结构光相机』

@@ -66,7 +66,41 @@ RailWidget::RailWidget(QWidget* parent) : QWidget(parent), ui(new Ui::RailWidget
     connect(this, &RailWidget::sendMove2AbsPosition, m_axes[Axis::X].get(), &AbstractAxis::whenMove2AbsPosition);  // 绝对位置
 }
 
-RailWidget::~RailWidget() { this->disconnectRail(); }
+RailWidget::~RailWidget() {
+    QObject::disconnect(nullptr, nullptr, this, nullptr);
+    QObject::disconnect(this, nullptr, nullptr, nullptr);
+
+    if (m_communication_) {
+        QObject::disconnect(m_communication_.get(), nullptr, nullptr, nullptr);
+    }
+
+    for (const auto& pair : m_axes) {
+        const auto& ptr = pair.second;
+        if (!ptr) {
+            continue;
+        }
+
+        QObject::disconnect(ptr.get(), nullptr, nullptr, nullptr);
+
+        QThread* axisThread = ptr->thread();
+        if (axisThread && axisThread != QThread::currentThread() && axisThread->isRunning()) {
+            QMetaObject::invokeMethod(ptr.get(), [ptr]() { ptr->enableServo(false); }, Qt::BlockingQueuedConnection);
+        } else {
+            ptr->enableServo(false);
+        }
+    }
+
+    if (m_communication_) {
+        QThread* commThread = m_communication_->thread();
+        if (commThread && commThread != QThread::currentThread() && commThread->isRunning()) {
+            QMetaObject::invokeMethod(
+                m_communication_.get(), [communication = m_communication_.get()]() { communication->whenDisconnectFromPLC(); },
+                Qt::BlockingQueuedConnection);
+        } else {
+            m_communication_->whenDisconnectFromPLC();
+        }
+    }
+}
 
 // 设置绝对运动位置框
 PLCCommunication* RailWidget::communication() const { return m_communication_.get(); }

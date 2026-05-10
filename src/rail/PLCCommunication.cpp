@@ -10,7 +10,14 @@
 
 PLCCommunication::PLCCommunication(QObject *parent) : QObject(parent) {}
 
-PLCCommunication::~PLCCommunication() { whenDisconnectFromPLC(); }
+PLCCommunication::~PLCCommunication() {
+    if (modbusTcp) {
+        modbus_close(modbusTcp);
+        modbus_free(modbusTcp);
+        modbusTcp = nullptr;
+    }
+    m_isConnected = false;
+}
 
 void PLCCommunication::whenConnectToPLC(const QString &ip, int port) {
     if (modbusTcp) {

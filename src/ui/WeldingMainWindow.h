@@ -46,6 +46,8 @@ public slots:
     void whenGetWeldCoarseLocInfo(std::vector<std::vector<QTableWidgetItem *>> info);  // 获得粗定位信息用于显示在表格
     void whenGetCoarseCameraSerial(std::vector<std::string> serialNum);                // 获得粗定位相机序列号
     void whenGetCoarseLocWorkpieceNum(int num);                                        // 获得粗定位工件数量
+    void whenWorkpieceResidualPhotoPos(int workpieceNum, int photoTimes);              // 收到工件剩余拍照次数
+    void whenTableRowRenew(int index);                                                 // 更新当前表格行号
 signals:
     void connectStructLightCamera();                                                // 连接结构光相机
     void disconnectStructLightCamera();                                             // 断开结构光相机
@@ -92,6 +94,16 @@ private slots:
     void on_btnRailRegressOrigin_clicked();
 
     void on_checkBoxImmediateStop_toggled(bool checked);
+
+    void on_btn_VerifyCoord_clicked();
+
+    void on_tableWidgetCoarseLoc_currentCellChanged(int currentRow, int /*currentColumn*/, int /*previousRow*/, int /*previousColumn*/);
+
+    void on_comboBoxCoarseLocInfo_currentIndexChanged(int index);
+
+    void on_btn_nextWorkpiece_clicked();
+
+    void on_btn_AutoWelding_clicked();
 
 private:
     boost::shared_ptr<pcl::visualization::PCLVisualizer> pclVisualizer;  // 点云可视化界面

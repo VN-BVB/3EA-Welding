@@ -35,7 +35,11 @@ WeldingMainWindow::WeldingMainWindow(QWidget* parent)
     PLOGD << "三轴焊接系统软件启动成功";
 }
 
-WeldingMainWindow::~WeldingMainWindow() { delete ui; }
+WeldingMainWindow::~WeldingMainWindow() {
+    QObject::disconnect(nullptr, nullptr, this, nullptr);
+    QObject::disconnect(this, nullptr, nullptr, nullptr);
+    delete ui;
+}
 
 void WeldingMainWindow::initIcon() {}
 void WeldingMainWindow::initStatusLight() {
@@ -161,8 +165,8 @@ void WeldingMainWindow::initRailWeldingSystem() {
         // 『自动焊接』信号槽
         connect(this, &WeldingMainWindow::sendAutoWelding, railWeldingSystem.get(), &RailWeldingSystem::whenAutoWelding);
 
-        // // 『工件粗定位』信号槽
-        // connect(railWeldingSystem.get(), &RailWeldingSystem::sendWeldCoarseLocInfo, this, &WeldingMainWindow::whenGetWeldCoarseLocInfo);
+        // 『工件粗定位』信号槽
+        connect(railWeldingSystem.get(), &RailWeldingSystem::sendWeldCoarseLocInfo, this, &WeldingMainWindow::whenGetWeldCoarseLocInfo);
 
         // 机器人信息信号槽
         connect(railWeldingSystem.get(), &RailWeldingSystem::sendRobotCurrentPose, this, &WeldingMainWindow::whenGetRobotCurrentPose);
@@ -171,14 +175,14 @@ void WeldingMainWindow::initRailWeldingSystem() {
         // connect(this, &WeldingMainWindow::sendRobotMoveJ2SouthWorkbench, railWeldingSystem->robot.get(), &AbstractRobot::whenRobotMoveJ2SouthWorkbench);
         // connect(this, &WeldingMainWindow::sendRobotMoveJ2NorthWorkbench, railWeldingSystem->robot.get(), &AbstractRobot::whenRobotMoveJ2NorthWorkbench);
 
-        // // 粗定位表格信号槽
-        // connect(ui->tableWidgetCoarseLoc, &QTableWidget::currentCellChanged,this, &WeldingMainWindow::on_tableWidgetCoarseLoc_currentCellChanged);
-        // connect(ui->comboBoxCoarseLocInfo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &WeldingMainWindow::on_comboBoxCoarseLocInfo_currentIndexChanged);
-        // connect(railWeldingSystem.get(), &RailWeldingSystem::sendWorkpieceResidualPhotoPos, this, &WeldingMainWindow::whenWorkpieceResidualPhotoPos);
-        // connect(railWeldingSystem.get(), &RailWeldingSystem::sendRenewTableRow, this, &WeldingMainWindow::whenTableRowRenew);
-        // connect(railWeldingSystem.get(), &RailWeldingSystem::sendMove2NextWorkpiece, this, &WeldingMainWindow::on_btn_nextWorkpiece_clicked);
-        // connect(ui->settingWidget, &SettingWidget::sendCoarseCameraExposure, ui->workpieceCoarseLocWidget->baslerControl,
-        //         &CoarsePositioningCamera::whenGetCameraExposure);
+        // 粗定位表格信号槽
+        connect(ui->tableWidgetCoarseLoc, &QTableWidget::currentCellChanged,this, &WeldingMainWindow::on_tableWidgetCoarseLoc_currentCellChanged);
+        connect(ui->comboBoxCoarseLocInfo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &WeldingMainWindow::on_comboBoxCoarseLocInfo_currentIndexChanged);
+        connect(railWeldingSystem.get(), &RailWeldingSystem::sendWorkpieceResidualPhotoPos, this, &WeldingMainWindow::whenWorkpieceResidualPhotoPos);
+        connect(railWeldingSystem.get(), &RailWeldingSystem::sendRenewTableRow, this, &WeldingMainWindow::whenTableRowRenew);
+        connect(railWeldingSystem.get(), &RailWeldingSystem::sendMove2NextWorkpiece, this, &WeldingMainWindow::on_btn_nextWorkpiece_clicked);
+        connect(ui->settingWidget, &SettingWidget::sendCoarseCameraExposure, ui->workpieceCoarseLocWidget->baslerControl,
+                &CoarsePositioningCamera::whenGetCameraExposure);
         // clang-format on
 
         PLOGD << "地轨焊接系统类初始化成功";
@@ -408,6 +412,20 @@ void WeldingMainWindow::whenGetWorkpieceRailMap(cv::Mat res) {
     // 更新视图 (如果没有立即显示，尝试刷新视图)
     ui->graphicsViewCoarseLoc->setScene(scene);  // 确保场景设置正确
 }
+// 收到工件剩余拍照次数
+void WeldingMainWindow::whenWorkpieceResidualPhotoPos(int workpieceNum, int photoTimes) {
+    QTableWidgetItem* photoTimesResidualItem = new QTableWidgetItem;
+    photoTimesResidualItem->setText(QString::number(photoTimes));
+    photoTimesResidualItem->setTextAlignment(Qt::AlignCenter);
+    ui->tableWidgetCoarseLoc->setItem(workpieceNum, 6, photoTimesResidualItem);
+}
+
+// 更新当前表格行号
+void WeldingMainWindow::whenTableRowRenew(int index) {
+    if (index >= 0 && index < ui->tableWidgetCoarseLoc->rowCount()) {
+        ui->tableWidgetCoarseLoc->setCurrentCell(index, 0);
+    }
+}
 // 获得粗定位界面点击位置
 void WeldingMainWindow::whenGetWorkPieceCoord(int x, int y) { ui->label_coordinateLabel->setText(QString("X: %1, Y: %2").arg(x).arg(y)); }
 // 获得粗定位相机序列号
@@ -503,3 +521,35 @@ void WeldingMainWindow::on_btnRailRegressOrigin_clicked() {
 }
 
 void WeldingMainWindow::on_checkBoxImmediateStop_toggled(bool checked) { ui->railWidget->on_chk_ImmediateStop_toggled(checked); }
+
+void WeldingMainWindow::on_btn_VerifyCoord_clicked() {
+    ui->workpieceCoarseLocWidget->on_btn_VerifyCoordinates_clicked();
+    ui->tabWidget_CoarseLoc->setCurrentIndex(ui->tabWidget_CoarseLoc->indexOf(ui->tab_coarseLocRes));
+}
+
+void WeldingMainWindow::on_tableWidgetCoarseLoc_currentCellChanged(int currentRow, int /*currentColumn*/, int /*previousRow*/,
+                                                                   int /*previousColumn*/) {
+    if (currentRow >= 0 && currentRow < ui->comboBoxCoarseLocInfo->count()) {
+        ui->comboBoxCoarseLocInfo->setCurrentIndex(currentRow);
+        ui->workpieceCoarseLocWidget->on_comboWorkpieceNum_currentIndexChanged(currentRow);
+    }
+}
+// 选择粗定位工件
+void WeldingMainWindow::on_comboBoxCoarseLocInfo_currentIndexChanged(int index) {
+    if (index >= 0 && index < ui->tableWidgetCoarseLoc->rowCount()) {
+        ui->tableWidgetCoarseLoc->setCurrentCell(index, 0);
+    }
+    ui->workpieceCoarseLocWidget->on_comboWorkpieceNum_currentIndexChanged(index);
+}
+
+void WeldingMainWindow::on_btn_nextWorkpiece_clicked() {
+    PLOGD << "当前选中行号: " << ui->tableWidgetCoarseLoc->currentRow();
+    railWeldingSystem->move2SelectedWorkpiece(ui->tableWidgetCoarseLoc->currentRow());
+}
+
+void WeldingMainWindow::on_btn_AutoWelding_clicked() {
+    railWeldingSystem->currTableRow = ui->tableWidgetCoarseLoc->currentRow();
+    PLOGD << "railWeldingSystem->currTableRow: " << railWeldingSystem->currTableRow;
+    PLOGD << "ui->tableWidgetCoarseLoc->currentRow(): " << ui->tableWidgetCoarseLoc->currentRow();
+    emit sendAutoWelding();
+}
