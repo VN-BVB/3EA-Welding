@@ -759,7 +759,49 @@ void FittingWorkpieceCoordinate::railMapRotated(cv::Mat& image, int angle) {
             throw std::invalid_argument("Unsupported rotation angle. Use 0, 90, 180, or 270.");
     }
 }
+cv::Point3d FittingWorkpieceCoordinate::computeProjectedOffset(const cv::Point3d& pt, const cv::Mat& trackDirection, const std::string& axis) {
+    if (trackDirection.empty() || trackDirection.rows != 3 || trackDirection.cols != 1) {
+        std::cerr << "Invalid trackDirection vector!" << std::endl;
+        return pt;
+    }
 
+    double dx = trackDirection.at<double>(0, 0);
+    double dy = trackDirection.at<double>(1, 0);
+    double dz = trackDirection.at<double>(2, 0);
+
+    double t = 0.0;
+    if (axis == "x") {
+        if (dx == 0) return pt;
+        t = pt.x / dx;
+    } else if (axis == "y") {
+        if (dy == 0) return pt;
+        t = pt.y / dy;
+    } else if (axis == "z") {
+        if (dz == 0) return pt;
+        t = pt.z / dz;
+    } else {
+        std::cerr << "Invalid axis!" << std::endl;
+        return pt;
+    }
+
+    double offset_x = t * dx;
+    double offset_y = t * dy;
+    double offset_z = t * dz;
+    cv::Point3d projected_pt(pt.x, pt.y - offset_y, pt.z - offset_z);
+
+    // 新投影点到原点的距离
+    double distance = std::sqrt(projected_pt.x * projected_pt.x + offset_y * offset_y + offset_z * offset_z);
+    projected_pt = cv::Point3d(distance, projected_pt.y, projected_pt.z);
+    // std::cout << "Original Point: " << pt << "\n";
+    // std::cout << "Track Direction: (" << dx << ", " << dy << ", " << dz << ")\n";
+    // std::cout << "Track chazhi: (" << offset_x << ", " << offset_y << ", " << offset_z << ")\n";
+    // std::cout << "Projection Axis: '" << axis << "' => t = " << t << "\n";
+    // std::cout << "Projected Point = pt + t * dir = " << projected_pt << "\n";
+    // std::cout << "Distance from projected point to origin: " << distance << "\n";
+    // std::cout << "-----------------------------\n";
+
+    return projected_pt;
+}
 //-----------------------------------------------获取结果----------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------
 void FittingWorkpieceCoordinate::sortWorkpieceBoxInfo(workpieceBoxInWorld& boxInfo, const std::string& axis, const std::string& order) {
@@ -964,6 +1006,30 @@ void FittingWorkpieceCoordinate::whenGetResultInfo(const std::vector<cv::Point3d
         workpieceFinalInfoInWorldAfterVerify.workpieceInfoInWorld[i].workpieceAreaRect = std::make_pair(resultCenters[i], resultLeftTop[i]);
     }
 }
+void FittingWorkpieceCoordinate::applyTrackOffsetCompensation(workpieceBoxInWorld& info) {
+    if (!applyTrackCompensation || info.trackDirection.empty()) {
+        return;
+    }
+
+    for (auto& wp : info.workpieceInfoInWorld) {
+        auto& center = wp.workpieceAreaRect.first;
+        auto& topLeft = wp.workpieceAreaRect.second;
+
+        center = computeProjectedOffset(center, info.trackDirection, "x");
+        topLeft = computeProjectedOffset(topLeft, info.trackDirection, "x");
+
+        // === 对每个焊缝区域 weldAreaRect 的左上角和中心做补偿（这里只对左上角做） ===
+        for (auto& rect : wp.weldAreaRect) {
+            cv::Point3d topLeft3d(rect.x, rect.y, 0.0);  // 默认 z=0
+            cv::Point3d newTopLeft = computeProjectedOffset(topLeft3d, info.trackDirection, "x");
+
+            rect.x = newTopLeft.x;
+            rect.y = newTopLeft.y;
+        }
+    }
+}
+
+void FittingWorkpieceCoordinate::computeBaseOffsetAndViewpointsFromMask(workpieceBoxInWorld& info) {}
 
 void FittingWorkpieceCoordinate::whenGetWeldBoxInfo(const std::vector<std::vector<std::array<double, 4>>>& boxInfos) {
     // 安全处理：避免超过已有工件数量
@@ -1004,5 +1070,9 @@ void FittingWorkpieceCoordinate::whenGetWeldBoxInfo(const std::vector<std::vecto
     computeIOUsWithOverlap(workpieceFinalInfoInWorldAfterIOU);
     sortWorkpieceBoxInfo(workpieceFinalInfoInWorldAfterIOU, sortWorldAxis, sortWorldOrder);
     whenDisplayWeldSeamArea(workpieceFinalInfoInWorldAfterIOU);
+    // TODO 下面的要进行修改，原逻辑是垂直投影，现在为求解三元一次方程；
+    applyTrackOffsetCompensation(workpieceFinalInfoInWorldAfterIOU);
+    // TODO 基座位置选解
+    // computeBaseOffsetAndViewpointsFromMask(workpieceFinalInfoInWorldAfterIOU);
     emit sendFinalInfoToMain(workpieceFinalInfoInWorldAfterIOU);
 }

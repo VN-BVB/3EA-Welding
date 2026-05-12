@@ -143,28 +143,11 @@ void WorkpieceCoarseLocalization::whenGetWorkpieceRailMap(cv::Mat res) {
 }
 
 void WorkpieceCoarseLocalization::whenViewWorldCoordinateLabel(int x, int y) { ui->coordinateLabel->setText(QString("X: %1, Y: %2").arg(x).arg(y)); }
-
+// 这个函数中的求方向向量部分应该在fitting中实现，不应该在ui中，后续要进行修改，应该在这个函数的上一级；
 void WorkpieceCoarseLocalization::getLocalizationResult(const workpieceBoxInWorld& workpieceBoxInfoInWorld) {
     resultPtr = std::make_shared<workpieceBoxInWorld>(workpieceBoxInfoInWorld);  // std::shared_ptr<workpieceBoxInWorld>
     whenUpdateComboWp(static_cast<int>(workpieceBoxInfoInWorld.workpieceInfoInWorld.size()));
-    if (applyTrackCompensation && !resultPtr->trackDirection.empty()) {
-        for (auto& wp : resultPtr->workpieceInfoInWorld) {
-            // === 对 workpieceAreaRect 进行偏移补偿 ===
-            auto& center = wp.workpieceAreaRect.first;
-            auto& topleft = wp.workpieceAreaRect.second;
 
-            center = computeProjectedOffset(center, resultPtr->trackDirection, "x");
-            topleft = computeProjectedOffset(topleft, resultPtr->trackDirection, "x");
-
-            // === 对每个焊缝区域 weldAreaRect 的左上角和中心做补偿（这里只对左上角做） ===
-            for (auto& rect : wp.weldAreaRect) {
-                cv::Point3d topLeft3d(rect.x, rect.y, 0.0);  // 默认 z=0
-                cv::Point3d newTopLeft = computeProjectedOffset(topLeft3d, resultPtr->trackDirection, "x");
-                rect.x = newTopLeft.x;
-                rect.y = newTopLeft.y;
-            }
-        }
-    }
     if (resultPtr->workpieceInfoInWorld.size() > 0) {
         cv::Mat res = resultPtr->workpieceInfoInWorld[0].workpiece_weld_Mask.second;
         if (!res.empty()) {
@@ -302,49 +285,6 @@ void WorkpieceCoarseLocalization::printWorkpieceBoxInfo(const workpieceBoxInWorl
     }
 
     cv::waitKey(0);
-}
-cv::Point3d WorkpieceCoarseLocalization::computeProjectedOffset(const cv::Point3d& pt, const cv::Mat& trackDirection, const std::string& axis) {
-    if (trackDirection.empty() || trackDirection.rows != 3 || trackDirection.cols != 1) {
-        std::cerr << "Invalid trackDirection vector!" << std::endl;
-        return pt;
-    }
-
-    double dx = trackDirection.at<double>(0, 0);
-    double dy = trackDirection.at<double>(1, 0);
-    double dz = trackDirection.at<double>(2, 0);
-
-    double t = 0.0;
-    if (axis == "x") {
-        if (dx == 0) return pt;
-        t = pt.x / dx;
-    } else if (axis == "y") {
-        if (dy == 0) return pt;
-        t = pt.y / dy;
-    } else if (axis == "z") {
-        if (dz == 0) return pt;
-        t = pt.z / dz;
-    } else {
-        std::cerr << "Invalid axis!" << std::endl;
-        return pt;
-    }
-
-    double offset_x = t * dx;
-    double offset_y = t * dy;
-    double offset_z = t * dz;
-    cv::Point3d projected_pt(pt.x, pt.y - offset_y, pt.z - offset_z);
-
-    // 新投影点到原点的距离
-    double distance = std::sqrt(projected_pt.x * projected_pt.x + offset_y * offset_y + offset_z * offset_z);
-    projected_pt = cv::Point3d(distance, projected_pt.y, projected_pt.z);
-    // std::cout << "Original Point: " << pt << "\n";
-    // std::cout << "Track Direction: (" << dx << ", " << dy << ", " << dz << ")\n";
-    // std::cout << "Track chazhi: (" << offset_x << ", " << offset_y << ", " << offset_z << ")\n";
-    // std::cout << "Projection Axis: '" << axis << "' => t = " << t << "\n";
-    // std::cout << "Projected Point = pt + t * dir = " << projected_pt << "\n";
-    // std::cout << "Distance from projected point to origin: " << distance << "\n";
-    // std::cout << "-----------------------------\n";
-
-    return projected_pt;
 }
 void WorkpieceCoarseLocalization::whenNeedToSaveImg() {
     // 获取当前时间并格式化

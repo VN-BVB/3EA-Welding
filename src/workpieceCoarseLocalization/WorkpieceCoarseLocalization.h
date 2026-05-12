@@ -37,7 +37,6 @@ private:
     QGraphicsScene *scene = new QGraphicsScene;        // 创建一个 QGraphicsScene
     std::shared_ptr<workpieceBoxInWorld> resultPtr;
     bool detectionEnabled;
-    bool applyTrackCompensation = true;  // 是否启用地轨方向向量补偿
     QTimer *timer = nullptr;
 
     void handleSaveImageLogic();
@@ -67,7 +66,6 @@ public slots:
     void whenViewWorldCoordinateLabel(int x, int y);
     void getLocalizationResult(const workpieceBoxInWorld &workpieceBoxInfoInWorld);
     void printWorkpieceBoxInfo(const workpieceBoxInWorld *info, int workpieceIndex);
-    cv::Point3d computeProjectedOffset(const cv::Point3d &pt, const cv::Mat &trackDirection, const std::string &axis);
     void whenImageNeedToInfer(std::string workbenchGroup, std::string locationMode);
 signals:
     void sendCommandToInferPath(std::string path);

@@ -72,6 +72,11 @@ public:
     void whenGetWeldBoxInfo(const std::vector<std::vector<std::array<double, 4>>> &boxInfos);
     void computeIOUsWithOverlap(workpieceBoxInWorld &boxInfo);
     void sortWorkpieceBoxInfo(workpieceBoxInWorld &boxInfo, const std::string &axis, const std::string &order);
+    void applyTrackOffsetCompensation(workpieceBoxInWorld &info);
+    void computeBaseOffsetAndViewpointsFromMask(workpieceBoxInWorld &info);
+
+private:
+    cv::Point3d computeProjectedOffset(const cv::Point3d &pt, const cv::Mat &trackDirection, const std::string &axis);
 
 private:
     std::vector<ObjectInfo> allObjects;
@@ -94,6 +99,7 @@ private:
     std::vector<std::pair<cv::Rect, int>> workpieceROIs;      // 存储每个roi和它对应的类别索引
     float railPosition;                                       // 地轨位置
     std::string sortOrder;                                    // 工件顺序
+    bool applyTrackCompensation = true;                       // 是否启用地轨方向向量补偿
 
 signals:
     void appendFittingLog(QString message);             // 日志信号
