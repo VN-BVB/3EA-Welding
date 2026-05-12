@@ -6,7 +6,12 @@ std::array<cameraConfig, 6> cameraParameters;  // 相机参数数量
 /**
  * @brief 构造函数，初始化时加载校准参数
  */
-FittingWorkpieceCoordinate::FittingWorkpieceCoordinate() { loadCalibrationParameters(configFilePath); }
+FittingWorkpieceCoordinate::FittingWorkpieceCoordinate() {
+    loadCalibrationParameters(configFilePath);
+    // ViewPlanningConfig::getInstance().initDefaultConfig();
+    // ViewPlanningConfig::getInstance().writeConfig();
+    ViewPlanningConfig::getInstance().readConfig();
+}
 
 /**
  * @brief 处理工件坐标拟合
@@ -1030,29 +1035,164 @@ void FittingWorkpieceCoordinate::applyTrackOffsetCompensation(workpieceBoxInWorl
         }
     }
 }
+//-------------计算基座位置和视点位姿-------------------
+
+namespace {
+
+cv::Point2d normalize2d(const cv::Point2d& v) {
+    double n = std::sqrt(v.x * v.x + v.y * v.y);
+    if (n < 1e-9) {
+        return cv::Point2d(0.0, 0.0);
+    }
+    return cv::Point2d(v.x / n, v.y / n);
+}
+
+double dot2d(const cv::Point2d& a, const cv::Point2d& b) { return a.x * b.x + a.y * b.y; }
+
+double cross2d(const cv::Point2d& a, const cv::Point2d& b) { return a.x * b.y - a.y * b.x; }
+
+void drawCoordAxis(cv::Mat& img, const cv::Point2d& origin, const cv::Point2d& xDir, const cv::Point2d& yDir, double len) {
+    cv::Point o(cvRound(origin.x), cvRound(origin.y));
+
+    cv::Point xEnd(cvRound(origin.x + xDir.x * len), cvRound(origin.y + xDir.y * len));
+
+    cv::Point yEnd(cvRound(origin.x + yDir.x * len), cvRound(origin.y + yDir.y * len));
+
+    // X轴：红色
+    cv::arrowedLine(img, o, xEnd, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+
+    // Y轴：绿色
+    cv::arrowedLine(img, o, yEnd, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+
+    // 原点：蓝色
+    cv::circle(img, o, 5, cv::Scalar(255, 0, 0), -1);
+}
+
+int countSkeletonNeighbors(const cv::Mat& skeleton, int x, int y) {
+    int count = 0;
+
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (dx == 0 && dy == 0) {
+                continue;
+            }
+
+            int nx = x + dx;
+            int ny = y + dy;
+
+            if (nx < 0 || nx >= skeleton.cols || ny < 0 || ny >= skeleton.rows) {
+                continue;
+            }
+
+            if (skeleton.at<uchar>(ny, nx) > 0) {
+                ++count;
+            }
+        }
+    }
+
+    return count;
+}
+
+std::vector<cv::Point> findSkeletonEndpoints(const cv::Mat& skeleton) {
+    std::vector<cv::Point> endpoints;
+
+    for (int y = 1; y < skeleton.rows - 1; ++y) {
+        for (int x = 1; x < skeleton.cols - 1; ++x) {
+            if (skeleton.at<uchar>(y, x) == 0) {
+                continue;
+            }
+
+            int neighbors = countSkeletonNeighbors(skeleton, x, y);
+
+            if (neighbors == 1) {
+                endpoints.emplace_back(x, y);
+            }
+        }
+    }
+
+    return endpoints;
+}
+
+std::pair<cv::Point, cv::Point> findFarthestPair(const std::vector<cv::Point>& pts) {
+    double maxDist2 = -1.0;
+    std::pair<cv::Point, cv::Point> result;
+
+    for (size_t i = 0; i < pts.size(); ++i) {
+        for (size_t j = i + 1; j < pts.size(); ++j) {
+            double dx = pts[i].x - pts[j].x;
+            double dy = pts[i].y - pts[j].y;
+            double d2 = dx * dx + dy * dy;
+
+            if (d2 > maxDist2) {
+                maxDist2 = d2;
+                result = std::make_pair(pts[i], pts[j]);
+            }
+        }
+    }
+
+    return result;
+}
+
+cv::Point2d chooseNearestImageAxis(const cv::Point2d& dir) {
+    std::vector<cv::Point2d> axes = {cv::Point2d(1.0, 0.0), cv::Point2d(-1.0, 0.0), cv::Point2d(0.0, 1.0), cv::Point2d(0.0, -1.0)};
+
+    cv::Point2d bestAxis = axes[0];
+    double bestDot = -1.0;
+
+    cv::Point2d ndir = normalize2d(dir);
+
+    for (const auto& axis : axes) {
+        double d = dot2d(ndir, axis);
+        if (d > bestDot) {
+            bestDot = d;
+            bestAxis = axis;
+        }
+    }
+
+    return bestAxis;
+}
+
+}  // namespace
+
 // 这里传入的掩膜图像如果是与三轴1：1的尺度是最好
+// 即输入的图像为像素坐标系转换到机器人基座坐标系在三轴原点处的坐标系中；
+// 目前默认位于地面高度为2m，后续数值不定，所以目前计划不以三轴坐标系，聚焦于焊缝坐标系
+// 旋转矩阵转换欧拉角abc函数为： MyToolFunc::extractEulerZYX(R_ref, currentABC);
 void FittingWorkpieceCoordinate::computeBaseOffsetAndViewpointsFromMask(workpieceBoxInWorld& info) {
+    QDir().mkpath("./data/test/output");
+
+    // ===== 第一步：获取单例配置对象 =====
+    ViewPlanningConfig& viewConfig = ViewPlanningConfig::getInstance();
+
     for (size_t i = 0; i < info.workpieceInfoInWorld.size(); ++i) {
         auto& wp = info.workpieceInfoInWorld[i];
         auto& segObj = wp.workpiece_weld_Obj.first;
 
         const int classId = segObj.label;
-        cv::Mat mask = segObj.boxMask.clone();
 
-        if (mask.empty()) {
+        if (segObj.boxMask.empty()) {
             PLOGE << "computeBaseOffsetAndViewpointsFromMask: mask empty, index = " << i;
             continue;
         }
+
+        // ===== 第二步：从单例配置中获取该类别的视点配置 =====
+        ViewClassConfig* classConfig = nullptr;
+        if (viewConfig.classConfigs.find(classId) != viewConfig.classConfigs.end()) {
+            classConfig = &viewConfig.classConfigs[classId];
+        } else {
+            PLOGW << "computeBaseOffsetAndViewpointsFromMask: No view config found for classId " << classId;
+            // 若无配置，使用默认偏移0
+        }
+
         // ================= 1. 获取标准二值mask =================
         cv::Mat grayMask;
 
         if (segObj.boxMask.channels() == 1) {
-            grayMask = segObj.boxMask;
+            grayMask = segObj.boxMask.clone();
         } else {
             cv::cvtColor(segObj.boxMask, grayMask, cv::COLOR_BGR2GRAY);
         }
 
-        // 强制转标准二值图
         cv::Mat binMask;
         cv::threshold(grayMask, binMask, 127, 255, cv::THRESH_BINARY);
 
@@ -1064,7 +1204,7 @@ void FittingWorkpieceCoordinate::computeBaseOffsetAndViewpointsFromMask(workpiec
             continue;
         }
 
-        // ================= 2. 根据mask PCA建立子焊缝坐标系 =================
+        // ================= 2. PCA计算mask质心和主方向 =================
         cv::Mat data(static_cast<int>(maskPts.size()), 2, CV_32F);
 
         for (int k = 0; k < static_cast<int>(maskPts.size()); ++k) {
@@ -1076,95 +1216,283 @@ void FittingWorkpieceCoordinate::computeBaseOffsetAndViewpointsFromMask(workpiec
 
         cv::Point2d origin(pca.mean.at<float>(0, 0), pca.mean.at<float>(0, 1));
 
-        cv::Point2d xDir(pca.eigenvectors.at<float>(0, 0), pca.eigenvectors.at<float>(0, 1));
+        cv::Point2d pcaDir(pca.eigenvectors.at<float>(0, 0), pca.eigenvectors.at<float>(0, 1));
 
-        double xNorm = std::sqrt(xDir.x * xDir.x + xDir.y * xDir.y);
-        if (xNorm < 1e-6) {
-            PLOGE << "computeBaseOffsetAndViewpointsFromMask: invalid PCA xDir, index = " << i;
+        pcaDir = normalize2d(pcaDir);
+
+        if (std::abs(pcaDir.x) < 1e-9 && std::abs(pcaDir.y) < 1e-9) {
+            PLOGE << "computeBaseOffsetAndViewpointsFromMask: invalid PCA dir, index = " << i;
             continue;
         }
 
-        xDir.x /= xNorm;
-        xDir.y /= xNorm;
+        wp.photoPos.clear();
 
-        // PCA主方向为X，垂直方向为Y
-        cv::Point2d yDir(-xDir.y, xDir.x);
+        // ================= 3. 类别0和类别2：暂用PCA建立焊缝坐标系 =================
+        // Plate_Plate_F0
+        // TubeSide_Plate_F2
+        if (classId == 0 || classId == 2) {
+            /*
+             * 目前暂用方案，后面根据实际工件在具体修改：
+             * 1. PCA主方向作为焊缝坐标系Y轴；
+             * 2. X轴为Y轴垂直方向；
+             * 3. X/Y正方向先按照掩膜默认像素坐标系方向投影确定；
+             * 4. 坐标系原点使用PCA求出的mask质心点；
+             * 5. 后续在该焊缝坐标系下根据不同类别做固定XYZ偏移。
+             */
 
-        // ================= 3. 保存PCA主方向调试图：画在mask图上 =================
-        cv::Mat pcaMaskColor;
-        cv::cvtColor(binMask, pcaMaskColor, cv::COLOR_GRAY2BGR);
+            cv::Point2d yDir = pcaDir;
 
-        // mask区域显示为浅灰色
-        pcaMaskColor.setTo(cv::Scalar(180, 180, 180), binMask > 0);
+            // Y轴大方向按照图像默认坐标系方向，优先让Y朝图像右侧或下侧
+            if (std::abs(yDir.x) >= std::abs(yDir.y)) {
+                if (yDir.x < 0.0) {
+                    yDir = -yDir;
+                }
+            } else {
+                if (yDir.y < 0.0) {
+                    yDir = -yDir;
+                }
+            }
 
-        const double lineLen = 200.0;
+            cv::Point2d xDir(-yDir.y, yDir.x);
+            xDir = normalize2d(xDir);
 
-        cv::Point p0(static_cast<int>(origin.x - xDir.x * lineLen), static_cast<int>(origin.y - xDir.y * lineLen));
+            // 类别0有两个坐标系，分别为X朝向两边
+            if (classId == 0) {
+                cv::Point2d xDirA = xDir;
+                cv::Point2d yDirA = yDir;
 
-        cv::Point p1(static_cast<int>(origin.x + xDir.x * lineLen), static_cast<int>(origin.y + xDir.y * lineLen));
+                cv::Point2d xDirB = -xDir;
+                cv::Point2d yDirB = yDir;
 
-        // X方向：红色
-        cv::line(pcaMaskColor, p0, p1, cv::Scalar(0, 0, 255), 2);
+                // ===== 从配置中获取偏移值（如果存在），否则使用默认值 =====
+                double offsetXA = 0.0, offsetYA = 0.0, offsetZA = 0.0;
+                double offsetXB = 0.0, offsetYB = 0.0, offsetZB = 0.0;
 
-        // 原点：蓝色
-        cv::circle(pcaMaskColor, cv::Point(static_cast<int>(origin.x), static_cast<int>(origin.y)), 5, cv::Scalar(255, 0, 0), -1);
+                if (classConfig != nullptr && classConfig->transforms.size() >= 2) {
+                    // 第一个变换对应A方向
+                    offsetXA = classConfig->transforms[0].offsetXYZ[0];
+                    offsetYA = classConfig->transforms[0].offsetXYZ[1];
+                    offsetZA = classConfig->transforms[0].offsetXYZ[2];
 
-        std::string pcaSavePath = "./data/test/output/workpiece_" + std::to_string(i) + "_cls_" + std::to_string(classId) + "_mask_pca_axis.png";
+                    PLOGD << "Class 0 Transform A: offset=(" << offsetXA << ", " << offsetYA << ", " << offsetZA << ")";
 
-        cv::imwrite(pcaSavePath, pcaMaskColor);
+                    // 第二个变换对应B方向
+                    offsetXB = classConfig->transforms[1].offsetXYZ[0];
+                    offsetYB = classConfig->transforms[1].offsetXYZ[1];
+                    offsetZB = classConfig->transforms[1].offsetXYZ[2];
 
-        // ================= 4. 类别1和类别3额外保存骨架线效果 =================
+                    PLOGD << "Class 0 Transform B: offset=(" << offsetXB << ", " << offsetYB << ", " << offsetZB << ")";
+                }
+
+                cv::Point2d photoA = origin + xDirA * offsetXA + yDirA * offsetYA;
+
+                cv::Point2d photoB = origin + xDirB * offsetXB + yDirB * offsetYB;
+
+                wp.photoPos.emplace_back(photoA.x, photoA.y, offsetZA);
+                wp.photoPos.emplace_back(photoB.x, photoB.y, offsetZB);
+
+                cv::Mat pcaMaskColor;
+                cv::cvtColor(binMask, pcaMaskColor, cv::COLOR_GRAY2BGR);
+                pcaMaskColor.setTo(cv::Scalar(180, 180, 180), binMask > 0);
+
+                drawCoordAxis(pcaMaskColor, origin, xDirA, yDirA, 120.0);
+                drawCoordAxis(pcaMaskColor, origin, xDirB, yDirB, 80.0);
+
+                std::string pcaSavePath =
+                    "./data/test/output/workpiece_" + std::to_string(i) + "_cls_" + std::to_string(classId) + "_mask_pca_two_axis.png";
+
+                cv::imwrite(pcaSavePath, pcaMaskColor);
+            }
+            // 类别2只有一个坐标系
+            else if (classId == 2) {
+                // ===== 从配置中获取偏移值（如果存在），否则使用默认值 =====
+                double offsetX = 0.0, offsetY = 0.0, offsetZ = 0.0;
+
+                if (classConfig != nullptr && classConfig->transforms.size() >= 1) {
+                    offsetX = classConfig->transforms[0].offsetXYZ[0];
+                    offsetY = classConfig->transforms[0].offsetXYZ[1];
+                    offsetZ = classConfig->transforms[0].offsetXYZ[2];
+
+                    PLOGD << "Class 2 Transform: offset=(" << offsetX << ", " << offsetY << ", " << offsetZ << ")";
+                }
+
+                cv::Point2d photo = origin + xDir * offsetX + yDir * offsetY;
+
+                wp.photoPos.emplace_back(photo.x, photo.y, offsetZ);
+
+                cv::Mat pcaMaskColor;
+                cv::cvtColor(binMask, pcaMaskColor, cv::COLOR_GRAY2BGR);
+                pcaMaskColor.setTo(cv::Scalar(180, 180, 180), binMask > 0);
+
+                drawCoordAxis(pcaMaskColor, origin, xDir, yDir, 120.0);
+
+                std::string pcaSavePath =
+                    "./data/test/output/workpiece_" + std::to_string(i) + "_cls_" + std::to_string(classId) + "_mask_pca_axis.png";
+
+                cv::imwrite(pcaSavePath, pcaMaskColor);
+            }
+        }
+
+        // ================= 4. 类别1和类别3：骨架线、端点、开口方向、坐标系 =================
         // Tube_Plate_F1
         // Tube_Tube_F3
-        if (classId == 1 || classId == 3) {
+        else if (classId == 1 || classId == 3) {
             cv::Mat skeleton;
-            MyToolFunc::thinning(binMask, skeleton, MyToolFunc::THINNING_ZHANGSUEN);
+            MyToolFunc::thinning(binMask, skeleton, MyToolFunc::THINNING_GUOHALL);
+
+            std::vector<cv::Point> skeletonPts;
+            cv::findNonZero(skeleton, skeletonPts);
+
+            if (skeletonPts.size() < 2) {
+                PLOGE << "computeBaseOffsetAndViewpointsFromMask: skeleton point too few, index = " << i;
+                continue;
+            }
+
+            std::vector<cv::Point> endpoints = findSkeletonEndpoints(skeleton);
+
+            cv::Point endPt0;
+            cv::Point endPt1;
+
+            if (endpoints.size() >= 2) {
+                auto farPair = findFarthestPair(endpoints);
+                endPt0 = farPair.first;
+                endPt1 = farPair.second;
+            } else {
+                auto farPair = findFarthestPair(skeletonPts);
+                endPt0 = farPair.first;
+                endPt1 = farPair.second;
+            }
+
+            cv::Point2d p0(endPt0.x, endPt0.y);
+            cv::Point2d p1(endPt1.x, endPt1.y);
+
+            cv::Point2d chordDir = normalize2d(p1 - p0);
+
+            if (std::abs(chordDir.x) < 1e-9 && std::abs(chordDir.y) < 1e-9) {
+                PLOGE << "computeBaseOffsetAndViewpointsFromMask: invalid chord dir, index = " << i;
+                continue;
+            }
+
+            cv::Point2d normalDir(-chordDir.y, chordDir.x);
+
+            int positiveCount = 0;
+            int negativeCount = 0;
+
+            for (const auto& sp : skeletonPts) {
+                cv::Point2d q(sp.x, sp.y);
+
+                double dist = cross2d(chordDir, q - p0);
+
+                if (dist > 1.0) {
+                    ++positiveCount;
+                } else if (dist < -1.0) {
+                    ++negativeCount;
+                }
+            }
+
+            cv::Point2d skeletonSideDir;
+
+            if (positiveCount >= negativeCount) {
+                skeletonSideDir = normalDir;
+            } else {
+                skeletonSideDir = -normalDir;
+            }
+
+            // 大多数骨架线所在方向的反方向，作为焊缝开口方向
+            cv::Point2d openingDir = -skeletonSideDir;
+            openingDir = normalize2d(openingDir);
+
+            /*
+             * 1. 类别1/3先通过骨架线端点连接形成弦方向；
+             * 2. 判断大多数骨架点在弦的哪一侧；
+             * 3. 另一侧作为焊缝开口方向；
+             * 4. 坐标系原点使用PCA质心；
+             * 5. 坐标系轴方向先按默认图像坐标系轴向选择；
+             * 6. 看开口方向离哪个图像轴最近，就把哪个方向作为焊缝坐标系X轴；
+             * 7. 另一个轴按右手/垂直关系旋转得到。
+             */
+
+            cv::Point2d xDir = chooseNearestImageAxis(openingDir);
+            cv::Point2d yDir(-xDir.y, xDir.x);
+
+            // 保证Y方向大致与弦方向同向，方便后续统一
+            if (dot2d(yDir, chordDir) < 0.0) {
+                yDir = -yDir;
+            }
+
+            // ===== 从配置中获取偏移值（如果存在），否则使用默认值 =====
+            double offsetX = 0.0, offsetY = 0.0, offsetZ = 0.0;
+
+            if (classConfig != nullptr && classConfig->transforms.size() >= 1) {
+                offsetX = classConfig->transforms[0].offsetXYZ[0];
+                offsetY = classConfig->transforms[0].offsetXYZ[1];
+                offsetZ = classConfig->transforms[0].offsetXYZ[2];
+
+                PLOGD << "Class " << classId << " Transform: offset=(" << offsetX << ", " << offsetY << ", " << offsetZ << ")";
+            }
+
+            cv::Point2d photo = origin + xDir * offsetX + yDir * offsetY;
+
+            wp.photoPos.emplace_back(photo.x, photo.y, offsetZ);
 
             cv::Mat skeletonColor;
             cv::cvtColor(binMask, skeletonColor, cv::COLOR_GRAY2BGR);
+            skeletonColor.setTo(cv::Scalar(180, 180, 180), binMask > 0);
+
+            // 骨架线：红色
             skeletonColor.setTo(cv::Scalar(0, 0, 255), skeleton > 0);
 
-            std::string skeletonSavePath = "./data/test/output/workpiece_" + std::to_string(i) + "_cls_" + std::to_string(classId) + "_skeleton.png";
+            // 端点连线：黄色
+            cv::line(skeletonColor, endPt0, endPt1, cv::Scalar(0, 255, 255), 2, cv::LINE_AA);
+
+            // 端点：蓝色、绿色
+            cv::circle(skeletonColor, endPt0, 5, cv::Scalar(255, 0, 0), -1);
+            cv::circle(skeletonColor, endPt1, 5, cv::Scalar(0, 255, 0), -1);
+
+            // 开口方向：紫色
+            cv::arrowedLine(skeletonColor, cv::Point(cvRound(origin.x), cvRound(origin.y)),
+                            cv::Point(cvRound(origin.x + openingDir.x * 100.0), cvRound(origin.y + openingDir.y * 100.0)), cv::Scalar(255, 0, 255), 2,
+                            cv::LINE_AA);
+
+            // 焊缝坐标系
+            drawCoordAxis(skeletonColor, origin, xDir, yDir, 120.0);
+
+            std::string skeletonSavePath =
+                "./data/test/output/workpiece_" + std::to_string(i) + "_cls_" + std::to_string(classId) + "_skeleton_endpoint_axis.png";
 
             cv::imwrite(skeletonSavePath, skeletonColor);
         }
 
-        // ================= 5. 根据类别分支规划偏移和视点 =================
-
-        double offsetX = 0.0;
-        double offsetY = 0.0;
-        double offsetZ = 0.0;
-
-        // Plate_Plate_F0
-        if (classId == 0) {
-            offsetX = 0.0;
-            offsetY = 0.0;
-            offsetZ = 0.0;
-        }
-        // Tube_Plate_F1
-        else if (classId == 1) {
-            offsetX = 0.0;
-            offsetY = 0.0;
-            offsetZ = 0.0;
-        }
-        // TubeSide_Plate_F2
-        else if (classId == 2) {
-            offsetX = 0.0;
-            offsetY = 0.0;
-            offsetZ = 0.0;
-        }
-        // Tube_Tube_F3
-        else if (classId == 3) {
-            offsetX = 0.0;
-            offsetY = 0.0;
-            offsetZ = 0.0;
-        } else {
+        else {
             PLOGE << "computeBaseOffsetAndViewpointsFromMask: unknown classId = " << classId;
             continue;
         }
 
-        // ================= 6. 当前阶段先全部填0 =================
-        wp.robotViewPose = robotPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        // ================= 5. 从配置中获取视点姿态（4x4变换矩阵） =================
+        // 位姿通过建立的焊缝坐标系和变换矩阵来确立
+        if (classConfig != nullptr && classConfig->transforms.size() >= 1) {
+            // 获取第一个变换的4x4矩阵
+            const ViewTransformConfig& transform = classConfig->transforms[0];
+            cv::Mat transformMat = transform.getTransformMatrix();
+
+            // 从4x4矩阵中提取旋转部分 (3x3)
+            cv::Mat R = transformMat(cv::Rect(0, 0, 3, 3)).clone();
+
+            // 使用你项目中的函数将旋转矩阵转换为欧拉角 (ABC)
+            // 注意：这里假设你有 MyToolFunc::extractEulerZYX 函数
+            cv::Mat eularABC;
+            if (R.rows == 3 && R.cols == 3) {
+                // MyToolFunc::extractEulerZYX(R, eularABC);  // 取消注释后使用
+                // wp.robotViewPose = robotPose(eularABC.at<double>(0, 0), eularABC.at<double>(1, 0), eularABC.at<double>(2, 0), 0.0, 0.0, 0.0);
+
+                PLOGD << "Transform matrix for class " << classId << ":\n" << transformMat;
+            }
+        }
+
+        // 如果无配置或不需要从矩阵提取，使用默认值
+        if (wp.robotViewPose.a_ == 0.0 && wp.robotViewPose.b_ == 0.0 && wp.robotViewPose.c_ == 0.0) {
+            wp.robotViewPose = robotPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        }
     }
 }
 

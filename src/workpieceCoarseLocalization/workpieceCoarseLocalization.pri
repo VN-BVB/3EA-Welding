@@ -1,5 +1,6 @@
 SOURCES += \
     $$PWD/WorkpieceCoarseLocalization.cpp \
+    $$PWD/include/CoarseLocalizationMatrix.cpp \
     $$PWD/src/camera_control/basler/CoarsePositioningCamera.cpp \
     $$PWD/src/fittingWorkpieceCoordinate/Fittingworkpiececoordinate.cpp \
     $$PWD/src/yoloInference/YoloInference.cpp
