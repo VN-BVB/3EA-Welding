@@ -5,6 +5,7 @@ PRECOMPILED_HEADER = src/stable.h
 HEADERS += \
     src/stable.h
 include( ./ui/ui.pri )
+include( ./test/test.pri )
 include( ./rail/rail.pri )
 include( ./utils/utils.pri )
 include( ./errorSave/errorSave.pri )

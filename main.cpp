@@ -18,6 +18,7 @@
 #include "crashHandler/CrashHandler.h"
 #include "robotFactory/AbstractRobot.h"
 #include "src/rail/RailWidget.h"
+#include "src/test/test.h"  //----
 #include "structLightCamera/StructLightCamera.h"
 void initPlog();          // 初始化日志类
 void registerMetaType();  // 注册元数据类型
@@ -30,6 +31,8 @@ int main(int argc, char *argv[]) {
 
     WeldingMainWindow w;
     w.show();
+    // Test test;
+    // test.runWorkpieceCoarseLocalizationDemo();
     return a.exec();
 }
 // 初始化日志类

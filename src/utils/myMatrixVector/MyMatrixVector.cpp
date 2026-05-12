@@ -253,7 +253,7 @@ Eigen::Quaterniond MyToolFunc::eulerToQuat(double a, double b, double c) {
     Eigen::AngleAxisd ry(B, Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd rz(C, Eigen::Vector3d::UnitZ());
 
-    return rz * ry * rx;  // ZYX 顺序（和你 extractEulerZYX 一致）
+    return rz * ry * rx;  // ZYX 顺序（和 extractEulerZYX 一致）
 }
 
 // 四元数 → 欧拉角（度）

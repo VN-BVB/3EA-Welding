@@ -6,6 +6,7 @@
 
 #include "deepLearning/objectDetect/yolo11/common.hpp"
 #include "deepLearning/segment/yolo11/common.hpp"
+#include "robotFactory/AbstractRobot.h"
 
 struct workpieceIOUInfo {
     cv::Mat cameraOriginalMat;                                                           // 相机原图
@@ -24,6 +25,7 @@ struct workpieceInfo {
     std::vector<cv::Point3d> photoPos;                                                   // 单一工件多次拍照位置
     std::vector<std::vector<cv::Rect_<double>>> rectOfPhotoPos;                          // 每个拍照位置对应的目标检测框
     std::vector<workpieceIOUInfo> workpieceIouInfos;
+    robotPose robotViewPose;  // 机器人视点位姿
 };
 
 struct workpieceBoxInWorld {

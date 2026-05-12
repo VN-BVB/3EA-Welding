@@ -624,7 +624,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr MyToolFunc::generateCylinderCloud(pcl::Model
     dir.normalize();
 
     // ---------- 2. 默认高度 ----------
-    float height = 100.0f;  // ⚠️ 可根据你工件尺寸改
+    float height = 100.0f;  // ⚠️ 可根据工件尺寸改
     float min_t = -height / 2.0f;
     float max_t = height / 2.0f;
 

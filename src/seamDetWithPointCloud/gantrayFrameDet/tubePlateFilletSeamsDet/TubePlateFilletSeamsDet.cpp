@@ -776,7 +776,7 @@ bool TubePlateFilletSeamsDet::solveSeamEndPoints() {
     if (total_len < 1e-6f) return false;
 
     // ================= 10. 均匀采样 =================
-    int N = sample_num;  // 你想要的采样点数（包含首尾）
+    int N = sample_num;  // 想要的采样点数（包含首尾）
     filletSeamsTheoryTP.reserve(N);
 
     // 步长

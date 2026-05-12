@@ -175,7 +175,7 @@ void PlatePlateFilletSeamsDet::ransacMultiPlane(pcl::PointCloud<pcl::PointXYZ>::
     std::vector<pcl::ModelCoefficients::Ptr> plane_coeffs;
     std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> plane_clouds;
 
-    int max_planes = 3;    // 至少拟合3个（你要求）
+    int max_planes = 3;    // 至少拟合3个（要求）
     int min_points = 100;  // 防止过小
 
     // ===== 多平面提取 =====
