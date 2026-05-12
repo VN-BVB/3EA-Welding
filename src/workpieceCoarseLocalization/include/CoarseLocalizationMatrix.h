@@ -159,4 +159,93 @@ public:
            cereal::make_nvp("thirdaryCameraSerialNum", thirdaryCameraSerialNum));
     }
 };
+// 视点规划读取
+struct ViewTransformConfig {
+    std::string name;
+
+    // 基座偏移
+    std::vector<double> offsetXYZ{0.0, 0.0, 0.0};
+
+    // 4x4齐次矩阵（二维数组格式）
+    std::vector<std::vector<double>> T{
+        {1.0, 0.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    };
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        ar(CEREAL_NVP(name), CEREAL_NVP(offsetXYZ), CEREAL_NVP(T));
+    }
+    
+    // 辅助方法：将二维数组T转换为cv::Mat
+    cv::Mat getTransformMatrix() const {
+        if (T.size() != 4) {
+            std::cerr << "Error: Transform matrix T size is incorrect!" << std::endl;
+            return cv::Mat::eye(4, 4, CV_64F);
+        }
+        cv::Mat mat(4, 4, CV_64F);
+        for (int i = 0; i < 4; i++) {
+            if (T[i].size() != 4) {
+                std::cerr << "Error: Transform matrix T row " << i << " size is incorrect!" << std::endl;
+                return cv::Mat::eye(4, 4, CV_64F);
+            }
+            std::memcpy(mat.ptr<double>(i), T[i].data(), 4 * sizeof(double));
+        }
+        return mat;
+    }
+    
+    // 辅助方法：从cv::Mat设置T
+    void setTransformMatrix(const cv::Mat& mat) {
+        if (mat.rows != 4 || mat.cols != 4 || mat.type() != CV_64F) {
+            std::cerr << "Error: Invalid transform matrix for setTransformMatrix!" << std::endl;
+            return;
+        }
+        T.resize(4);
+        for (int i = 0; i < 4; i++) {
+            T[i].assign(mat.ptr<double>(i), mat.ptr<double>(i) + 4);
+        }
+    }
+};
+
+struct ViewClassConfig {
+    int classId = -1;
+
+    std::string className;
+
+    std::vector<ViewTransformConfig> transforms;
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        ar(CEREAL_NVP(classId), CEREAL_NVP(className), CEREAL_NVP(transforms));
+    }
+};
+
+class ViewPlanningConfig {
+public:
+    static ViewPlanningConfig& getInstance();
+
+    std::map<int, ViewClassConfig> classConfigs;
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        ar(CEREAL_NVP(classConfigs));
+    }
+
+    void readConfig();
+    void writeConfig();
+    void printConfig();
+    void initDefaultConfig();
+
+private:
+    ViewPlanningConfig() = default;
+
+private:
+    friend class cereal::access;
+    std::string configPath = "./data/config/ViewPlanningConfig.json";
+
+    static ViewPlanningConfig* instance;
+    static std::mutex mutex_;
+};
 #endif  // CoarseLocalizationMatrix_H
