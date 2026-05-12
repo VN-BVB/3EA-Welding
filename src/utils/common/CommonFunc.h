@@ -41,6 +41,16 @@ std::string getRobotTypeString(ROBOT_TYPE robotType);
 
 // 获取手眼关系字符串
 std::string getHandTypeTypeString(HAND_EYE_TYPE handTypeType);
+// 骨架提取
+enum ThinningTypes { THINNING_ZHANGSUEN = 0, THINNING_GUOHALL = 1 };
+
+/**
+ * @brief thinning 二值图骨架细化
+ * @param input  输入二值图(CV_8UC1, 0/255)
+ * @param output 输出骨架图
+ * @param thinningType 细化算法
+ */
+void thinning(cv::InputArray input, cv::OutputArray output, int thinningType = THINNING_GUOHALL);
 
 }  // namespace MyToolFunc
 

@@ -1,4 +1,6 @@
 ﻿#include "FittingWorkpieceCoordinate.h"
+
+#include "utils/common/CommonFunc.h"
 std::array<cameraConfig, 6> cameraParameters;  // 相机参数数量
 
 /**
@@ -1028,8 +1030,143 @@ void FittingWorkpieceCoordinate::applyTrackOffsetCompensation(workpieceBoxInWorl
         }
     }
 }
+// 这里传入的掩膜图像如果是与三轴1：1的尺度是最好
+void FittingWorkpieceCoordinate::computeBaseOffsetAndViewpointsFromMask(workpieceBoxInWorld& info) {
+    for (size_t i = 0; i < info.workpieceInfoInWorld.size(); ++i) {
+        auto& wp = info.workpieceInfoInWorld[i];
+        auto& segObj = wp.workpiece_weld_Obj.first;
 
-void FittingWorkpieceCoordinate::computeBaseOffsetAndViewpointsFromMask(workpieceBoxInWorld& info) {}
+        const int classId = segObj.label;
+        cv::Mat mask = segObj.boxMask.clone();
+
+        if (mask.empty()) {
+            PLOGE << "computeBaseOffsetAndViewpointsFromMask: mask empty, index = " << i;
+            continue;
+        }
+        // ================= 1. 获取标准二值mask =================
+        cv::Mat grayMask;
+
+        if (segObj.boxMask.channels() == 1) {
+            grayMask = segObj.boxMask;
+        } else {
+            cv::cvtColor(segObj.boxMask, grayMask, cv::COLOR_BGR2GRAY);
+        }
+
+        // 强制转标准二值图
+        cv::Mat binMask;
+        cv::threshold(grayMask, binMask, 127, 255, cv::THRESH_BINARY);
+
+        std::vector<cv::Point> maskPts;
+        cv::findNonZero(binMask, maskPts);
+
+        if (maskPts.size() < 10) {
+            PLOGE << "computeBaseOffsetAndViewpointsFromMask: mask point too few, index = " << i;
+            continue;
+        }
+
+        // ================= 2. 根据mask PCA建立子焊缝坐标系 =================
+        cv::Mat data(static_cast<int>(maskPts.size()), 2, CV_32F);
+
+        for (int k = 0; k < static_cast<int>(maskPts.size()); ++k) {
+            data.at<float>(k, 0) = static_cast<float>(maskPts[k].x);
+            data.at<float>(k, 1) = static_cast<float>(maskPts[k].y);
+        }
+
+        cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
+
+        cv::Point2d origin(pca.mean.at<float>(0, 0), pca.mean.at<float>(0, 1));
+
+        cv::Point2d xDir(pca.eigenvectors.at<float>(0, 0), pca.eigenvectors.at<float>(0, 1));
+
+        double xNorm = std::sqrt(xDir.x * xDir.x + xDir.y * xDir.y);
+        if (xNorm < 1e-6) {
+            PLOGE << "computeBaseOffsetAndViewpointsFromMask: invalid PCA xDir, index = " << i;
+            continue;
+        }
+
+        xDir.x /= xNorm;
+        xDir.y /= xNorm;
+
+        // PCA主方向为X，垂直方向为Y
+        cv::Point2d yDir(-xDir.y, xDir.x);
+
+        // ================= 3. 保存PCA主方向调试图：画在mask图上 =================
+        cv::Mat pcaMaskColor;
+        cv::cvtColor(binMask, pcaMaskColor, cv::COLOR_GRAY2BGR);
+
+        // mask区域显示为浅灰色
+        pcaMaskColor.setTo(cv::Scalar(180, 180, 180), binMask > 0);
+
+        const double lineLen = 200.0;
+
+        cv::Point p0(static_cast<int>(origin.x - xDir.x * lineLen), static_cast<int>(origin.y - xDir.y * lineLen));
+
+        cv::Point p1(static_cast<int>(origin.x + xDir.x * lineLen), static_cast<int>(origin.y + xDir.y * lineLen));
+
+        // X方向：红色
+        cv::line(pcaMaskColor, p0, p1, cv::Scalar(0, 0, 255), 2);
+
+        // 原点：蓝色
+        cv::circle(pcaMaskColor, cv::Point(static_cast<int>(origin.x), static_cast<int>(origin.y)), 5, cv::Scalar(255, 0, 0), -1);
+
+        std::string pcaSavePath = "./data/test/output/workpiece_" + std::to_string(i) + "_cls_" + std::to_string(classId) + "_mask_pca_axis.png";
+
+        cv::imwrite(pcaSavePath, pcaMaskColor);
+
+        // ================= 4. 类别1和类别3额外保存骨架线效果 =================
+        // Tube_Plate_F1
+        // Tube_Tube_F3
+        if (classId == 1 || classId == 3) {
+            cv::Mat skeleton;
+            MyToolFunc::thinning(binMask, skeleton, MyToolFunc::THINNING_ZHANGSUEN);
+
+            cv::Mat skeletonColor;
+            cv::cvtColor(binMask, skeletonColor, cv::COLOR_GRAY2BGR);
+            skeletonColor.setTo(cv::Scalar(0, 0, 255), skeleton > 0);
+
+            std::string skeletonSavePath = "./data/test/output/workpiece_" + std::to_string(i) + "_cls_" + std::to_string(classId) + "_skeleton.png";
+
+            cv::imwrite(skeletonSavePath, skeletonColor);
+        }
+
+        // ================= 5. 根据类别分支规划偏移和视点 =================
+
+        double offsetX = 0.0;
+        double offsetY = 0.0;
+        double offsetZ = 0.0;
+
+        // Plate_Plate_F0
+        if (classId == 0) {
+            offsetX = 0.0;
+            offsetY = 0.0;
+            offsetZ = 0.0;
+        }
+        // Tube_Plate_F1
+        else if (classId == 1) {
+            offsetX = 0.0;
+            offsetY = 0.0;
+            offsetZ = 0.0;
+        }
+        // TubeSide_Plate_F2
+        else if (classId == 2) {
+            offsetX = 0.0;
+            offsetY = 0.0;
+            offsetZ = 0.0;
+        }
+        // Tube_Tube_F3
+        else if (classId == 3) {
+            offsetX = 0.0;
+            offsetY = 0.0;
+            offsetZ = 0.0;
+        } else {
+            PLOGE << "computeBaseOffsetAndViewpointsFromMask: unknown classId = " << classId;
+            continue;
+        }
+
+        // ================= 6. 当前阶段先全部填0 =================
+        wp.robotViewPose = robotPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    }
+}
 
 void FittingWorkpieceCoordinate::whenGetWeldBoxInfo(const std::vector<std::vector<std::array<double, 4>>>& boxInfos) {
     // 安全处理：避免超过已有工件数量
@@ -1070,9 +1207,10 @@ void FittingWorkpieceCoordinate::whenGetWeldBoxInfo(const std::vector<std::vecto
     computeIOUsWithOverlap(workpieceFinalInfoInWorldAfterIOU);
     sortWorkpieceBoxInfo(workpieceFinalInfoInWorldAfterIOU, sortWorldAxis, sortWorldOrder);
     whenDisplayWeldSeamArea(workpieceFinalInfoInWorldAfterIOU);
-    // TODO 下面的要进行修改，原逻辑是垂直投影，现在为求解三元一次方程；
-    applyTrackOffsetCompensation(workpieceFinalInfoInWorldAfterIOU);
     // TODO 基座位置选解
     // computeBaseOffsetAndViewpointsFromMask(workpieceFinalInfoInWorldAfterIOU);
+    // TODO 下面的要进行修改，原逻辑是垂直投影，现在为求解三元一次方程；
+    applyTrackOffsetCompensation(workpieceFinalInfoInWorldAfterIOU);
+
     emit sendFinalInfoToMain(workpieceFinalInfoInWorldAfterIOU);
 }

@@ -97,8 +97,8 @@ struct LogQuantileOptions : public CommonOptions {
 
     // 对数底
     // 自然对数 e：最常用
-    // 10：如果你更习惯十进制尺度
-    // 2：如果你更喜欢“翻倍”尺度
+    // 10：如果更习惯十进制尺度
+    // 2：如果更喜欢“翻倍”尺度
     double logBase = 2.71828182845904523536;
 
     // 对数前的平移量
@@ -108,7 +108,7 @@ struct LogQuantileOptions : public CommonOptions {
 
     // 是否自动把数据整体平移到正数区间
     // true：如果最小值太小，会自动增加 shift，保证 log 有定义
-    // false：严格使用你提供的 shift
+    // false：严格使用提供的 shift
     bool autoShiftToPositive = true;
 };
 
@@ -118,7 +118,7 @@ struct LogQuantileOptions : public CommonOptions {
 struct KMeansOptions : public CommonOptions {
     // 聚类簇数
     // 对阈值问题通常设为 2：低值簇 + 高值簇
-    // 如果你想做更细分，可设为 3 或更多
+    // 如果想做更细分，可设为 3 或更多
     int k = 2;
 
     // 单次 KMeans 最大迭代次数

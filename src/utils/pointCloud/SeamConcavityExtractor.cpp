@@ -763,7 +763,7 @@ bool SeamConcavityExtractor::computePcaProjection(const SphereProjectionData& sp
         pcaData.projected2DPoints.reserve(sphereData.unitVectors.size());
     }
 
-    // 先按你原来的方式去中心化
+    // 先按原来的方式去中心化
     Eigen::Matrix3f cov = Eigen::Matrix3f::Zero();
 
     for (const auto& uhat : sphereData.unitVectors) {
@@ -1572,7 +1572,7 @@ bool SeamConcavityExtractor::judgeConcavityPoint(float meanDeviation, float conc
 //     }
 
 //     SeamClustering::MADOptions opt;
-//     opt.madScale = autoThreshMadScale_;  // 你原来就是 med + scale * robustSigma
+//     opt.madScale = autoThreshMadScale_;  // 原来就是 med + scale * robustSigma
 //     opt.scaleToNormalSigma = true;
 //     opt.fallback = SeamClustering::FallbackPolicy::None;
 

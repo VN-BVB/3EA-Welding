@@ -311,10 +311,10 @@ void PointCloudReconstruction::makeMaskForSeamsDetToGF() {
         PLOGW << "分割结果为空";
         // // ===== 手动构造一个 SegResult =====
         // SegResult fakeSeg;
-        // fakeSeg.classId = 4;  // 给个默认类别（按你实际类别定义）
+        // fakeSeg.classId = 4;  // 给个默认类别（按实际类别定义）
         // fakeSeg.score = 1.0f;
 
-        // // 你给的框
+        // // 给的框
         // fakeSeg.topLeftX = 600;
         // fakeSeg.topLeftY = 450;
         // fakeSeg.bottomRightX = 1470;

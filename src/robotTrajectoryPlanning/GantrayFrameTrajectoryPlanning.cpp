@@ -1296,7 +1296,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 }
                 X.normalize();
 
-                // 保持和你现有逻辑一致：X 尽量与世界 X 同向
+                // 保持和现有逻辑一致：X 尽量与世界 X 同向
                 if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0.0f) {
                     X = -X;
                     Y = -Y;

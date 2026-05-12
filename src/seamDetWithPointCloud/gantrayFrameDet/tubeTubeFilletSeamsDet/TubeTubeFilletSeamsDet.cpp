@@ -262,7 +262,7 @@ void TubeTubeFilletSeamsDet::ransacCylinder() {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ds(new pcl::PointCloud<pcl::PointXYZ>);
     {
         // ScopedTimer t("voxelDownsample");
-        const float voxelLeafSize = 1.0f;  // 你后面可以自己调，先给个常用值
+        const float voxelLeafSize = 1.0f;  // 后面可以自己调，先给个常用值
         MyToolFunc::pointcloudVoxelDownsampling(cloudInWeldArea, voxelLeafSize, cloud_ds);
     }
 
