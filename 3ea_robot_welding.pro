@@ -28,11 +28,13 @@ QMAKE_CXXFLAGS += /bigobj
 
 
 # 以下为第三方库配置选项
-DEFINES += LI_CONFIG
+# DEFINES += LI_CONFIG
 # DEFINES += ROM_CONFIG
+DEFINES += ZHANG_CONFIG
 
 contains(DEFINES, LI_CONFIG)  { include(./3rdParty/3rdPartyLi.pri) }
 contains(DEFINES, ROM_CONFIG) { include(./3rdParty/3rdPartyRom.pri) }
+contains(DEFINES, ZHANG_CONFIG) { include(./3rdParty/3rdPartyZHANG.pri) }
 
 
 include(./src/src.pri)
