@@ -1481,6 +1481,7 @@ void FittingWorkpieceCoordinate::computeBaseOffsetAndViewpointsFromMask(workpiec
             // 使用你项目中的函数将旋转矩阵转换为欧拉角 (ABC)
             // 注意：这里假设你有 MyToolFunc::extractEulerZYX 函数
             cv::Mat eularABC;
+
             if (R.rows == 3 && R.cols == 3) {
                 // MyToolFunc::extractEulerZYX(R, eularABC);  // 取消注释后使用
                 // wp.robotViewPose = robotPose(eularABC.at<double>(0, 0), eularABC.at<double>(1, 0), eularABC.at<double>(2, 0), 0.0, 0.0, 0.0);

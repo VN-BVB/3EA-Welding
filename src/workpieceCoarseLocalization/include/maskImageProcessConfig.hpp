@@ -22,10 +22,10 @@ struct workpieceInfo {
     std::pair<segYolo11::ObjectYolo11Seg, std::vector<det::Object>> workpiece_weld_Obj;  // 检测数据
     std::pair<cv::Point3d, cv::Point3d> workpieceAreaRect;                               // <center, topleft>
     std::vector<cv::Rect_<double>> weldAreaRect;                                         // 工件焊缝区域信息
-    std::vector<cv::Point3d> photoPos;                                                   // 单一工件多次拍照位置
     std::vector<std::vector<cv::Rect_<double>>> rectOfPhotoPos;                          // 每个拍照位置对应的目标检测框
     std::vector<workpieceIOUInfo> workpieceIouInfos;
-    robotPose robotViewPose;  // 机器人视点位姿
+    std::vector<cv::Point3d> photoPos;  // 基座位置
+    robotPose robotViewPose;            // 机器人视点位姿
 };
 
 struct workpieceBoxInWorld {
