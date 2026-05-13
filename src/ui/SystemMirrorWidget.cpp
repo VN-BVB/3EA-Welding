@@ -65,6 +65,16 @@ void SystemMirrorWidget::importSTL() {
         parameter[i].assembly->SetOrigin(parameter[i].Origin);
     }
     renderer->AddActor(externalAxis_X_Bottom);
+    // 显示第一个零件坐标系
+    auto axes = vtkSmartPointer<vtkAxesActor>::New();
+
+    axes->SetTotalLength(300, 300, 300);
+    axes->SetShaftTypeToCylinder();
+    axes->SetAxisLabels(true);
+    axes->SetPickable(false);
+    axes->SetDragable(false);
+
+    renderer->AddActor(axes);
 
     renderer->SetBackground(0.85, 0.85, 0.85);
     this->GetRenderWindow()->AddRenderer(renderer);
@@ -220,5 +230,8 @@ void SystemMirrorWidget::RobotArmAssemblyLink(systemParts parameter) {
     actor->RotateX(parameter.Rotate[0]);
     actor->SetPosition(parameter.PositionXYZ);
     actor->GetProperty()->SetColor(parameter.rgb);
+    // if (parameter.assembly == externalAxis_Z_MovePillar || parameter.assembly == link0) {
+    //     actor->GetProperty()->SetOpacity(0.5);
+    // }
     parameter.assembly->AddPart(actor);
 }

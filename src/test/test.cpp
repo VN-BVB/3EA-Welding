@@ -200,7 +200,7 @@ workpieceBoxInWorld Test::runWorkpieceCoarseLocalizationDemo(const std::string &
     }
 
     FittingWorkpieceCoordinate fittingWorkpieceCoordinate;
-    fittingWorkpieceCoordinate.computeBaseOffsetAndViewpointsFromMask(coarseLocalizationDemoResult);
+    fittingWorkpieceCoordinate.computeBaseOffsetAndViewpointsFromMask(coarseLocalizationDemoResult);  //----------------------
 
     workpieceFinalInfoInWorld = coarseLocalizationDemoResult;
     saveWorkpieceBoxSummary(coarseLocalizationDemoResult, sourceImagePathsByWorkpiece, outputDir);
