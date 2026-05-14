@@ -78,6 +78,7 @@
 | 📦 `release/` | 发布版本 | `release/v1.2.0` |
 | ⏪ `revert/` | 回退修改 | `revert/broken-feature` |
 | 🧬 `experiment/` | 实验性功能 | `experiment/fp16-gelu` |
+| 🧪 `spike/` | 技术方案验证 / 可行性探索 | `spike/tensorrt-fp16` |
 | 🚧 `wip/` | 开发中（未完成） | `wip/new-localization` |
 ---
 ##
