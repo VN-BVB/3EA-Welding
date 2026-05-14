@@ -646,7 +646,8 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             // ================= 4. Z轴 =================
             Eigen::Vector3f Z = (tubeSidePlateFilletPlanePoseW * n1 + (1.0f - tubeSidePlateFilletPlanePoseW) * n2).normalized();
 
-            if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+            // if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+            if (Z.dot(n1) > 0) Z = -Z;
 
             // ================= 5. Y轴（焊缝方向） =================
             Eigen::Vector3f dir = (P1 - P0).normalized();
@@ -661,7 +662,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             }
 
             Y.normalize();
-
+            // TODO 三角形肘板焊缝的XY位姿需要确认
             if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
 
             // ================= 6. X轴 =================
@@ -732,7 +733,8 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             Eigen::Vector3f Z = (platePlateFilletPlanePoseW_H * n1 + (1.0f - platePlateFilletPlanePoseW_H) * n2).normalized();
 
             // 朝下
-            if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+            // if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+            if (Z.dot(n1) > 0) Z = -Z;
 
             // ===== 4. Y轴（焊缝方向）=====
             Eigen::Vector3f dir = (P1 - P0).normalized();
@@ -749,13 +751,14 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             Y.normalize();
 
             // Y反向
+            // TODO 板板水平的XY位姿需要确认
             if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
 
             // ===== 5. X轴 =====
             Eigen::Vector3f X = Y.cross(Z).normalized();
 
-            // X正向
-            if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0) {
+            // X正向要求原理底板
+            if (X.dot(n2) < 0) {
                 X = -X;
                 Y = -Y;
             }
@@ -866,7 +869,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             Eigen::Vector3f Z = (platePlateFilletWeldPoseW_V * seamDir + (1.0f - platePlateFilletWeldPoseW_V) * N_mid).normalized();
 
             //  6. Z方向约束（朝下）
-            if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+            if (Z.dot(n1) > 0) Z = -Z;
 
             //  7. Y轴（用立板方向 n2）
             Eigen::Vector3f Y = n2;
@@ -881,6 +884,7 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
             Y.normalize();
 
             // Y与机器人基座坐标系反向
+            // TODO 板板竖直的XY位姿需要确认，特别是X！
             if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
 
             //  8. X轴
@@ -996,23 +1000,23 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 Eigen::Vector3f Z = (tubePlateFilletWeldPoseW * N_mid + (1.0f - tubePlateFilletWeldPoseW) * t).normalized();
 
                 // ===== 5. Z轴约束：必须向下 =====
-                // if (Z.dot(Eigen::Vector3f(0, 0, 1)) > 0) Z = -Z;
+                if (Z.dot(n_cyl) > 0) Z = -Z;
 
-                Eigen::Vector3f worldZ(0, 0, 1);
+                // Eigen::Vector3f worldZ(0, 0, 1);
 
-                // 当前焊点位于圆柱上/下半圆
-                float hemi = n_cyl.dot(worldZ);
-                // 正常情况下，在规定了母材方向后，这里就不用0, 0, 1硬约束了，直接反向径向就行；
-                if (hemi > 0.0f) {
-                    // 上半圆：焊枪朝下
-                    if (Z.dot(worldZ) > 0) Z = -Z;
-                } else if (hemi < 0.0f) {
-                    // 下半圆：焊枪朝上
-                    if (Z.dot(worldZ) < 0) Z = -Z;
-                } else {
-                    // 与径向相反（朝向圆柱）
-                    if (Z.dot(n_cyl) > 0) Z = -Z;
-                }
+                // // 当前焊点位于圆柱上/下半圆
+                // float hemi = n_cyl.dot(worldZ);
+                // // 正常情况下，在规定了母材方向后，这里就不用0, 0, 1硬约束了，直接反向径向就行；
+                // if (hemi > 0.0f) {
+                //     // 上半圆：焊枪朝下
+                //     if (Z.dot(worldZ) > 0) Z = -Z;
+                // } else if (hemi < 0.0f) {
+                //     // 下半圆：焊枪朝上
+                //     if (Z.dot(worldZ) < 0) Z = -Z;
+                // } else {
+                //     // 与径向相反（朝向圆柱）
+                //     if (Z.dot(n_cyl) > 0) Z = -Z;
+                // }
 
                 // ===== 6. Y轴：沿切向，但与世界Y反向 =====
                 Eigen::Vector3f Y = t;
@@ -1025,13 +1029,18 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 Y.normalize();
 
                 // 强制与世界Y反向
+                // TODO 管板角接的XY位姿需要确认
                 if (Y.dot(Eigen::Vector3f(0, 1, 0)) > 0) Y = -Y;
 
                 // ===== 7. X轴：强制与世界X同向 =====
                 Eigen::Vector3f X = Y.cross(Z).normalized();
 
                 // 强制X与世界X同向
-                if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0) {
+                // if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0) {
+                //     X = -X;
+                //     Y = -Y;  // 保持右手系
+                // }
+                if (X.dot(n_cyl) < 0) {
                     X = -X;
                     Y = -Y;  // 保持右手系
                 }
@@ -1235,31 +1244,34 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 } else {
                     Z.normalize();
                 }
+                // TODO 管管角接的XYZ位姿需要确认
 
                 // 7. Z方向约束
                 // 7. Z方向约束：参考圆柱上/下半圆
                 Eigen::Vector3f worldZ(0, 0, 1);
 
                 // 用融合后的径向方向判断当前焊点处于整体上/下半圆
-                float hemi = N_mid.dot(worldZ);
+                // float hemi = N_mid.dot(worldZ);
 
-                if (hemi > 0.0f) {
-                    // 上半圆：焊枪朝下
-                    if (Z.dot(worldZ) > 0.0f) {
-                        Z = -Z;
-                    }
-                } else if (hemi < 0.0f) {
-                    // 下半圆：焊枪朝上
-                    if (Z.dot(worldZ) < 0.0f) {
-                        Z = -Z;
-                    }
-                } else {
-                    // 一般状况都是：让Z与融合径向相反，朝向两个圆柱夹角内部
-                    if (Z.dot(N_mid) > 0.0f) {
-                        Z = -Z;
-                    }
+                // if (hemi > 0.0f) {
+                //     // 上半圆：焊枪朝下
+                //     if (Z.dot(worldZ) > 0.0f) {
+                //         Z = -Z;
+                //     }
+                // } else if (hemi < 0.0f) {
+                //     // 下半圆：焊枪朝上
+                //     if (Z.dot(worldZ) < 0.0f) {
+                //         Z = -Z;
+                //     }
+                // } else {
+                //     // 一般状况都是：让Z与融合径向相反，朝向两个圆柱夹角内部
+                //     if (Z.dot(N_mid) > 0.0f) {
+                //         Z = -Z;
+                //     }
+                // }
+                if (Z.dot(N_mid) > 0.0f) {
+                    Z = -Z;
                 }
-
                 // 8. Y轴：沿焊缝切向，并投影到垂直于 Z 的平面
 
                 Eigen::Vector3f Y = t - t.dot(Z) * Z;
@@ -1297,11 +1309,14 @@ void GantrayFrameTrajectoryPlanning::generateWeldPose(std::vector<std::shared_pt
                 X.normalize();
 
                 // 保持和现有逻辑一致：X 尽量与世界 X 同向
-                if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0.0f) {
+                // if (X.dot(Eigen::Vector3f(1, 0, 0)) < 0.0f) {
+                //     X = -X;
+                //     Y = -Y;
+                // }
+                if (X.dot(n1) < 0.0f) {
                     X = -X;
                     Y = -Y;
                 }
-
                 // 10. 重正交
 
                 Z = X.cross(Y);

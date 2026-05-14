@@ -130,20 +130,61 @@ void PlatePlateFilletSeamsDet::singleSeamReinitialize() {
 }
 
 // ===== 计算平面面积（辅助函数）=====
+// float PlatePlateFilletSeamsDet::computePlaneArea(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::ModelCoefficients::Ptr coeff) {
+//     if (!cloud || cloud->empty()) return 0.0f;
+
+//     Eigen::Vector3f normal(coeff->values[0], coeff->values[1], coeff->values[2]);
+//     normal.normalize();
+
+//     // 构建局部坐标系
+//     Eigen::Vector3f u = normal.unitOrthogonal();
+//     Eigen::Vector3f v = normal.cross(u);
+
+//     float min_u = FLT_MAX, max_u = -FLT_MAX;
+//     float min_v = FLT_MAX, max_v = -FLT_MAX;
+
+//     for (const auto& pt : cloud->points) {
+//         Eigen::Vector3f p(pt.x, pt.y, pt.z);
+
+//         float pu = p.dot(u);
+//         float pv = p.dot(v);
+
+//         min_u = std::min(min_u, pu);
+//         max_u = std::max(max_u, pu);
+//         min_v = std::min(min_v, pv);
+//         max_v = std::max(max_v, pv);
+//     }
+
+//     float width = max_u - min_u;
+//     float height = max_v - min_v;
+
+//     return width * height;
+// }
 float PlatePlateFilletSeamsDet::computePlaneArea(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::ModelCoefficients::Ptr coeff) {
     if (!cloud || cloud->empty()) return 0.0f;
+    if (!coeff || coeff->values.size() < 4) return 0.0f;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    *clusterCloud = *cloud;
+
+    // 只保留最大连通域，避免离散噪声把包围盒面积撑大
+    MyToolFunc::myFastMaxCluster(clusterCloud, 1.0f);
+
+    if (!clusterCloud || clusterCloud->empty()) return 0.0f;
 
     Eigen::Vector3f normal(coeff->values[0], coeff->values[1], coeff->values[2]);
+
+    if (normal.norm() < 1e-6f) return 0.0f;
     normal.normalize();
 
-    // 构建局部坐标系
     Eigen::Vector3f u = normal.unitOrthogonal();
     Eigen::Vector3f v = normal.cross(u);
+    v.normalize();
 
     float min_u = FLT_MAX, max_u = -FLT_MAX;
     float min_v = FLT_MAX, max_v = -FLT_MAX;
 
-    for (const auto& pt : cloud->points) {
+    for (const auto& pt : clusterCloud->points) {
         Eigen::Vector3f p(pt.x, pt.y, pt.z);
 
         float pu = p.dot(u);
@@ -157,6 +198,8 @@ float PlatePlateFilletSeamsDet::computePlaneArea(pcl::PointCloud<pcl::PointXYZ>:
 
     float width = max_u - min_u;
     float height = max_v - min_v;
+
+    if (width <= 0.0f || height <= 0.0f) return 0.0f;
 
     return width * height;
 }
