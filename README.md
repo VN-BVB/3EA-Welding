@@ -60,12 +60,33 @@
             ColumnLimit: 150,
         }
         ```
-
-11. **其它细节:** 其它需要遵守的代码编写细节, 列举如下:
+11. # 🌳 Git 分支命名规范
+## 📌 分支前缀说明
+| 前缀 | 说明 | 示例 |
+|:--|:--|:--|
+| ✨ `feat/` | 新功能开发 | `feat/yolo11-seg` |
+| 🐛 `fix/` | Bug 修复 | `fix/qt-crash` |
+| 🚑 `hotfix/` | 紧急线上修复 | `hotfix/login-error` |
+| ♻️ `refactor/` | 代码重构 | `refactor/trajectory-planning` |
+| ⚡ `perf/` | 性能优化 | `perf/cuda-reduction` |
+| 📚 `docs/` | 文档修改 | `docs/readme-update` |
+| 🎨 `style/` | 代码格式/风格调整 | `style/clang-format` |
+| 🧪 `test/` | 测试相关 | `test/seam-detector` |
+| 🔧 `build/` | 构建系统/依赖修改 | `build/cmake-update` |
+| 🚀 `ci/` | CI/CD 流水线相关 | `ci/github-actions` |
+| 🔨 `chore/` | 杂项维护 | `chore/update-thirdparty` |
+| 📦 `release/` | 发布版本 | `release/v1.2.0` |
+| ⏪ `revert/` | 回退修改 | `revert/broken-feature` |
+| 🧬 `experiment/` | 实验性功能 | `experiment/fp16-gelu` |
+| 🚧 `wip/` | 开发中（未完成） | `wip/new-localization` |
+---
+##
+#
+12. **其它细节:** 其它需要遵守的代码编写细节, 列举如下:
     1. 避免使用全局变量、避免使用全局函数、避免使用宏定义等;
     2. 可供多个模块使用的通用函数, 请将其放在`./src/utils`目录下, 并采用命名空间或类+静态成员函数的方式组织;
     3. 避免使用`using namespace ***;`等类似语句, 而应使用`类名::`前缀来调用库中的函数和类, 不要害怕代码过长, 代码长并不是问题, 而是让代码可以像文章一样优雅阅读的必要条件;
     4. 我们建议您在将用到的第三方库的头文件在`stable.h`中包含, 因为`stable.h`采用了预编译指令, 可以减少编译时间;
     5. 编写新模块或修改现有模块时, 请新建独立分支编写代码, 测试无误后再合并到主分支, 避免主分支的代码出现错误或冲突, 确保主分支的代码始终保持稳定可运行状态.
 
-12. 在您的代码中, 请确保您的行为符合上述准则. 我们期待您的合作, 并欢迎您的贡献.
+13. 在您的代码中, 请确保您的行为符合上述准则. 我们期待您的合作, 并欢迎您的贡献.
