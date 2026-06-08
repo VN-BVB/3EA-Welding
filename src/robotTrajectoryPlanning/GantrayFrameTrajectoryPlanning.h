@@ -47,7 +47,7 @@ private:
     debugCollisionCheck checker;
     const float maxExtraOffset = 300.0f;  // 碰撞检测最高抬起限制
 
-    float tubeSidePlateFilletPlanePoseW = 0.7f;  // 管侧与板角接焊缝靠近三角肘板平面法向量权重
+    float tubeSidePlateFilletPlanePoseW = 0.5f;  // 管侧与板角接焊缝靠近三角肘板平面法向量权重
     float platePlateFilletPlanePoseW_H = 0.5f;   // 板板水平角接靠近立板法向量权重（变大--靠近底）
     float platePlateFillettiltW_H = 0.5f;        // 板板水平角接靠近焊缝权重（变大--靠近焊缝，1为45）
     float platePlateFilletPlanePoseW_V = 0.5f;   // 板板垂直角接靠近立板法向量权重（变大-靠近侧壁）
