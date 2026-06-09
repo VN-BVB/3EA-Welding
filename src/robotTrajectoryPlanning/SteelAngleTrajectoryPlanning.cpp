@@ -1166,10 +1166,16 @@ void SteelAngleTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr<W
 
         if (info->weldEndPointsInCamera && info->weldEndPointsInCamera->size() == 2) {
             info->weldEndPointsInRobot = std::make_shared<std::vector<pcl::PointXYZ>>();
+            info->weldEndPointsInRobotRaw = std::make_shared<std::vector<pcl::PointXYZ>>();
+            info->weldEndPointsInRobot->reserve(info->weldEndPointsInCamera->size());
+            info->weldEndPointsInRobotRaw->reserve(info->weldEndPointsInCamera->size());
 
-            info->weldEndPointsInRobot->push_back(MyToolFunc::transformSinglePoint(info->weldEndPointsInCamera->at(0), T));
+            for (const auto& pt : *(info->weldEndPointsInCamera)) {
+                const auto rawPoint = MyToolFunc::transformSinglePoint(pt, T);
+                info->weldEndPointsInRobot->push_back(rawPoint);
+                info->weldEndPointsInRobotRaw->push_back(rawPoint);
+            }
 
-            info->weldEndPointsInRobot->push_back(MyToolFunc::transformSinglePoint(info->weldEndPointsInCamera->at(1), T));
         }
         /* ---------- 点云（异步） ---------- */
 

@@ -457,11 +457,15 @@ void GantrayFrameTrajectoryPlanning::transSeams2Base(std::vector<std::shared_ptr
         // ---------- 2.1 焊缝端点 ----------
         if (info->weldEndPointsInCamera && info->weldEndPointsInCamera->size() >= 2) {
             info->weldEndPointsInRobot = std::make_shared<std::vector<pcl::PointXYZ>>();
+            info->weldEndPointsInRobotRaw = std::make_shared<std::vector<pcl::PointXYZ>>();
 
             info->weldEndPointsInRobot->reserve(info->weldEndPointsInCamera->size());
+            info->weldEndPointsInRobotRaw->reserve(info->weldEndPointsInCamera->size());
 
             for (const auto& pt : *(info->weldEndPointsInCamera)) {
-                info->weldEndPointsInRobot->emplace_back(MyToolFunc::transformSinglePoint(pt, T_cam2base));
+                const auto rawPoint = MyToolFunc::transformSinglePoint(pt, T_cam2base);
+                info->weldEndPointsInRobot->emplace_back(rawPoint);
+                info->weldEndPointsInRobotRaw->emplace_back(rawPoint);
             }
         }
         // ---------- 2.2 （异步）焊缝区域点云 ----------

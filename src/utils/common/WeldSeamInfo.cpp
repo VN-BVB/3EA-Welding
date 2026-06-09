@@ -31,6 +31,7 @@ WeldSeamInfo& WeldSeamInfo::operator=(const WeldSeamInfo& other) noexcept {
         // 共享智能指针, 增加引用计数
         weldEndPointsInCamera = other.weldEndPointsInCamera;
         weldEndPointsInRobot = other.weldEndPointsInRobot;
+        weldEndPointsInRobotRaw = other.weldEndPointsInRobotRaw;
         weldEndPointsFromSeg = other.weldEndPointsFromSeg;
         swingReferencePoints = other.swingReferencePoints;
         rectPtr = other.rectPtr;
@@ -69,6 +70,10 @@ std::shared_ptr<WeldSeamInfo> WeldSeamInfo::clone() const {
 
     if (weldEndPointsInRobot) {  // 端点数据深拷贝
         copy->weldEndPointsInRobot = std::make_shared<std::vector<pcl::PointXYZ>>(*weldEndPointsInRobot);
+    }
+
+    if (weldEndPointsInRobotRaw) {  // 端点数据深拷贝
+        copy->weldEndPointsInRobotRaw = std::make_shared<std::vector<pcl::PointXYZ>>(*weldEndPointsInRobotRaw);
     }
 
     if (weldEndPointsFromSeg) {  // 端点数据深拷贝

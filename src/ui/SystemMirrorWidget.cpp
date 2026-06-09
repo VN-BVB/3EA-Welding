@@ -134,9 +134,8 @@ void SystemMirrorWidget::displayPointCloud(const pcl::PointCloud<pcl::PointXYZ>:
 // 显示直线 / 曲线
 void SystemMirrorWidget::displayLines(const std::shared_ptr<std::vector<pcl::PointXYZ>>& lineEndpoints, const std::array<double, 3>& color,
                                       double lineWidth) {
-    bool asPolyline;
-    if (lineEndpoints->size() >= 3) asPolyline = true;
     if (!renderer || !lineEndpoints || lineEndpoints->empty()) return;
+    bool asPolyline = lineEndpoints->size() >= 3;
 
     auto points = vtkSmartPointer<vtkPoints>::New();
     auto lines = vtkSmartPointer<vtkCellArray>::New();

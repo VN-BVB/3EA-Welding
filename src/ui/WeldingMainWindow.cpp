@@ -357,7 +357,8 @@ void WeldingMainWindow::whenGetSeamInfo(std::vector<std::shared_ptr<WeldSeamInfo
             }
 
             if (info->detectSuccFlag == true && info->weldEndPointsInRobot != nullptr && info->weldEndPointsInRobot->size() >= 2) {
-                ui->systemMirrorWidget->displayLines(info->weldEndPointsInRobot, {1.0, 0.0, 0.0});  // 在系统镜像中显示焊缝
+                ui->systemMirrorWidget->displayLines(info->weldEndPointsInRobotRaw, {1.0, 0.0, 0.0});  // 未补偿焊缝
+                ui->systemMirrorWidget->displayLines(info->weldEndPointsInRobot, {0.0, 0.0, 1.0});     // 补偿后焊缝
             }
         }
     }

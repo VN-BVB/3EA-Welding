@@ -43,14 +43,31 @@ void handleWeldAreaInfo2Display(std::vector<std::shared_ptr<WeldSeamInfo>> weldA
 
     // 焊缝可视化
     int seamsNum = 0;
+    auto drawSeamLine = [&pclVisualizer](const std::shared_ptr<std::vector<pcl::PointXYZ>>& points, const std::string& labelPrefix, int seamIndex,
+                                         double r, double g, double b) {
+        if (!points || points->size() < 2) return;
+
+        if (points->size() == 2) {
+            std::string label = labelPrefix + std::to_string(seamIndex);
+            pclVisualizer->addLine(points->at(0), points->at(1), r, g, b, label);
+            pclVisualizer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 8, label);
+            return;
+        }
+
+        for (int i = 0; i < static_cast<int>(points->size()) - 1; ++i) {
+            std::string label = labelPrefix + std::to_string(seamIndex) + "_" + std::to_string(i);
+            pclVisualizer->addLine(points->at(i), points->at(i + 1), r, g, b, label);
+            pclVisualizer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 8, label);
+        }
+    };
+
     for (auto& info : weldAreaInfo) {
         if (!info || !info->detectSuccFlag || !info->weldEndPointsInRobot || info->weldEndPointsInRobot->empty()) continue;
+        drawSeamLine(info->weldEndPointsInRobotRaw, "label_RawSeam_", seamsNum, 1, 0, 0);
+        drawSeamLine(info->weldEndPointsInRobot, "label_CompensatedSeam_", seamsNum, 0, 0, 1);
+
         int endPtSz = info->weldEndPointsInRobot->size();
         if (endPtSz == 2) {
-            std::string lable_ButtSeam = "lable_Seam" + std::to_string(seamsNum++);
-            pclVisualizer->addLine(info->weldEndPointsInRobot->at(0), info->weldEndPointsInRobot->at(1), 1, 0, 0, lable_ButtSeam);
-            pclVisualizer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 8, lable_ButtSeam);
-
             // 焊缝宽度显示
             if (info->weldType == WELD_TYPE::BACK_BEAM_BUTT || info->weldType == WELD_TYPE::BACK_CORNER_BUTT ||
                 info->weldType == WELD_TYPE::FRONT_BEAM_BUTT || info->weldType == WELD_TYPE::FRONT_CORNER_BUTT) {
@@ -63,15 +80,8 @@ void handleWeldAreaInfo2Display(std::vector<std::shared_ptr<WeldSeamInfo>> weldA
                 std::string lable_SeamWidth = "lable_SeamWidth: " + std::to_string(seamWidth) + " " + std::to_string(seamsNum);
                 pclVisualizer->addText3D(width, seamWidthStart, orientation, 5.0, 1.0, 0.5, 0.0, lable_SeamWidth);
             }
+            seamsNum++;
         } else if (endPtSz > 2) {
-            for (int i = 0; i < endPtSz - 1; ++i) {
-                std::string label = "label_Seam_" + std::to_string(seamsNum) + "_" + std::to_string(i);
-
-                pclVisualizer->addLine(info->weldEndPointsInRobot->at(i), info->weldEndPointsInRobot->at(i + 1), 1, 0, 0, label);
-
-                pclVisualizer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 8, label);
-            }
-
             seamsNum++;
         }
     }
