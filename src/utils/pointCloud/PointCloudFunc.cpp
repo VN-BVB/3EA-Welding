@@ -105,6 +105,38 @@ pcl::PointXYZ MyToolFunc::transformSinglePoint(const pcl::PointXYZ& single_point
     pcl::transformPointCloud(cloud_in, cloud_out, Tranfrom_matrix);
     return cloud_out.points[0];
 }
+pcl::ModelCoefficients::Ptr MyToolFunc::transformLine(const pcl::ModelCoefficients::Ptr& lineCoeff, const Eigen::Matrix4f& T_cam2base) {
+    if (!lineCoeff || lineCoeff->values.size() < 6) {
+        return nullptr;
+    }
+
+    Eigen::Vector3f p_cam(lineCoeff->values[0], lineCoeff->values[1], lineCoeff->values[2]);
+
+    Eigen::Vector3f dir_cam(lineCoeff->values[3], lineCoeff->values[4], lineCoeff->values[5]);
+
+    Eigen::Matrix3f R = T_cam2base.block<3, 3>(0, 0);
+    Eigen::Vector3f t = T_cam2base.block<3, 1>(0, 3);
+
+    Eigen::Vector3f p_base = R * p_cam + t;
+    Eigen::Vector3f dir_base = R * dir_cam;
+
+    if (dir_base.norm() > 1e-6f) {
+        dir_base.normalize();
+    }
+
+    auto result = boost::make_shared<pcl::ModelCoefficients>();
+    result->values.resize(6);
+
+    result->values[0] = p_base.x();
+    result->values[1] = p_base.y();
+    result->values[2] = p_base.z();
+
+    result->values[3] = dir_base.x();
+    result->values[4] = dir_base.y();
+    result->values[5] = dir_base.z();
+
+    return result;
+}
 pcl::ModelCoefficients::Ptr MyToolFunc::transformPlane(const pcl::ModelCoefficients::Ptr& plane, const Eigen::Matrix4f& T) {
     // p' = T * p----->πᵀ p = 0----->(T⁻¹)ᵀ π  · p' = 0
     if (!plane || plane->values.size() != 4) return nullptr;

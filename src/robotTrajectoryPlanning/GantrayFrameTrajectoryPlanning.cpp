@@ -1887,7 +1887,7 @@ bool GantrayFrameTrajectoryPlanning::computePlatePlateFilletVerticalSwingPoints(
     if (horizontalDir.dot(n1) < 0) horizontalDir = -horizontalDir;
 
     float L2 = 0.1f;
-    Eigen::Vector3f refPoint2 = P_ref - L2 * horizontalDir;
+    Eigen::Vector3f refPoint2 = P_ref + L2 * horizontalDir;  // TODO 更换直线摆焊第二参考点方向
 
     // ===== 5. 输出 =====
     swingPoints.reserve(6);

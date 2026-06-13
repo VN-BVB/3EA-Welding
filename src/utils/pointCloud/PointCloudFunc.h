@@ -55,6 +55,7 @@ namespace MyToolFunc {
 // ###################################### 点 ######################################
 // 对点做矩阵变换
 pcl::PointXYZ transformSinglePoint(const pcl::PointXYZ& point, const Eigen::Matrix4f& transform);
+pcl::ModelCoefficients::Ptr transformLine(const pcl::ModelCoefficients::Ptr& lineCoeff, const Eigen::Matrix4f& T_cam2base);
 pcl::ModelCoefficients::Ptr transformPlane(const pcl::ModelCoefficients::Ptr& plane, const Eigen::Matrix4f& T);
 pcl::ModelCoefficients::Ptr transformCylinder(const pcl::ModelCoefficients::Ptr& cyl, const Eigen::Matrix4f& T);
 pcl::PointCloud<pcl::PointXYZ>::Ptr transformPointCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, const Eigen::Matrix4f& transform);

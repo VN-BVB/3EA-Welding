@@ -5,10 +5,10 @@
 // P002: 偶数次接收路径点的位置数据
 // P003: 错误处理时的备用位置数据
 // P004, P005, P006: 用于关节运动转换工作台操作
-// P007: 奇数次接收路径点的摆焊参考点
-// P008: 偶数次接收路径点的摆焊参考点
-// P009: 奇数次接收路径点的摆焊上一点
-// P010: 偶数次接收路径点的摆焊上一点
+// P007: 奇数次接收路径点的摆焊参考点（垂直）
+// P008: 偶数次接收路径点的摆焊参考点（垂直）
+// P009: 奇数次接收路径点的摆焊上一点（水平）
+// P010: 偶数次接收路径点的摆焊上一点（水平）
 // P011~20 & P021~30 曲线轨迹存储点
 
 // B004: 结束标志位
@@ -31,10 +31,12 @@
 // I006: 奇数次焊接电压
 // I007: 偶数次焊接电流
 // I008: 偶数次焊接电压
+// I010: 摆焊文件序列号
 
 NOP
 *LABELWELD
 SET I000 3
+SET I010 1 
 *SETB
 INC I000
 SET B[I000] 0
@@ -62,9 +64,9 @@ SET B006 1
 SET B005 0
 SKILLSND "askpath"
 IF(B017=1)THEN
-    MOVL P009 V=I001 PL=0 TRAP *ERR
-    WVON WEV#1
+    WVON WEV#I010
     REFP 1 P007
+    REFP 2 P009
     MOVL P001 V=I001 PL=0 NWAIT TRAP *ERR
     SET B017=0
     CWAIT
@@ -111,9 +113,9 @@ SET B006 1
 SET B005 0
 SKILLSND "askpath"
 IF(B018=1)THEN
-    MOVL P010 V=I002 PL=0 TRAP *ERR2
-    WVON WEV#1
+    WVON WEV#I010
     REFP 1 P008
+    REFP 2 P010
     MOVL P002 V=I002 PL=0 NWAIT TRAP *ERR2
     SET B018=0
     CWAIT
@@ -122,8 +124,8 @@ ELSEIF (B020=1) THEN
     MOVES P021 V=I002 NWAIT TRAP *ERR2
     IF(B022=1)THEN
         WVON WEV#(2)
-		REFP 1 P007
-		REFP 2 P009
+		REFP 1 P008
+		REFP 2 P010
 	ENDIF
     MOVES P022 V=I002 NWAIT TRAP *ERR2
     MOVES P023 V=I002 NWAIT TRAP *ERR2

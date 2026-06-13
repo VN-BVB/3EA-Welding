@@ -34,7 +34,8 @@ int spray_flag = 0;
 int pos_flag = 0;
 
 // 摆焊动作控制 (机器人以及焊缝方位的定义参见上位机代码中的seamsErrorCompensate函数)
-enum SWING_WELD_ACTION {
+enum SWING_WELD_ACTION
+{
     LINE_WELD = 0,                        // 直线焊接
     FRONT_LEFT_VERTICAL_SWING_WELD = 1,   // 机器人前方左侧竖直焊缝摆焊
     FRONT_RIGHT_VERTICAL_SWING_WELD = 2,  // 机器人前方右侧竖直焊缝摆焊
@@ -42,10 +43,11 @@ enum SWING_WELD_ACTION {
     LEFT_RIGHT_VERTICAL_SWING_WELD = 4,   // 机器人左方右侧竖直焊缝摆焊
     RIGHT_LEFT_VERTICAL_SWING_WELD = 5,   // 机器人右方左侧竖直焊缝摆焊
     RIGHT_RIGHT_VERTICAL_SWING_WELD = 6,  // 机器人右方右侧竖直焊缝摆焊
+    LINE_HORIZONTAL_SWING_WELD = 10,      // 水平直线摆焊
     GANTRAY_FRAME_LINE_SWING_WELD = 100,  // 龙门支架直线摆焊
     GANTRAY_FRAME_CURVE_WELD = 101,       // 龙门支架曲线焊接
-    GANTRAY_FRAME_CURVE_SWING_WELD = 102  // 龙门支架曲线摆焊
-};
+    GANTRAY_FRAME_CURVE_SWING_WELD = 102 // 龙门支架曲线摆焊
+    };
 
 // 等待来自程序的 skill 指令， 根据指令的内容（cmd）决定执行的处理的任务。
 void CmdRcv_Task(void) {
@@ -397,8 +399,15 @@ void socketRecv_Task(void) {  // 套接字接收
                                 buffNum++;
                             } else if (buffNum < 9)  {  // 如果到了9个, 说明当前数据是摆焊指令, 就存到摆焊处
                                 CURR_SWING_METHOD = (int)fbuff;
-
-                                if ((targetNum != 0) &&
+                                // 如果摆焊方法是水平摆焊；
+                                if ((targetNum != 0) && CURR_SWING_METHOD == LINE_HORIZONTAL_SWING_WELD)
+                                    { //水平摆焊，改变文件序号；可以改变筛选条件为10到19，然后用CURR_SWING_METHOD % 10在上位机选择文件序列号，例如：13 -> 3。
+                                    SetIVar(10, 3);
+                                }else{
+                                    SetIVar(10, 4); //立焊摆焊，文件序号默认为4
+                                }
+                                //直线摆焊
+                                if ((targetNum != 0)  &&
                                     (CURR_SWING_METHOD != LINE_WELD) && 
                                     (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_WELD) && 
                                     (CURR_SWING_METHOD != GANTRAY_FRAME_CURVE_SWING_WELD)){ //
@@ -407,48 +416,44 @@ void socketRecv_Task(void) {  // 套接字接收
                                         swingRefTarget[j] = prevTarget[j];
                                         swingPrevTarget[j] = prevTarget[j];
                                     }
-                                    // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册。
-                                    // 说明：这个不是上一点，而是实际运动点，上一点为写入文件中的原起点；
-                                    // 这里是角钢的摆焊，因为原始地轨程序中的上位机并没有给出焊接参考点，所以在这里给；
-                                    switch (CURR_SWING_METHOD){
-                                    case FRONT_LEFT_VERTICAL_SWING_WELD:
-                                        swingRefTarget[1] -= 10 * 1000;
-                                        swingPrevTarget[0] += 0.1 * 1000;
-                                        swingPrevTarget[1] += 0.1 * 1000;
-                                        break;
-                                    case FRONT_RIGHT_VERTICAL_SWING_WELD:
-                                        swingRefTarget[1] += 10 * 1000;
-                                        swingPrevTarget[0] += 0.1 * 1000;
-                                        swingPrevTarget[1] -= 0.1 * 1000;
-                                        break;
-                                    case LEFT_LEFT_VERTICAL_SWING_WELD:
-                                        swingRefTarget[0] += 10 * 1000;
-                                        swingPrevTarget[0] -= 0.1 * 1000;
-                                        swingPrevTarget[1] += 0.1 * 1000;
-                                        break;
-                                    case LEFT_RIGHT_VERTICAL_SWING_WELD:
-                                        swingRefTarget[0] -= 10 * 1000;
-                                        swingPrevTarget[0] += 0.1 * 1000;
-                                        swingPrevTarget[1] += 0.1 * 1000;
-                                        break;
-                                    case RIGHT_LEFT_VERTICAL_SWING_WELD:
-                                        swingRefTarget[0] -= 10 * 1000;
-                                        swingPrevTarget[0] += 0.1 * 1000;
-                                        swingPrevTarget[1] -= 0.1 * 1000;
-                                        break;
-                                    case RIGHT_RIGHT_VERTICAL_SWING_WELD:
-                                        swingRefTarget[0] += 10 * 1000;
-                                        swingPrevTarget[0] -= 0.1 * 1000;
-                                        swingPrevTarget[1] -= 0.1 * 1000;
-                                        break;
-                                    }
                                     if (targetNum % 2 == 0){
                                         SetBVar(17, 1); // 1，3，5...的摆焊标志位
                                     }else{
                                         SetBVar(18, 1); // 2，4，6...的摆焊标志位
-                                    }  
-
+                                    }
+                                    // 根据工件/焊缝的不同位置计算相应的摆焊参考点和上一点, 0 1 2分别为点的X Y Z, 参考点规则参见安川手册。
+                                    // 说明：这个不是上一点，而是实际运动点，上一点为写入文件中的原起点；（已改）
+                                    // 这里是角钢的摆焊，因为原始地轨程序中的上位机并没有给出焊接参考点，所以在这里给；
+                                    if(CURR_SWING_METHOD >= 1 && CURR_SWING_METHOD <= 6){
+                                    switch (CURR_SWING_METHOD){
+                                    case FRONT_LEFT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[1] -= 10 * 1000;
+                                        swingPrevTarget[0] -= 0.1 * 1000;
+                                        break;
+                                    case FRONT_RIGHT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[1] += 10 * 1000;
+                                        swingPrevTarget[0] -= 0.1 * 1000;
+                                        break;
+                                    case LEFT_LEFT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[0] += 10 * 1000;
+                                        swingPrevTarget[1] -= 0.1 * 1000;
+                                        break;
+                                    case LEFT_RIGHT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[0] -= 10 * 1000;
+                                        swingPrevTarget[1] -= 0.1 * 1000;
+                                        break;
+                                    case RIGHT_LEFT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[0] -= 10 * 1000;
+                                        swingPrevTarget[1] += 0.1 * 1000;
+                                        break;
+                                    case RIGHT_RIGHT_VERTICAL_SWING_WELD:
+                                        swingRefTarget[0] += 10 * 1000;
+                                        swingPrevTarget[1] += 0.1 * 1000;
+                                        break;
+                                        }
+                                    }
                                 }
+                                //曲线比较复杂，临时都放在最后逻辑中。
                                 buffNum++;
                             } else if (buffNum < 10) {  // 如果到了10个, 说明当前数据是电流指令。
                                  if (targetNum % 2 == 0) {
@@ -465,19 +470,25 @@ void socketRecv_Task(void) {  // 套接字接收
                                 }
                                 buffNum++;
                             }
-                            else if (buffNum < 14){ // p1
-                                if ((targetNum != 0) && 
-                                    (CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD || 
-                                            (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD && curveSwingRefLoaded == 0))){ 
-                                    swingRefTarget[buffNum - 11] = fbuff; 
+                            else if (buffNum < 14)
+                            { // p1
+                                if ((targetNum != 0) &&
+                                    (CURR_SWING_METHOD == LINE_HORIZONTAL_SWING_WELD || 
+                                    CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD ||
+                                    (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD && curveSwingRefLoaded == 0)))
+                                {
+                                    swingRefTarget[buffNum - 11] = fbuff;
                                 }
                                 buffNum++;
                             }
-                            else if (buffNum < 17){ // p2
-                                if ((targetNum != 0) && 
-                                    (CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD || 
-                                            (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD && curveSwingRefLoaded == 0))){ 
-                                    swingPrevTarget[buffNum - 14] = fbuff; 
+                            else if (buffNum < 17)
+                            { // p2
+                                if ((targetNum != 0) &&
+                                    (CURR_SWING_METHOD == LINE_HORIZONTAL_SWING_WELD || 
+                                    CURR_SWING_METHOD == GANTRAY_FRAME_LINE_SWING_WELD ||
+                                    (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD && curveSwingRefLoaded == 0)))
+                                {
+                                    swingPrevTarget[buffNum - 14] = fbuff;
                                 }
                                 buffNum++;
                             }
@@ -485,7 +496,8 @@ void socketRecv_Task(void) {  // 套接字接收
                             // 数据打包 (第7个数为速度, 第8个数为是否起弧, 第9个数为摆焊类型)
                             if (buffNum == 17)
                             {
-                                int handled = 0;  // 是否已处理
+                                //执行曲线存储逻辑
+                                int handled = 0;  // 曲线是否已处理
                                 // 存储曲线点，targetNum不跟进；
                                 if (CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_WELD || 
                                     CURR_SWING_METHOD == GANTRAY_FRAME_CURVE_SWING_WELD)
