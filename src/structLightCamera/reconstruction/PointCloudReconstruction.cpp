@@ -11,6 +11,11 @@
 #include "utils/common/WeldSeamInfo.h"
 #endif
 
+#include <algorithm>
+
+#include <QDateTime>
+#include <QDir>
+
 PointCloudReconstruction::PointCloudReconstruction() : structLightConfig(StructLightConfig::getInstance()) {
     initPara();  // 初始化需要用到的参数
 #ifdef SMART_CAMERA
@@ -105,6 +110,26 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudReconstruction::localReconstruct(i
         decodeGrayCode();                                // 3. 解码格雷码
         phaseUnwrap();                                   // 4. 相位展开, 求绝对相位
         reconstructPoint();                              // 5.3 重建点云
+
+        const std::string timeName = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz").toStdString();
+        const QString imageDir = "./data/depthImg/images";
+        const QString depthDir = "./data/depthImg/images_depth";
+        QDir().mkpath(imageDir);
+        QDir().mkpath(depthDir);
+
+        if (primaryCameraCapturedImg && primaryCameraCapturedImg->size() > 19) {
+            cv::Mat imageAfterReconstruct = (*primaryCameraCapturedImg)[19].clone();  // 获取空白图
+            const std::string imageSavePath = imageDir.toStdString() + "/" + timeName + ".bmp";
+            if (!cv::imwrite(imageSavePath, imageAfterReconstruct)) {
+                PLOGE << "localReconstruct: 保存第19张图失败: " << imageSavePath;
+            } else {
+                PLOGD << "localReconstruct: 第19张图已保存: " << imageSavePath;
+            }
+        } else {
+            PLOGW << "localReconstruct: 主相机采集图像不足20张，跳过保存第19张图";
+        }
+
+        saveDepthMapAfterFilter(pointCloud, depthDir.toStdString() + "/" + timeName);
     }
 
     PLOGD << "重建完成";
@@ -678,6 +703,103 @@ void PointCloudReconstruction::calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Pt
     }
 }
 
+void PointCloudReconstruction::saveDepthMapAfterFilter(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cameraPointCloud,
+                                                       const std::string& saveBasePath) {
+    if (!cameraPointCloud || cameraPointCloud->empty()) {
+        PLOGW << "saveDepthMapAfterFilter: 点云为空，跳过保存深度图";
+        return;
+    }
+
+    std::vector<cv::Point3f> objectPoints;
+    std::vector<float> depths;
+    objectPoints.reserve(cameraPointCloud->size());
+    depths.reserve(cameraPointCloud->size());
+
+    for (const auto& p : cameraPointCloud->points) {
+        if (std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z) && p.z > 0.0f) {
+            objectPoints.emplace_back(p.x, p.y, p.z);
+            depths.emplace_back(p.z);
+        }
+    }
+
+    if (objectPoints.empty()) {
+        PLOGW << "saveDepthMapAfterFilter: 没有有效相机坐标点，跳过保存深度图";
+        return;
+    }
+
+    std::vector<cv::Point2f> imagePoints;
+    cv::projectPoints(objectPoints, cv::Vec3d(0, 0, 0), cv::Vec3d(0, 0, 0), structLightConfig.Kc, cameraDistortion, imagePoints);
+
+    cv::Mat depthMap = cv::Mat::zeros(cameraHeight, cameraWidth, CV_32FC1);
+
+    for (size_t i = 0; i < imagePoints.size(); ++i) {
+        const int u = cvRound(imagePoints[i].x);
+        const int v = cvRound(imagePoints[i].y);
+
+        if (u < 0 || u >= cameraWidth || v < 0 || v >= cameraHeight) {
+            continue;
+        }
+
+        const float z = depths[i];
+        float& currentDepth = depthMap.at<float>(v, u);
+
+        // 同一个像素保留最近点
+        if (currentDepth <= 0.0f || z < currentDepth) {
+            currentDepth = z;
+        }
+    }
+
+    cv::Mat validMask = depthMap > 0.0f;
+    const int validCount = cv::countNonZero(validMask);
+    if (validCount == 0) {
+        PLOGW << "saveDepthMapAfterFilter: 投影后没有有效深度像素";
+        return;
+    }
+
+    double depthMin = 0.0;
+    double depthMax = 0.0;
+    cv::minMaxLoc(depthMap, &depthMin, &depthMax, nullptr, nullptr, validMask);
+
+    cv::Mat depth16 = cv::Mat::zeros(cameraHeight, cameraWidth, CV_16UC1);
+    const bool hasDepthRange = depthMax > depthMin;
+
+    for (int y = 0; y < cameraHeight; ++y) {
+        const float* depthPtr = depthMap.ptr<float>(y);
+        ushort* outPtr = depth16.ptr<ushort>(y);
+
+        for (int x = 0; x < cameraWidth; ++x) {
+            float z = depthPtr[x];
+
+            if (z <= 0.0f || !std::isfinite(z)) {
+                outPtr[x] = 0;
+                continue;
+            }
+
+            if (!hasDepthRange) {
+                outPtr[x] = 0;
+                continue;
+            }
+
+            const double norm = (static_cast<double>(z) - depthMin) / (depthMax - depthMin);
+            double clippedNorm = norm;
+            if (clippedNorm < 0.0) {
+                clippedNorm = 0.0;
+            } else if (clippedNorm > 1.0) {
+                clippedNorm = 1.0;
+            }
+
+            outPtr[x] = static_cast<ushort>(std::round(clippedNorm * 65535.0));
+        }
+    }
+
+    const std::string savePath = saveBasePath + ".tiff";
+    if (!cv::imwrite(savePath, depth16)) {
+        PLOGE << "saveDepthMapAfterFilter: 保存YOLO多模态raw16深度图失败: " << savePath;
+        return;
+    }
+
+    PLOGD << "YOLO多模态raw16深度图已保存: " << savePath << " 有效像素数: " << validCount << " depthMin: " << depthMin << " depthMax: " << depthMax;
+}
 // 5.0.3 点云后处理
 void PointCloudReconstruction::pointCloudPostProcess(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud) {
     if (pointCloud->size() > 0) {

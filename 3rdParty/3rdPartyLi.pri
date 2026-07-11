@@ -8,7 +8,7 @@ CONFIG(debug, debug|release){
 } else {
     LIBS += D:/qt/opencv/opencv/build/x64/vc15/lib/opencv_world460.lib
 }
-
+#440和pcl库冲突，要把pcl放在上面
 # 引入Eigen矩阵运算库
 INCLUDEPATH += D:\ProgramData\eigen-git-mirror-master
 

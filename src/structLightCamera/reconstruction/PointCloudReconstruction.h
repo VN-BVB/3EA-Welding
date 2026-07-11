@@ -79,6 +79,8 @@ private:
     void calcPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud, std::vector<cv::Point2d>& cameraCoord,
                         std::vector<double>& projectCoord);                      // 5.0.2 计算点云
     void pointCloudPostProcess(pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud);  // 5.0.3 点云后处理
+    void saveDepthMapAfterFilter(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cameraPointCloud,
+                                 const std::string& saveBasePath);  // 保存滤波后相机坐标系深度图
 #ifdef SMART_CAMERA
     void reconstructForWorkbench();  // 5.1 背景平面的三维重建, 拟合背景平面参数
     void reconstructForSeamArea();   // 5.2 目标检测框的三维重建, 填充到对应焊缝信息结构体
