@@ -141,7 +141,7 @@ private:
        将目标检测模型集成在结构光相机端进行推理, 采用条件编译的方式便于结构光相机模块在其他项目中集成 */
 #ifdef SMART_CAMERA
     // 模型路径
-#if defined(ROM_CONFIG) || defined(LI_CONFIG)
+#if defined(ROM_CONFIG) || defined(LI_CONFIG) || defined(ZHANG_CONFIG)
     const std::string objDetEnginePath = "./data/DL_models/objDec/objDecRom.engine";
     const std::string segEnginePath = "./data/DL_models/segment/segment2GantrayFrame.engine";
 #elif GONG_RAIL_CONFIG

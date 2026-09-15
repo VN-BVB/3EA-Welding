@@ -30,7 +30,9 @@ struct workpieceInfo {
 
 struct workpieceBoxInWorld {
     std::vector<workpieceInfo> workpieceInfoInWorld;
-    cv::Mat trackDirection;  // 地轨方向向量
+    cv::Mat xAxisTrackDirection;      // X轴方向向量
+    cv::Mat yAxisTrackDirection; // Y轴方向向量
+    cv::Mat zAxisTrackDirection; // Z轴方向向量
     cv::Mat finalRailMap;    // 最终长图
 };
 
@@ -51,7 +53,7 @@ namespace CanvasDrawingConfig {
 // 长画布参数
 const int pixelRow = 4000;                   // 原始画布高度
 const int pixelCol = 6000;                   // 原始画布宽度
-const int correctLineThickness = 20;         // 正常线厚度
+const int correctLineThickness = 5;         // 正常线厚度
 const int warningLineThickness = 20;         // 警告线厚度
 const int deleteLineThickness = 20;          // 删除线厚度
 const int weldSeamLineThickness = 2;         // 焊缝区线厚度
@@ -64,11 +66,11 @@ const cv::Scalar warningColor(255, 125, 0);  // 警告颜色
 const cv::Scalar deleteColor(255, 0, 0);     // 删除颜色
 const cv::Scalar weldSeamColor(0, 0, 0);     // 焊缝区域颜色
 
-const cv::Mat canvasMat = (cv::Mat_<double>(3, 3) << 1, 0, 100, 0, -1, pixelRow / 2, 0, 0, 1);  // 绘制坐标系偏移
+const cv::Mat canvasMat = (cv::Mat_<double>(3, 3) << 0, 1, 5000, 1, 0, 1500, 0, 0, 1);  // 绘制坐标系偏移
 const int railMapRotationAngle = 0;                                                             // 0 90 180 270  画布最后可视化的角度
 const std::string sortWorldAxis = "X";                                                          // 世界坐标系下排序
 const std::string sortWorldOrder = "up";                                                        // 世界坐标系下排序
-const float iouThreshold = 0.0;                                                                 // 工件IOU合并阈值
+const float iouThreshold = 0.3;                                                                 // 工件IOU合并阈值
 const int wpIOUSearchNum = 6;                                                                   // 工件IOU搜索最大范围±
 const bool standardOutput = true;                                                               // 强制规范南北工作台输出
 }  // namespace CanvasDrawingConfig
@@ -84,7 +86,7 @@ const int AdjustWorkpieceResolution = 1;  // 调整工件掩膜分辨率倍数
 const int rectRotationAngle = 0;          // 90 180 270 //旋转工件提高召回率
 const std::string sortAxis = "X";
 const std::string sortOrder = "up";
-const bool saveEveryImg = false;  // 每次点击都保存图像结果
+const bool saveEveryImg = true;  // 每次点击都保存图像结果
 }  // namespace MaskTransformConfig
 
 class CoordinateMapper {

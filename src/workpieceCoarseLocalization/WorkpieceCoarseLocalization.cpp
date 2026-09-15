@@ -20,7 +20,7 @@ WorkpieceCoarseLocalization::WorkpieceCoarseLocalization(QWidget* parent) : QWid
 
     // 拟合工件手动控件
     connect(ui->mapView, &ScalableGraphicsView::senderSignalPixelCoordinates, fittingWorkpieceCoordinate,
-            &FittingWorkpieceCoordinate::handleClickEvent);  //
+            &FittingWorkpieceCoordinate::handleClickEvent);
     connect(ui->mapView, &ScalableGraphicsView::senderSignalPixelCoordinates, this, &WorkpieceCoarseLocalization::whenViewWorldCoordinateLabel);
     // 注册Qt没有的数据类型
     qRegisterMetaType<cv::Mat>("cv::Mat");
@@ -41,7 +41,7 @@ WorkpieceCoarseLocalization::WorkpieceCoarseLocalization(QWidget* parent) : QWid
     fittingWorkpieceCoordinate->moveToThread(fittingWorkpieceSubThread);
     connect(this, &WorkpieceCoarseLocalization::sendCommandToInferPath, yolo11SegInference, &YoloSegInference::whenPathNeedToInfer);
     connect(yolo11SegInference, &YoloSegInference::sendInferResultToMainWindow, this, &WorkpieceCoarseLocalization::whenGetInferResult);
-    connect(yolo11RectInference, &YoloDetInference::sendInferResultToMainWindow, this, &WorkpieceCoarseLocalization::whenGetInferResult);
+    // connect(yolo11RectInference, &YoloDetInference::sendInferResultToMainWindow, this, &WorkpieceCoarseLocalization::whenGetInferResult);
 
     // 深度学习-拟合工件坐标坐标
     connect(yolo11SegInference, &YoloSegInference::sendCoordinateTofit, fittingWorkpieceCoordinate,
@@ -55,10 +55,12 @@ WorkpieceCoarseLocalization::WorkpieceCoarseLocalization(QWidget* parent) : QWid
     connect(this, &WorkpieceCoarseLocalization::sendVerifyCoordinatesInManual, fittingWorkpieceCoordinate,
             &FittingWorkpieceCoordinate::whenVerifyWorkpieceCoordinates);
     connect(fittingWorkpieceCoordinate, &FittingWorkpieceCoordinate::sendFinalInfoToMain, this, &WorkpieceCoarseLocalization::getLocalizationResult);
-    connect(fittingWorkpieceCoordinate, &FittingWorkpieceCoordinate::sendWorkpieceMaskImageInWorld, yolo11RectInference,
-            &YoloDetInference::whenRecieveWpMaskInWorld);
-    connect(yolo11RectInference, &YoloDetInference::sendBoxInfoToDisplay, fittingWorkpieceCoordinate,
-            &FittingWorkpieceCoordinate::whenGetWeldBoxInfo);
+    // connect(fittingWorkpieceCoordinate, &FittingWorkpieceCoordinate::sendWorkpieceMaskImageInWorld, yolo11RectInference,
+    //         &YoloDetInference::whenRecieveWpMaskInWorld);
+    // connect(yolo11RectInference, &YoloDetInference::sendBoxInfoToDisplay, fittingWorkpieceCoordinate,
+    //         &FittingWorkpieceCoordinate::whenGetWeldBoxInfo);
+    connect(yolo11SegInference, &YoloSegInference::sendWeldBoxInfo,
+            fittingWorkpieceCoordinate, &FittingWorkpieceCoordinate::whenGetWeldBoxInfo);
     connect(fittingWorkpieceCoordinate, &FittingWorkpieceCoordinate::sendUpdateInferedCameraImgNum, this,
             &WorkpieceCoarseLocalization::whenUpdateComboCameraImg);
 
@@ -73,6 +75,11 @@ WorkpieceCoarseLocalization::WorkpieceCoarseLocalization(QWidget* parent) : QWid
     connect(baslerControl, &CoarsePositioningCamera::sendCvImagesToInfer, yolo11SegInference, &YoloSegInference::whenImageNeedToInfer);
     connect(baslerControl, &CoarsePositioningCamera::appendCameraLog, this, &WorkpieceCoarseLocalization::whenAppendLog);
 
+    //标定模块
+    calibrationWorker->moveToThread(calibrationThread);
+    connect(calibrationWorker, &CalibrationWorker::messageRaised, this, &WorkpieceCoarseLocalization::whenAppendLog);
+    calibrationThread->start();
+
     // inferenceSubThread->start();
     cameraControlSubThread->start();
     fittingWorkpieceSubThread->start();
@@ -83,6 +90,7 @@ WorkpieceCoarseLocalization::~WorkpieceCoarseLocalization() {
     delete yolo11SegInference;
     delete yolo11RectInference;
     delete fittingWorkpieceCoordinate;
+    delete calibrationWorker;
 }
 
 void WorkpieceCoarseLocalization::whenGetImage(cv::Mat res) { ui->qImageWidget->setOpenCVImage(res); }
@@ -273,9 +281,9 @@ void WorkpieceCoarseLocalization::printWorkpieceBoxInfo(const workpieceBoxInWorl
     }
 
     // 全局信息
-    std::cout << "[trackDirection] size: " << info->trackDirection.rows << "x" << info->trackDirection.cols << std::endl;
-    if (!info->trackDirection.empty()) {
-        std::cout << info->trackDirection << std::endl;
+    std::cout << "[trackDirection] size: " << info->xAxisTrackDirection.rows << "x" << info->xAxisTrackDirection.cols << std::endl;
+    if (!info->xAxisTrackDirection.empty()) {
+        std::cout << info->xAxisTrackDirection << std::endl;
         // cv::imshow("trackDirection", info->trackDirection);
     }
 
@@ -401,12 +409,18 @@ void WorkpieceCoarseLocalization::handleSaveImageLogic() {
     int saveType = -1;
     bool validOption = true;
 
-    if (selectedOption == u8"相机手眼标定") {
+    if (selectedOption == u8"内参标定") {
         saveType = 0;
-    } else if (selectedOption == u8"平面拟合") {
+    } else if (selectedOption == u8"内参/手眼图") {
         saveType = 1;
-    } else if (selectedOption == u8"地轨标定") {
+    } else if (selectedOption == u8"平面图") {
+        saveType = 0;
+    } else if (selectedOption == u8"X轴图") {
         saveType = 2;
+    } else if (selectedOption == u8"Y轴图") {
+        saveType = 3;
+    } else if (selectedOption == u8"Z轴图") {
+        saveType = 4;
     } else if (selectedOption == u8"保存图像") {
     } else {
         qDebug() << u8"未选择有效操作！";
@@ -505,5 +519,31 @@ void WorkpieceCoarseLocalization::on_comboCameraInferedNum_currentIndexChanged(i
         } else {
             ui->qImageWidget->setOpenCVImage(cvImagesWorkpieceSeg[index]);
         }
+    }
+}
+
+void WorkpieceCoarseLocalization::on_btnStartCalibration_clicked() {
+    QString selected = ui->comboCalibration->currentText();
+    QString calibPath = "./data/workpieceCoaLoc/Calib";          // 标定图片存放目录
+    QString resultPath = QString::fromStdString(configFilePath); // 结果保存路径
+
+    if (selected == u8"内参标定") {
+        QMetaObject::invokeMethod(calibrationWorker, "runCameraCalibration",
+                                  Q_ARG(QString, calibPath), Q_ARG(QString, resultPath));
+    } else if (selected == u8"平面标定") {
+        QMetaObject::invokeMethod(calibrationWorker, "runPlaneCalibration",
+                                  Q_ARG(QString, calibPath), Q_ARG(QString, resultPath));
+    } else if (selected == u8"手眼标定") {
+        QMetaObject::invokeMethod(calibrationWorker, "runHandEyeCalibration",
+                                  Q_ARG(QString, calibPath), Q_ARG(QString, resultPath));
+    } else if (selected == u8"X轴标定") {
+        QMetaObject::invokeMethod(calibrationWorker, "runExternalAxisCalibration",
+                                  Q_ARG(QString, calibPath), Q_ARG(QString, resultPath), Q_ARG(int, 0));
+    } else if (selected == u8"Y轴标定") {
+        QMetaObject::invokeMethod(calibrationWorker, "runExternalAxisCalibration",
+                                  Q_ARG(QString, calibPath), Q_ARG(QString, resultPath), Q_ARG(int, 1));
+    } else if (selected == u8"Z轴标定") {
+        QMetaObject::invokeMethod(calibrationWorker, "runExternalAxisCalibration",
+                                  Q_ARG(QString, calibPath), Q_ARG(QString, resultPath), Q_ARG(int, 2));
     }
 }

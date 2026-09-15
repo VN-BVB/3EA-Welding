@@ -22,81 +22,44 @@ void CoarsePositioningCamera::openCamera() {
 
     std::vector<COARES_LOC_CAMERA> coaresLocCamera(serialNum.size());
     std::vector<QString> color(serialNum.size());
-    std::vector<std::shared_ptr<AbstractCamera>> newCameras(serialNum.size());
-
-    std::mutex mutexLog;
-    std::vector<std::thread> threads;
 
     PLOGD << L"正在连接粗定位Basler相机... ...";
     emit appendCameraLog(QString(u8"正在连接Basler相机... ..."));
 
     for (size_t i = 0; i < serialNum.size(); ++i) {
-        threads.emplace_back([&, i]() {
-            std::string devSerial = serialNum[i];
-            std::shared_ptr<AbstractCamera> cam = cameraFactory->createCamera();
-            cam->moveToThread(sharedCameraThread);
+        std::string devSerial = serialNum[i];
+        if (devSerial.empty()) continue;
 
-            if (!cam) {
-                std::lock_guard<std::mutex> lock(mutexLog);
-                emit appendCameraLog(QString(u8"无法创建第%1个相机实例").arg(i + 1));
-                color[i] = MY_COLOR::RED;
-                return;
-            }
+        uint8_t index = 0x01 << i;
+        switch (index) {
+        case COARES_LOC_CAMERA::CAMERA_1:
+            coaresLocCamera[i] = COARES_LOC_CAMERA::CAMERA_1;
+            break;
+        case COARES_LOC_CAMERA::CAMERA_2:
+            coaresLocCamera[i] = COARES_LOC_CAMERA::CAMERA_2;
+            break;
+        default:
+            break;
+        }
 
-            uint8_t index = 0x01 << i;
-            switch (index) {
-                case COARES_LOC_CAMERA::CAMERA_1:
-                    coaresLocCamera[i] = COARES_LOC_CAMERA::CAMERA_1;
-                    break;
-                case COARES_LOC_CAMERA::CAMERA_2:
-                    coaresLocCamera[i] = COARES_LOC_CAMERA::CAMERA_2;
-                    break;
-                case COARES_LOC_CAMERA::CAMERA_3:
-                    coaresLocCamera[i] = COARES_LOC_CAMERA::CAMERA_3;
-                    break;
-                case COARES_LOC_CAMERA::CAMERA_4:
-                    coaresLocCamera[i] = COARES_LOC_CAMERA::CAMERA_4;
-                    break;
-                case COARES_LOC_CAMERA::CAMERA_5:
-                    coaresLocCamera[i] = COARES_LOC_CAMERA::CAMERA_5;
-                    break;
-                case COARES_LOC_CAMERA::CAMERA_6:
-                    coaresLocCamera[i] = COARES_LOC_CAMERA::CAMERA_6;
-                    break;
-                default:
-                    break;
-            }
+        std::shared_ptr<AbstractCamera> cam = cameraFactory->createCamera();
+        cam->moveToThread(sharedCameraThread);
 
-            if (cam->open(devSerial.c_str())) {
-                cam->setWorkMode(CAMERA_WORK_MODE::SOFTWARE_TRIGGER);
-                cam->setPara("ExposureTimeRaw", (int64_t)exposure);
-                newCameras[i] = cam;
-
-                std::lock_guard<std::mutex> lock(mutexLog);
-                emit appendCameraLog(QString(u8"相机 %1 连接成功").arg(QString::fromStdString(devSerial)));
-                color[i] = MY_COLOR::GREEN;
-            } else {
-                std::lock_guard<std::mutex> lock(mutexLog);
-                emit appendCameraLog(QString(u8"相机 %1 连接失败").arg(QString::fromStdString(devSerial)));
-                color[i] = MY_COLOR::RED;
-            }
-        });
-    }
-
-    for (auto& t : threads) {
-        t.join();  // 等待所有线程完成
-    }
-
-    for (size_t i = 0; i < newCameras.size(); ++i) {
-        if (newCameras[i]) {
-            connect(newCameras[i].get(), &AbstractCamera::sendImage, this, &CoarsePositioningCamera::whenGetCameraImage);
-            cameras.push_back(newCameras[i]);
-            S_Ns.push_back(serialNum[i]);
+        if (cam->open(devSerial.c_str())) {
+            cam->setWorkMode(CAMERA_WORK_MODE::SOFTWARE_TRIGGER);
+            cam->setPara("ExposureTimeRaw", (int64_t)exposure);
+            connect(cam.get(), &AbstractCamera::sendImage, this, &CoarsePositioningCamera::whenGetCameraImage);
+            cameras.push_back(cam);
+            S_Ns.push_back(devSerial);
+            color[i] = MY_COLOR::GREEN;
+            emit appendCameraLog(QString(u8"相机 %1 连接成功").arg(QString::fromStdString(devSerial)));
+        } else {
+            color[i] = MY_COLOR::RED;
+            emit appendCameraLog(QString(u8"相机 %1 连接失败").arg(QString::fromStdString(devSerial)));
         }
     }
 
     emit sendCameraStatus(coaresLocCamera, color);
-
     emit sendSerialNumber(S_Ns);
 
     currentS_N = S_Ns[0];
@@ -107,50 +70,44 @@ void CoarsePositioningCamera::openCamera() {
 void CoarsePositioningCamera::whenCameraImageInfer() {
     QEventLoop imageWaitLoop;
     connect(this, &CoarsePositioningCamera::imageReady, &imageWaitLoop, &QEventLoop::quit);
-    if (cameras.empty() || S_Ns.size() <= 1) {
-        PLOGE << L"推理失败，相机未连接。";
-        emit appendCameraLog(QString(u8"推理失败，相机未连接。"));
+
+    if (cameras.empty() || currentS_N == "未选择相机") {
+        PLOGE << L"推理失败，相机未连接或未选择。";
+        emit appendCameraLog(QString(u8"推理失败，相机未连接或未选择。"));
         return;
     }
+
+    // 找到当前选中的相机
+    auto it = std::find(S_Ns.begin(), S_Ns.end(), currentS_N);
+    if (it == S_Ns.end()) {
+        PLOGE << L"未找到选中的相机。";
+        return;
+    }
+    int idx = it - S_Ns.begin() - 1;  // 减1是因为 S_Ns[0] 是"未选择相机"
+
     imagesReceived.clear();
     receivedImages = 0;
-    for (auto& cam : cameras) {
-        if (cam) {
-            disconnect(this, &CoarsePositioningCamera::cameraStartGrabbing, cam.get(), &AbstractCamera::start);
-            cam->stop();
-        }
-    }
-    size_t i, n;
-    if (workbenchInsertGroup == "positive") {
-        i = 0;
-        n = 3;
-    } else if (workbenchInsertGroup == "negative") {
-        i = 3;
-        n = S_Ns.size() - 1;
 
-        imagesReceived.insert(imagesReceived.end(), 3, cv::Mat(1600, 1200, CV_8UC3, cv::Scalar(255, 255, 255)));  // 确保白色背景);
-    } else {
-        i = 0;
-        n = S_Ns.size() - 1;
-    }
-    for (i; i < n; ++i) {
-        imageSaverToInfer = 1;
-        if (cameras[i]) {
-            connect(this, &CoarsePositioningCamera::cameraStartGrabbing, cameras[i].get(), &AbstractCamera::start);
-            emit cameraStartGrabbing();
-            imageWaitLoop.exec();  // 阻塞等待图像返回
-            disconnect(this, &CoarsePositioningCamera::cameraStartGrabbing, cameras[i].get(), &AbstractCamera::start);
-        }
+    // 停止旧连接
+    disconnect(this, &CoarsePositioningCamera::cameraStartGrabbing, cameras[idx].get(), &AbstractCamera::start);
+    cameras[idx]->stop();
 
-        cameras[i]->stop();
-    }
+    // 只对选中的相机采一张图
+    imageSaverToInfer = 1;
+    connect(this, &CoarsePositioningCamera::cameraStartGrabbing, cameras[idx].get(), &AbstractCamera::start);
+    emit cameraStartGrabbing();
+    imageWaitLoop.exec();
+    disconnect(this, &CoarsePositioningCamera::cameraStartGrabbing, cameras[idx].get(), &AbstractCamera::start);
+    cameras[idx]->stop();
+
     if (saveEveryImg) {
         std::time_t now = std::time(nullptr);
         std::tm* localTime = std::localtime(&now);
         std::ostringstream dateTimeStream;
         dateTimeStream << std::put_time(localTime, "%Y%m%d_%H%M%S");
         for (size_t i = 0; i < imagesReceived.size(); ++i) {
-            std::string filename = "./data/workpieceCoaLoc/infer/camera" + std::to_string(i) + "_" + dateTimeStream.str() + "_ori.bmp";
+            std::string filename = "./data/workpieceCoaLoc/infer/camera" + std::to_string(i) + "_" + dateTimeStream.str() +
+                                   "_ori.bmp";
             cv::imwrite(filename, imagesReceived[i]);
             PLOGD << L"camera" << (i + 1) << L" Save image in workpieceCoaLoc succ.";
         }
@@ -215,22 +172,30 @@ void CoarsePositioningCamera::whenGetCameraImage(cv::Mat img, CAMERA_WORK_MODE w
         if (imageNumberToSaveInCalibration > 0) {
             std::string saveTypePath;
             switch (saveTypeEnable) {
-                case 0:
-                    saveTypePath = "img";
-                    savedImages = &savedCalibImages;
-                    break;
-                case 1:
-                    saveTypePath = "plane";
-                    savedImages = &savedPlaneImages;
-                    break;
-                case 2:
-                    saveTypePath = "compare";
-                    savedImages = &savedTrackImages;
-                    break;
-                default:
-                    saveTypePath = "normal";
-                    savedImages = &savednNormalImages;
-                    break;
+            case 0:
+                saveTypePath = "img";
+                savedImages = &savedCalibImages;
+                break;
+            case 1:
+                saveTypePath = "plane";
+                savedImages = &savedPlaneImages;
+                break;
+            case 2:
+                saveTypePath = "x_axis";
+                savedImages = &savedTrackImages;
+                break;
+            case 3:
+                saveTypePath = "y_axis";
+                savedImages = &savedTrackImages;
+                break;
+            case 4:
+                saveTypePath = "z_axis";
+                savedImages = &savedTrackImages;
+                break;
+            default:
+                saveTypePath = "normal";
+                savedImages = &savednNormalImages;
+                break;
             }
             if ((*savedImages) < 10) {
                 cv::imwrite("./data/workpieceCoaLoc/saveImg/camera" + std::to_string(cameraIndex) + "/" + saveTypePath + "/image0" +
@@ -254,33 +219,39 @@ void CoarsePositioningCamera::whenGetCameraImage(cv::Mat img, CAMERA_WORK_MODE w
 }
 
 void CoarsePositioningCamera::loadCalibConfigFromFile(const std::string& filename) {
-    std::map<std::string, CoarseLocalizationMatrix> cameraConfigMap;
+    serialNum.clear();
 
-    std::ifstream is(filename);
-    if (!is.is_open()) {
-        std::cerr << "Failed to open file: " << filename << std::endl;
-        throw std::runtime_error("无法打开配置文件：" + filename);
+    //读粗定位相机序列号
+    {
+        std::ifstream is(filename);
+        if (!is.is_open()) {
+            std::cerr << "Failed to open file: " << filename << std::endl;
+            throw std::runtime_error("无法打开配置文件：" + filename);
+        }
+        cereal::JSONInputArchive archive(is);
+
+        CoarseLocalizationMatrix calibResult;
+        archive(cereal::make_nvp("CalibrationResult", calibResult));
+
+        if (!calibResult.CameraSerialNum.empty()) {
+            serialNum.push_back(calibResult.CameraSerialNum);
+        }
     }
 
-    cereal::JSONInputArchive archive(is);
-    archive(cereal::make_nvp("Cameras", cameraConfigMap));
-
-    serialNum.clear();  // std::vector<std::string> serialNum;
-
-    // 读取 Camera1 ~ Camera6 的序列号
-    for (int i = 1; i <= 6; ++i) {
-        std::string camKey = "Camera" + std::to_string(i);
-        std::string serial = "";
-
-        if (cameraConfigMap.count(camKey) && !cameraConfigMap[camKey].CameraSerialNum.empty()) {
-            serial = cameraConfigMap[camKey].CameraSerialNum;
+    //读精定位相机序列号
+    {
+        std::ifstream is("./data/config/struct_light_config.json");
+        if (is.is_open()) {
+            cereal::JSONInputArchive archive(is);
+            CalibConfig config;
+            archive(config);
+            if (!config.primaryCameraSerialNum.empty()) {
+                serialNum.push_back(config.primaryCameraSerialNum);
+            }
         }
-
-        serialNum.push_back(serial);
-        // 可选打印
-        // std::cout << camKey << " SerialNum: " << serial << std::endl;
     }
 }
+
 // 相机曝光改变
 void CoarsePositioningCamera::whenGetCameraExposure(int inputexposure) {
     for (auto& cam : cameras) {

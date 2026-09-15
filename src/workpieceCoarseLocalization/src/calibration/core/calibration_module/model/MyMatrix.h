@@ -1,17 +1,17 @@
-﻿#ifndef CoarseLocalizationMatrix_H
-#define CoarseLocalizationMatrix_H
+#ifndef MYMATRIX_H
+#define MYMATRIX_H
 
 #include <cereal/archives/json.hpp>
-#include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
-#include <fstream>
 #include <opencv2/opencv.hpp>
 
-extern int cameraIndex;
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
 
-class CoarseLocalizationMatrix {
+class MyMatrix {
 public:
-    std::string CameraSerialNum;
     std::vector<double> cameraMatrixData;
     std::vector<double> distCoeffsData;
     std::vector<double> globalPlaneData;
@@ -26,19 +26,18 @@ public:
     double yAxisReferenceEncoderValue = 1000.0;
     double zAxisReferenceEncoderValue = 500.0;
 
-    CoarseLocalizationMatrix(cv::Mat cameraMatrix, cv::Mat distCoeffs, std::vector<double> globalPlane, cv::Mat cameraToBaseMatrix)
+    MyMatrix(cv::Mat cameraMatrix, cv::Mat distCoeffs, std::vector<double> globalPlane, cv::Mat cameraToBaseMatrix)
         : globalPlaneData(globalPlane) {
         cameraMatrixData = std::vector<double>(cameraMatrix.begin<double>(), cameraMatrix.end<double>());
         distCoeffsData = std::vector<double>(distCoeffs.begin<double>(), distCoeffs.end<double>());
         cameraToBaseMatrixData = std::vector<double>(cameraToBaseMatrix.begin<double>(), cameraToBaseMatrix.end<double>());
     }
 
-    CoarseLocalizationMatrix() {}
+    MyMatrix() {}
 
     template <class Archive>
     void save(Archive& ar) const {
-        ar(cereal::make_nvp("CameraSerialNum", CameraSerialNum),
-           cereal::make_nvp("CameraMatrix", cameraMatrixData),
+        ar(cereal::make_nvp("CameraMatrix", cameraMatrixData),
            cereal::make_nvp("DistortionCoefficients", distCoeffsData),
            cereal::make_nvp("GlobalPlane", globalPlaneData),
            cereal::make_nvp("cameraToBaseMatrix", cameraToBaseMatrixData),
@@ -55,8 +54,7 @@ public:
 
     template <class Archive>
     void load(Archive& ar) {
-        ar(cereal::make_nvp("CameraSerialNum", CameraSerialNum),
-           cereal::make_nvp("CameraMatrix", cameraMatrixData),
+        ar(cereal::make_nvp("CameraMatrix", cameraMatrixData),
            cereal::make_nvp("DistortionCoefficients", distCoeffsData),
            cereal::make_nvp("GlobalPlane", globalPlaneData),
            cereal::make_nvp("cameraToBaseMatrix", cameraToBaseMatrixData));
@@ -93,10 +91,7 @@ public:
     void transferData(cv::Mat& cameraMatrix,
                       cv::Mat& distCoeffs,
                       std::vector<double>& globalPlane,
-                      cv::Mat& cameraToBaseMatrix,
-                      cv::Mat& xAxisTrackDirection,
-                      cv::Mat& yAxisTrackDirection,
-                      cv::Mat& zAxisTrackDirection) const {
+                      cv::Mat& cameraToBaseMatrix) const {
         if (cameraMatrixData.size() == 9) {
             cameraMatrix = cv::Mat(3, 3, CV_64F, const_cast<double*>(cameraMatrixData.data())).clone();
         } else {
@@ -104,7 +99,9 @@ public:
             return;
         }
 
-        if (distCoeffsData.size() == 5) {
+        if (distCoeffsData.size() == 4) {
+            distCoeffs = cv::Mat(1, 4, CV_64F, const_cast<double*>(distCoeffsData.data())).clone();
+        } else if (distCoeffsData.size() == 5) {
             distCoeffs = cv::Mat(1, 5, CV_64F, const_cast<double*>(distCoeffsData.data())).clone();
         } else {
             std::cerr << "Error: Distortion Coefficients size is incorrect!" << std::endl;
@@ -119,119 +116,7 @@ public:
             std::cerr << "Error: cameraToBaseMatrix size is incorrect!" << std::endl;
             return;
         }
-
-        auto writeDirection = [](const std::vector<double>& src, cv::Mat& dst) {
-            if (src.size() == 3) {
-                dst = cv::Mat(3, 1, CV_64F, const_cast<double*>(src.data())).clone();
-            }
-        };
-        writeDirection(xAxisTrackDirectionData, xAxisTrackDirection);
-        writeDirection(yAxisTrackDirectionData, yAxisTrackDirection);
-        writeDirection(zAxisTrackDirectionData, zAxisTrackDirection);
     }
 };
 
-class CalibConfig {
-public:
-    std::string primaryCameraSerialNum;
-    std::string secondaryCameraSerialNum;
-    std::string thirdaryCameraSerialNum;
-    CalibConfig() {}
-
-    // cereal序列化支持
-    template <class Archive>
-    void serialize(Archive& ar) {
-        ar(cereal::make_nvp("primaryCameraSerialNum", primaryCameraSerialNum), cereal::make_nvp("secondaryCameraSerialNum", secondaryCameraSerialNum),
-           cereal::make_nvp("thirdaryCameraSerialNum", thirdaryCameraSerialNum));
-    }
-};
-// 视点规划读取
-struct ViewTransformConfig {
-    std::string name;
-
-    // 基座偏移
-    std::vector<double> offsetXYZ{0.0, 0.0, 0.0};
-
-    // 4x4齐次矩阵（二维数组格式）
-    std::vector<std::vector<double>> T{
-        {1.0, 0.0, 0.0, 0.0},
-        {0.0, 1.0, 0.0, 0.0},
-        {0.0, 0.0, 1.0, 0.0},
-        {0.0, 0.0, 0.0, 1.0}
-    };
-
-    template <class Archive>
-    void serialize(Archive& ar) {
-        ar(CEREAL_NVP(name), CEREAL_NVP(offsetXYZ), CEREAL_NVP(T));
-    }
-    
-    // 辅助方法：将二维数组T转换为cv::Mat
-    cv::Mat getTransformMatrix() const {
-        if (T.size() != 4) {
-            std::cerr << "Error: Transform matrix T size is incorrect!" << std::endl;
-            return cv::Mat::eye(4, 4, CV_64F);
-        }
-        cv::Mat mat(4, 4, CV_64F);
-        for (int i = 0; i < 4; i++) {
-            if (T[i].size() != 4) {
-                std::cerr << "Error: Transform matrix T row " << i << " size is incorrect!" << std::endl;
-                return cv::Mat::eye(4, 4, CV_64F);
-            }
-            std::memcpy(mat.ptr<double>(i), T[i].data(), 4 * sizeof(double));
-        }
-        return mat;
-    }
-    
-    // 辅助方法：从cv::Mat设置T
-    void setTransformMatrix(const cv::Mat& mat) {
-        if (mat.rows != 4 || mat.cols != 4 || mat.type() != CV_64F) {
-            std::cerr << "Error: Invalid transform matrix for setTransformMatrix!" << std::endl;
-            return;
-        }
-        T.resize(4);
-        for (int i = 0; i < 4; i++) {
-            T[i].assign(mat.ptr<double>(i), mat.ptr<double>(i) + 4);
-        }
-    }
-};
-
-struct ViewClassConfig {
-    int classId = -1;
-
-    std::string className;
-
-    std::vector<ViewTransformConfig> transforms;
-
-    template <class Archive>
-    void serialize(Archive& ar) {
-        ar(CEREAL_NVP(classId), CEREAL_NVP(className), CEREAL_NVP(transforms));
-    }
-};
-
-class ViewPlanningConfig {
-public:
-    static ViewPlanningConfig& getInstance();
-
-    std::map<int, ViewClassConfig> classConfigs;
-
-    template <class Archive>
-    void serialize(Archive& ar) {
-        ar(CEREAL_NVP(classConfigs));
-    }
-
-    void readConfig();
-    void writeConfig();
-    void printConfig();
-    void initDefaultConfig();
-
-private:
-    ViewPlanningConfig() = default;
-
-private:
-    friend class cereal::access;
-    std::string configPath = "./data/config/ViewPlanningConfig.json";
-
-    static ViewPlanningConfig* instance;
-    static std::mutex mutex_;
-};
-#endif  // CoarseLocalizationMatrix_H
+#endif  // MYMATRIX_H

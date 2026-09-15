@@ -76,6 +76,8 @@ private:
     const std::string segEnginePath = "./data/DL_models/segment/segmentRail.engine";
 #elif A17_CONFIG
     const std::string segEnginePath = "./data/DL_models/segment/segment.engine";
+#elif defined(ZHANG_CONFIG)
+    const std::string segEnginePath = "./data/DL_models/segment/segmentRom.engine";
 #endif
 
     // 计算过程需要用到的工具类

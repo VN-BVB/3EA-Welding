@@ -1,7 +1,22 @@
 ﻿#include "FittingWorkpieceCoordinate.h"
 
 #include "utils/common/CommonFunc.h"
-std::array<cameraConfig, 6> cameraParameters;  // 相机参数数量
+
+std::vector<cameraConfig> cameraParameters;  // 相机参数数量
+
+namespace {
+
+bool isTrackAxisDirectionValid(const cv::Mat& dir) {
+    return dir.rows == 3 && dir.cols == 1 && cv::norm(dir) > 1e-6;
+}
+
+double normalizedTrackAxisDot(const cv::Mat& lhs, const cv::Mat& rhs) {
+    cv::Mat lhsNorm = lhs / cv::norm(lhs);
+    cv::Mat rhsNorm = rhs / cv::norm(rhs);
+    return lhsNorm.dot(rhsNorm);
+}
+
+}  // namespace
 
 /**
  * @brief 构造函数，初始化时加载校准参数
@@ -18,34 +33,47 @@ FittingWorkpieceCoordinate::FittingWorkpieceCoordinate() {
  * @param objs 检测到的物体列表
  * @param imgNum 当前图像编号
  */
-void FittingWorkpieceCoordinate::whenFittingWorkpieceCoordinate(std::vector<segYolo11::ObjectYolo11Seg> objs, int imgNum) {
-    std::vector<cv::Point2d> Pt2ds;
-    std::vector<cv::Point3d> worldPoints;
+void FittingWorkpieceCoordinate::whenFittingWorkpieceCoordinate(std::vector<segYolo11::ObjectYolo11Seg> objs, int imgNum, double yAxisEncoderValue) {
+    std::vector<cv::Point2d> topLeftPt2ds;
+    std::vector<cv::Point2d> centerPt2ds;
+    std::vector<cv::Point3d> topLeftWorldPoints;
+    std::vector<cv::Point3d> centerWorldPoints;
     std::vector<int> validPixels;
+
+    if (objs.empty()) {
+        emit appendFittingLog(QString(u8"图片 %1 未检测到工件").arg(imgNum + 1));
+        return;
+    }
 
     // 遍历每个 Object
     for (const auto& obj : objs) {
-        // 计算矩形的中心坐标
-        // cv::Point2d center = cv::Point(obj.rect.x + obj.rect.width / 2, obj.rect.y + obj.rect.height / 2);
-        cv::Point2d point = cv::Point(obj.rect.x, obj.rect.y);  // 左上角坐标
-        // std::cout<<"point"<<point<<std::endl;
+        cv::Point2d topLeftPoint(obj.rect.x, obj.rect.y);  // 左上角坐标
+        cv::Point2d centerPoint(obj.rect.x + obj.rect.width / 2.0, obj.rect.y + obj.rect.height / 2.0);
         //  计算有效像素数量（boxMask 中值为 1 的像素）
         int validPixel = cv::countNonZero(obj.boxMask);  // 统计 boxMask 中值为 1 的像素数
-        Pt2ds.push_back(point);
+        topLeftPt2ds.push_back(topLeftPoint);
+        centerPt2ds.push_back(centerPoint);
         validPixels.push_back(validPixel);
     }
-    if (Pt2ds.empty()) {
+    if (topLeftPt2ds.empty()) {
         // 如果没有有效的点，输出日志
         emit appendFittingLog(QString(u8"未在图像 %1 中找到有效点").arg(imgNum + 1));
         return;
     }
-    worldPoints = pixel2WorldCoordPoint(Pt2ds, imgNum);  // 计算世界坐标系下的坐标
+    topLeftWorldPoints = pixel2WorldCoordPoint(topLeftPt2ds, yAxisEncoderValue);
+    centerWorldPoints = pixel2WorldCoordPoint(centerPt2ds, yAxisEncoderValue);
+    if (topLeftWorldPoints.size() != objs.size() || centerWorldPoints.size() != objs.size()) {
+        emit appendFittingLog(QString(u8"图片 %1 世界坐标数量异常").arg(imgNum + 1));
+        return;
+    }
     for (size_t i = 0; i < objs.size(); i++) {
         ObjectInfo objInfo;
         objInfo.object = objs[i];
-        objInfo.pt3d = worldPoints[i];
+        objInfo.pt3d = topLeftWorldPoints[i];
+        objInfo.centerPt3d = centerWorldPoints[i];
         objInfo.validPixel = validPixels[i];
         objInfo.cameraIndex = imgNum;
+        objInfo.yAxisEncoderValue = yAxisEncoderValue;
         allObjects.push_back(objInfo);
     }
 }
@@ -67,8 +95,9 @@ void FittingWorkpieceCoordinate::whenFinishInferrence() {
     removeSmallCategories(categorizedObjects);  // 实时拍摄使用，站点拍摄意义不大
 
     categoryWorldCenters = calculateCategoryCenters(categorizedObjects);
+    qDebug() << "=== categorizedObjects=" << categorizedObjects.size() << " centers=" << categoryWorldCenters.size();
     // categoryWorldLeftTopCenters在displayDetectedWorkpieces中存储。
-    displayDetectedWorkpieces(categorizedObjects, cvImagesCameraOri, categoryWorldCenters);
+    displayDetectedWorkpieces(categorizedObjects, cvImagesWorkpieceSeg, categoryWorldCenters);
     for (const auto& worldCenter : categoryWorldCenters) {
         // PLOGD << "workbenchInsertGroup:" << workbenchInsertGroup;
         if ((workbenchInsertGroup == "positive" && worldCenter.y < 0) || (workbenchInsertGroup == "negative" && worldCenter.y >= 0)) {
@@ -84,15 +113,53 @@ void FittingWorkpieceCoordinate::whenFinishInferrence() {
     allObjects.clear();
 }
 
-std::vector<cv::Point3d> FittingWorkpieceCoordinate::pixel2WorldCoordPoint(std::vector<cv::Point2d>& Pt2ds, int cameraNumber) {
+std::vector<cv::Point3d> FittingWorkpieceCoordinate::pixel2WorldCoordPoint(std::vector<cv::Point2d>& Pt2ds, double yAxisEncoderValue) {
+    if (Pt2ds.empty()) return {};
     std::vector<cv::Point3d> cameraPointsXYZ;
 
-    Point2dto3d(cameraParameters[cameraNumber].globalPlane, cameraParameters[cameraNumber].cameraMatrix, cameraParameters[cameraNumber].distCoeffs,
+    Point2dto3d(cameraParameters[0].globalPlane, cameraParameters[0].cameraMatrix, cameraParameters[0].distCoeffs,
                 Pt2ds, cameraPointsXYZ);  // 输出相机坐标系下在对应平面上的映射
     // std::cout<<"cameraPointsXYZ"<<cameraPointsXYZ<<std::endl;
-    std::vector<cv::Point3d> worldPoints = transformCameraToBase(cameraPointsXYZ, cameraParameters[cameraNumber].extrinsicMatrix);
+    std::vector<cv::Point3d> worldPoints = transformCameraToBase(cameraPointsXYZ, cameraParameters[0].cameraToBaseMatrix);
+    for (size_t i = 0; i < worldPoints.size(); ++i) {
+        cv::Point3d before = worldPoints[i];
+        worldPoints[i] = applyXAxisEncoderOffset(worldPoints[i], yAxisEncoderValue);
+        std::cout << "补偿前: " << before << " 补偿后: " << worldPoints[i]
+                  << " 编码器:" << yAxisEncoderValue << " ref:" << cameraParameters[0].yAxisReferenceEncoderValue <<
+            std::endl;
+    }
     // std::cout<<"cameraParameters[cameraNumber].extrinsicMatrix"<<cameraParameters[cameraNumber].extrinsicMatrix<<std::endl;
     return worldPoints;
+}
+
+cv::Point3d FittingWorkpieceCoordinate::applyXAxisEncoderOffset(const cv::Point3d& pt, double yAxisEncoderValue) {
+    std::cout << "applyXAxisEncoderOffset called, encoder=" << yAxisEncoderValue << " ref=" << cameraParameters[0].yAxisReferenceEncoderValue << std::endl;
+    if (!std::isfinite(yAxisEncoderValue)) {
+        return pt;
+    }
+    std::cout << "输入配对编码器的点：" << "X:" << pt.x << "Y:" << pt.y << "Z:" << pt.z << std::endl;
+
+    const double delta = cameraParameters[0].yAxisReferenceEncoderValue - yAxisEncoderValue;
+    if (std::abs(delta) < 1e-9) {
+        return pt;
+    }
+
+    if (cameraParameters[0].yAxisTrackDirection.rows == 3 && cameraParameters[0].yAxisTrackDirection.cols == 1) {
+        cv::Mat direction = cameraParameters[0].yAxisTrackDirection.clone();
+        const double norm = cv::norm(direction);
+        if (norm > 1e-9) {
+            direction /= norm;
+            // 透视修正：编码器每走1mm，rawY实际变化1.794mm
+            // 先预估一个值，跑一次看残留漂移再调整
+            const double perspectiveScale = 1.8;
+            cv::Point3d compensated(
+                pt.x + delta * direction.at<double>(0, 0),
+                pt.y + delta * perspectiveScale,      // Y用透视比例
+                pt.z + delta * direction.at<double>(2, 0));
+            return compensated;
+        }
+    }
+    return cv::Point3d(pt.x + delta, pt.y, pt.z);
 }
 
 /**
@@ -119,6 +186,7 @@ void FittingWorkpieceCoordinate::Point2dto3d(std::vector<double> plane, cv::Mat&
         pt.z = (1 / (A * x1 + B * y1 + C));
         pt.x = x1 * pt.z;
         pt.y = y1 * pt.z;
+        std::cout << "相机坐标系下3D点:" << pt << std::endl;
         Pt3ds.push_back(pt);
     }
     // for (const auto &a :Pt3ds ){
@@ -139,13 +207,16 @@ std::vector<cv::Point3d> FittingWorkpieceCoordinate::transformCameraToBase(const
     // 对每个相机坐标系下的点进行转换
     for (const auto& cameraPoint : cameraPoints) {
         // 将相机点转换为 4x1 向量，使用齐次坐标表示
+        std::cout << "输入转换的相机坐标系下3D点：" << cameraPoint << std::endl;
         cv::Mat cameraPointMat = (cv::Mat_<double>(4, 1) << cameraPoint.x, cameraPoint.y, cameraPoint.z, 1);
 
         // 使用 4x4 变换矩阵进行转换
         cv::Mat transformedPointMat = transformationMatrix * cameraPointMat;
+        std::cout << "手眼转换矩阵:" << transformationMatrix << std::endl;
 
         // 提取变换后的 3D 点 (x, y, z)，忽略齐次坐标的 w 分量
         cv::Point3d basePoint(transformedPointMat.at<double>(0), transformedPointMat.at<double>(1), transformedPointMat.at<double>(2));
+        std::cout << "转换到基坐标系下的3D点:" << basePoint << std::endl;
 
         // 将变换后的点添加到结果中
         basePoints.push_back(basePoint);
@@ -193,28 +264,26 @@ cv::Point3d FittingWorkpieceCoordinate::computeCentroid(const std::vector<Object
 }
 
 // 进行工件分类
-std::vector<std::vector<ObjectInfo>> FittingWorkpieceCoordinate::classifyWorkpieces(const std::vector<ObjectInfo>& allObjects, double threshold) {
-    std::vector<cv::Point3d> categoryLeftPts;  // 记录每个类别的左上角代表点（动态更新）
+std::vector<std::vector<ObjectInfo>> FittingWorkpieceCoordinate::classifyWorkpieces(const std::vector<ObjectInfo>&
+                                                                                        allObjects, double threshold) {
+    std::vector<cv::Point3d> categoryLeftPts;
+
     for (const auto& obj : allObjects) {
         bool foundGroup = false;
-
-        // 只和每个类别的代表点比较
         for (size_t i = 0; i < categoryLeftPts.size(); ++i) {
-            if (calculateDistance(obj.pt3d, categoryLeftPts[i]) < threshold) {
-                categorizedObjects[i].push_back(obj);  // 归入该类别
-                // 计算新的类别中心点
+            double dist = calculateDistance(obj.pt3d, categoryLeftPts[i]);
+            if (dist < threshold) {
+                categorizedObjects[i].push_back(obj);
                 categoryLeftPts[i] = computeCentroid(categorizedObjects[i]);
                 foundGroup = true;
                 break;
             }
         }
-        // 如果没有找到合适的类别，创建新类别
         if (!foundGroup) {
             categorizedObjects.push_back({obj});
             categoryLeftPts.push_back(obj.pt3d);
         }
     }
-
     return categorizedObjects;
 }
 
@@ -242,23 +311,12 @@ std::vector<cv::Point3d> FittingWorkpieceCoordinate::calculateCategoryCenters(st
         cv::Point3d sumCenter(0, 0, 0);                             // 用来累加平均中心坐标
 
         for (int i = 0; i < count; ++i) {
-            // 计算每个 Object 对应的矩形框的中心点
-            cv::Rect rect = category[i].object.rect;
-            // std::cout<<"rect:"<<rect<<std::endl;
-            // cv::Point2d center(rect.x , rect.y);
-            cv::Point2d center(rect.x + rect.width / 2.0, rect.y + rect.height / 2.0);
-            // std::cout<<"beforecenter: "<<rect.x<<", "<<rect.y<<std::endl;
-            // std::cout<<"center: "<<center<<std::endl;
-            std::vector<cv::Point2d> categoryCenters = {};  // 存储图像坐标系下的中心坐标
-            categoryCenters.push_back(center);
-            std::vector<cv::Point3d> finalWorldPoints = pixel2WorldCoordPoint(categoryCenters, category[i].cameraIndex);
-            // std::cout<<"finalWorldPoints:"<<finalWorldPoints<<std::endl;
-            sumCenter += finalWorldPoints[0];  // 累加
+            sumCenter += category[i].centerPt3d;  // 直接使用带位姿补偿的中心点
         }
 
         // 计算该类别的平均中心坐标
         cv::Point3d averageCenter = sumCenter / count;
-        // std::cout<<"averageCenter:"<<averageCenter<<std::endl;
+        std::cout<<"averageCenter:"<<averageCenter<<std::endl;
 
         categoryWorldCenters.push_back(averageCenter);  // 将结果加入类别中心坐标集合
     }
@@ -292,84 +350,61 @@ std::vector<cv::Point3d> FittingWorkpieceCoordinate::calculateCategoryCenters(st
  * @param filename 参数文件路径
  */
 void FittingWorkpieceCoordinate::loadCalibrationParameters(const std::string& filename) {
-    cv::Mat cameraMatrixRead = cv::Mat::zeros(3, 3, CV_64F);  // 清零相机矩阵
-    cv::Mat distCoeffsRead = cv::Mat::zeros(1, 5, CV_64F);    // 清零畸变系数
-    std::vector<double> planeRead;                            // 清空全局平面参数
-    cv::Mat extrinsicMatrixRead;
-    int cameraNumber = 0;
-    // 打开 JSON 文件
+    cv::Mat cameraMatrixRead = cv::Mat::zeros(3, 3, CV_64F);
+    cv::Mat distCoeffsRead = cv::Mat::zeros(1, 5, CV_64F);
+    std::vector<double> planeRead;
+    cv::Mat cameraToBaseMatrixRead;
+    cv::Mat xAxisTrackDir, yAxisTrackDir, zAxisTrackDir;
+
     std::ifstream file(filename);
     if (!file.is_open() || file.peek() == std::ifstream::traits_type::eof()) {
-        // 文件为空或无法打开，初始化一个包含多个相机的默认值
-        std::cerr << "File is empty or failed to open. Initializing default values." << std::endl;
-
-        // 创建多个默认的相机配置
-        std::map<std::string, CoarseLocalizationMatrix> cameraConfigMap;
-
-        // 假设有多个相机配置，名称为 Camera1, Camera2, Camera3
-        for (int i = 1; i <= 6; ++i) {
-            cv::Mat defaultCameraMatrix = cv::Mat::eye(3, 3, CV_64F);     // 默认相机矩阵
-            cv::Mat defaultDistCoeffs = cv::Mat::zeros(1, 5, CV_64F);     // 默认畸变系数
-            std::vector<double> defaultPlane = {0.0, 0.0, 0.0};           // 默认平面参数
-            cv::Mat defaultExtrinsicMatrix = cv::Mat::eye(4, 4, CV_64F);  // 默认外参矩阵
-
-            CoarseLocalizationMatrix defaultMatrix(defaultCameraMatrix, defaultDistCoeffs, defaultPlane, defaultExtrinsicMatrix);
-            cameraConfigMap["Camera" + std::to_string(i)] = defaultMatrix;  // 使用 Camera1, Camera2, Camera3 为键
-        }
-
-        // 保存默认相机配置到文件
-        std::ofstream outFile(filename);
-        cereal::JSONOutputArchive outputArchive(outFile);
-        outputArchive(cereal::make_nvp("Cameras", cameraConfigMap));
-
-        std::cerr << "Default values written to file." << std::endl;
+        std::cerr << "File is empty or failed to open." << std::endl;
         return;
     }
 
-    // 创建 Cereal JSON 输入归档
     cereal::JSONInputArchive inputArchive(file);
 
     try {
-        // 反序列化所有相机的数据，假设每个相机的名称是 Camera1, Camera2, 等等
-        std::map<std::string, CoarseLocalizationMatrix> cameraConfigMap;
-        inputArchive(cereal::make_nvp("Cameras", cameraConfigMap));
+        CoarseLocalizationMatrix calibResult;
+        inputArchive(cereal::make_nvp("CalibrationResult", calibResult));
 
-        // 遍历所有相机并输出其参数
-        for (const auto& cameraConfigPara : cameraConfigMap) {
-            std::string cameraName = cameraConfigPara.first;
-            CoarseLocalizationMatrix cameraData = cameraConfigPara.second;
+        calibResult.transferData(cameraMatrixRead, distCoeffsRead, planeRead,
+                                 cameraToBaseMatrixRead,
+                                 xAxisTrackDir, yAxisTrackDir, zAxisTrackDir);
 
-            // 将反序列化后的数据传递到对应的变量
-            cameraData.transferData(cameraMatrixRead, distCoeffsRead, planeRead, extrinsicMatrixRead);
-            cameraParameters[cameraNumber].cameraMatrix = cameraMatrixRead;
-            cameraParameters[cameraNumber].distCoeffs = distCoeffsRead;
-            cameraParameters[cameraNumber].globalPlane = planeRead;
-            cameraParameters[cameraNumber].extrinsicMatrix = extrinsicMatrixRead;
-            cameraNumber++;
+        cameraParameters.resize(1);
+        cameraParameters[0].cameraMatrix      = cameraMatrixRead;
+        cameraParameters[0].distCoeffs         = distCoeffsRead;
+        cameraParameters[0].globalPlane        = planeRead;
+        cameraParameters[0].cameraToBaseMatrix = cameraToBaseMatrixRead;
+        cameraParameters[0].xAxisTrackDirection = xAxisTrackDir;
+        cameraParameters[0].yAxisTrackDirection = yAxisTrackDir;
+        cameraParameters[0].zAxisTrackDirection = zAxisTrackDir;
+        cameraParameters[0].xAxisReferenceEncoderValue = calibResult.xAxisReferenceEncoderValue;
+        cameraParameters[0].yAxisReferenceEncoderValue = calibResult.yAxisReferenceEncoderValue;
+        applyTrackCompensation = true;
+        const bool xValid = isTrackAxisDirectionValid(xAxisTrackDir);
+        const bool yValid = isTrackAxisDirectionValid(yAxisTrackDir);
+        const bool zValid = isTrackAxisDirectionValid(zAxisTrackDir);
+        bool axesIndependent = false;
+        if (xValid && yValid && zValid) {
+            const double xyDot = std::abs(normalizedTrackAxisDot(xAxisTrackDir, yAxisTrackDir));
+            const double xzDot = std::abs(normalizedTrackAxisDot(xAxisTrackDir, zAxisTrackDir));
+            const double yzDot = std::abs(normalizedTrackAxisDot(yAxisTrackDir, zAxisTrackDir));
+            axesIndependent = xyDot < 0.95 && xzDot < 0.95 && yzDot < 0.95;
         }
-
-        // cameraMatrix = cameraParameters[3].cameraMatrix;
-        // distCoeffs = cameraParameters[3].distCoeffs;
-        // plane = cameraParameters[3].globalPlane;
-        // extrinsicMatrix = cameraParameters[3].extrinsicMatrix;
-        // // 打印相机的参数
-        // std::cout << "Calibration for cameraName" << 3 << ":\n";
-        // std::cout << "Camera Matrix:\n" << cameraMatrix << std::endl;
-        // std::cout << "Distortion Coefficients:\n" << distCoeffs << std::endl;
-        // std::cout << "ExtrinsicMatrix:\n" << extrinsicMatrix << std::endl;
-        // std::cout << "Global Plane Parameters: ";
-        // for (const auto& p : plane) {
-        //     std::cout << p << " ";
-        // }
-        // std::cout << std::endl;
-    } catch (const cereal::Exception& e) {
-        std::cerr << "Error reading calibration parameters: " << e.what() << std::endl;
-        return;
+        if (!(xValid && yValid && zValid && axesIndependent)) {
+            applyTrackCompensation = false;
+            PLOGW << "Track compensation disabled because axis directions are invalid or nearly parallel.";
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error reading calibration: " << e.what() << std::endl;
     }
 
-    // 可以记录调试信息
+    // 调试信息
     QString message = "Complete to load data/config/workpiece_localization_calib.json";
     emit appendFittingLog(message);
+
 }
 
 void FittingWorkpieceCoordinate::drawGridAndAxes(cv::Mat& railMap) {
@@ -439,38 +474,40 @@ void FittingWorkpieceCoordinate::drawGridAndAxes(cv::Mat& railMap) {
 void FittingWorkpieceCoordinate::drawDetectedWorkpieces(cv::Mat& railMap, const cv::Mat& resizedImage, cv::Point3d& worldCenter, int categoryIdx) {
     // 1300
     cv::Mat centerPoint = (cv::Mat_<double>(3, 1) << worldCenter.x, worldCenter.y, 1);
+    std::cout<<"转换成像素坐标前的世界坐标："<<centerPoint<<std::endl;
     cv::Mat centerResult = canvasMat * centerPoint;
+    std::cout<<"转换成像素坐标后的世界坐标："<<centerResult<<std::endl;
     double railMapX = centerResult.at<double>(0, 0);
     double railMapY = centerResult.at<double>(1, 0);
     // 确保抠出来的图像中心与 worldCenter 对齐
+    //找到左上角坐标以确定有没有超出边界
     int offsetX = static_cast<int>(railMapX - resizedImage.cols / 2);
     int offsetY = static_cast<int>(railMapY - resizedImage.rows / 2);
-    cv::Rect roi;  // 定义一个空的矩形
-
-    // 适配到画布
-    if (offsetX >= 0 && offsetX + resizedImage.cols < railMap.cols && offsetY >= 0 && offsetY + resizedImage.rows < railMap.rows) {
-        roi = cv::Rect(offsetX, offsetY, resizedImage.cols, resizedImage.rows);  // 正确设置 roi
-        cv::rectangle(railMap, roi, correctColor, correctLineThickness);
-        resizedImage.copyTo(railMap(roi));  // 将图像绘制到画布中
-    } else {
-        // 如果超出范围，调整到边界
-        offsetX = std::max(0, std::min(offsetX, railMap.cols - resizedImage.cols));
-        offsetY = std::max(0, std::min(offsetY, railMap.rows - resizedImage.rows));
-        roi = cv::Rect(offsetX, offsetY, resizedImage.cols, resizedImage.rows);  // 正确设置 roi
-        resizedImage.copyTo(railMap(roi));
-
-        // 绘制包裹工件的警告线
-        cv::rectangle(railMap, roi, warningColor, warningLineThickness);
+    //看目标矩形框和画布上的有效范围有没有重合
+    const cv::Rect targetRect(offsetX, offsetY, resizedImage.cols, resizedImage.rows);
+    const cv::Rect canvasRect(0, 0, railMap.cols, railMap.rows);
+    //计算重合矩形框
+    cv::Rect roi = targetRect & canvasRect;
+    //如果有重合就把重合部分copyto长画布上
+    if (roi.area() > 0) {
+        //把重合部分的矩形框算出来
+        const cv::Rect srcRoi(roi.x - targetRect.x, roi.y - targetRect.y, roi.width, roi.height);
+        resizedImage(srcRoi).copyTo(railMap(roi));
+        //在长画布上画出可视化矩形框
+        cv::rectangle(railMap, roi, roi == targetRect ? correctColor : warningColor,
+                      roi == targetRect ? correctLineThickness : warningLineThickness);
     }
     // 将 roi 和类别索引存入全局变量
-    workpieceROIs.push_back(std::make_pair(roi, categoryIdx));
+    if (roi.area() > 0) {
+        workpieceROIs.push_back(std::make_pair(roi, categoryIdx));
+    }
     // 标注工件中心点
     cv::circle(railMap, cv::Point(static_cast<int>(railMapX), static_cast<int>(railMapY)), 4, cv::Scalar(255, 0, 0), -1);
     // std::string text = "(" + std::to_string(worldCenter.x) + ", " + std::to_string(worldCenter.y) + ", " +
     // std::to_string(worldCenter.z) + ")"; cv::Point textPosition = cv::Point(static_cast<int>(railMapX) - resizedImage.cols
     // / 2, static_cast<int>(railMapY) + resizedImage.rows / 2 + 30); cv::putText(railMap, text, textPosition,
     // cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1);
-    if (std::find(selectedWorkpieces.begin(), selectedWorkpieces.end(), categoryIdx) != selectedWorkpieces.end()) {
+    if (roi.area() > 0 && std::find(selectedWorkpieces.begin(), selectedWorkpieces.end(), categoryIdx) != selectedWorkpieces.end()) {
         cv::rectangle(railMap, roi, deleteColor, deleteLineThickness);
     }
 }
@@ -502,6 +539,7 @@ void FittingWorkpieceCoordinate::displayDetectedWorkpieces(const std::vector<std
 
         // 将左上角坐标存入类变量中
         categoryWorldLeftTopCenters.push_back(worldTopLeft);
+        std::cout<<"categoryWorldLeftTopCenters"<<std::endl<<worldTopLeft<<std::endl;
 
         // 使用 categoryCenters3d 作为中心坐标
         cv::Point3d worldCenter = categoryCenters3d[categoryIdx];
@@ -515,11 +553,18 @@ void FittingWorkpieceCoordinate::displayDetectedWorkpieces(const std::vector<std
 
             cv::Rect rect = bestObject.object.rect;
             cv::Mat boxMask = bestObject.object.boxMask;  // 掩膜矩阵
-            // 生成白色背景的掩膜图像
-            cv::Mat maskRegion = cv::Mat(rect.size(), CV_8UC3, cv::Scalar(255, 255, 255));  // 白色画布
+            // 扩大区域显示母材
+            const int expandPixels = 50;
+            int ex1 = std::max(0, rect.x - expandPixels);
+            int ey1 = std::max(0, rect.y - expandPixels);
+            int ex2 = std::min(image.cols - 1, rect.x + rect.width + expandPixels);
+            int ey2 = std::min(image.rows - 1, rect.y + rect.height + expandPixels);
+            rect = cv::Rect(ex1, ey1, ex2 - ex1, ey2 - ey1);
 
-            cv::Mat objectRegion = image(rect).clone();  // 原图rect区域
-            objectRegion.copyTo(maskRegion, boxMask);    // 将原图rect区域中的掩膜部分复制给maskRegion
+            cv::Mat maskRegion = image(rect).clone();  // 扩大后的原图区域（含母材）
+
+            // cv::Mat objectRegion = image(rect).clone();  // 原图rect区域
+            // objectRegion.copyTo(maskRegion, boxMask);    // 将原图rect区域中的掩膜部分复制给maskRegion
             // cv::imshow("Extracted Workpiece", maskRegion); // 显示掩膜下的工件图像（像素坐标系）
             // cv::waitKey(0);
 
@@ -547,11 +592,12 @@ void FittingWorkpieceCoordinate::displayDetectedWorkpieces(const std::vector<std
             cv::resize(maskRegion, resizedImage, newSize, 0, 0, cv::INTER_LANCZOS4);  // Lanczos
 
             // 计算原图 rect 的角度
-            cv::Mat R = cameraParameters[imagNum].extrinsicMatrix(cv::Range(0, 3), cv::Range(0, 3));
+            cv::Mat R = cameraParameters[0].cameraToBaseMatrix(cv::Range(0, 3), cv::Range(0, 3));
             double angleDifference;
             // 计算偏航角（yaw）
             angleDifference = atan2(R.at<double>(1, 0), R.at<double>(0, 0));
             angleDifference = angleDifference * 180.0 / CV_PI;
+            angleDifference += 270.0;
             // angleDifference = 225;
             // 获取旋转矩阵
             cv::Point2f center(resizedImage.cols / 2, resizedImage.rows / 2);                // 图像的中心
@@ -629,7 +675,7 @@ void FittingWorkpieceCoordinate::handleClickEvent(int x, int y) {
         }
 
         // 更新显示
-        displayDetectedWorkpieces(categorizedObjects, cvImagesCameraOri, categoryWorldCenters);
+        displayDetectedWorkpieces(categorizedObjects, cvImagesWorkpieceSeg, categoryWorldCenters);
     }
 }
 
@@ -680,6 +726,7 @@ void FittingWorkpieceCoordinate::whenVerifyWorkpieceCoordinates() {
 }
 
 void FittingWorkpieceCoordinate::whenDisplayWeldSeamArea(workpieceBoxInWorld& boxInfo) {
+    if (boxInfo.workpieceInfoInWorld.empty()) return;
     const auto& workpieces = boxInfo.workpieceInfoInWorld;
 
     for (const auto& info : workpieces) {
@@ -766,48 +813,40 @@ void FittingWorkpieceCoordinate::railMapRotated(cv::Mat& image, int angle) {
             throw std::invalid_argument("Unsupported rotation angle. Use 0, 90, 180, or 270.");
     }
 }
-cv::Point3d FittingWorkpieceCoordinate::computeProjectedOffset(const cv::Point3d& pt, const cv::Mat& trackDirection, const std::string& axis) {
-    if (trackDirection.empty() || trackDirection.rows != 3 || trackDirection.cols != 1) {
-        std::cerr << "Invalid trackDirection vector!" << std::endl;
-        return pt;
+
+//修改成三轴投影
+cv::Point3d FittingWorkpieceCoordinate::computeTrackCompensation(const cv::Point3d &pt, const cv::Mat &xDir, const cv::Mat &yDir, const cv::Mat &zDir)
+{
+    // 三个轴方向向量可能不正交，解三元一次方程求分量
+    cv::Mat T = (cv::Mat_<double>(3, 3) <<
+                 xDir.at<double>(0,0), yDir.at<double>(0,0), zDir.at<double>(0,0),
+                 xDir.at<double>(1,0), yDir.at<double>(1,0), zDir.at<double>(1,0),
+                 xDir.at<double>(2,0), yDir.at<double>(2,0), zDir.at<double>(2,0));
+    std::cout<<"三轴方向向量组成的转换矩阵:"<<T<<std::endl;
+    cv::Mat P = (cv::Mat_<double>(3, 1) << pt.x, pt.y, pt.z);
+    std::cout<<"准备投影到三轴上的点："<<std::endl<<"X:"<<pt.x<<std::endl<<"Y:"<<pt.y<<std::endl<<"Z:"<<pt.z<<std::endl;
+    cv::Mat k;
+    if (!cv::solve(T, P, k, cv::DECOMP_LU)) {
+        return pt;  // 求解失败，返回原值
     }
 
-    double dx = trackDirection.at<double>(0, 0);
-    double dy = trackDirection.at<double>(1, 0);
-    double dz = trackDirection.at<double>(2, 0);
+    // k = (k1, k2, k3) 分别是三个轴的分量
+    // 补偿后只保留各轴自身方向上的贡献
+    cv::Point3d result(
+        k.at<double>(0,0) * xDir.at<double>(0,0) +
+            k.at<double>(1,0) * yDir.at<double>(0,0) +
+            k.at<double>(2,0) * zDir.at<double>(0,0),
 
-    double t = 0.0;
-    if (axis == "x") {
-        if (dx == 0) return pt;
-        t = pt.x / dx;
-    } else if (axis == "y") {
-        if (dy == 0) return pt;
-        t = pt.y / dy;
-    } else if (axis == "z") {
-        if (dz == 0) return pt;
-        t = pt.z / dz;
-    } else {
-        std::cerr << "Invalid axis!" << std::endl;
-        return pt;
-    }
+        k.at<double>(0,0) * xDir.at<double>(1,0) +
+            k.at<double>(1,0) * yDir.at<double>(1,0) +
+            k.at<double>(2,0) * zDir.at<double>(1,0),
 
-    double offset_x = t * dx;
-    double offset_y = t * dy;
-    double offset_z = t * dz;
-    cv::Point3d projected_pt(pt.x, pt.y - offset_y, pt.z - offset_z);
+        k.at<double>(0,0) * xDir.at<double>(2,0) +
+            k.at<double>(1,0) * yDir.at<double>(2,0) +
+            k.at<double>(2,0) * zDir.at<double>(2,0));
+    std::cout<<"投影到三轴上的点："<<std::endl<<"X:"<<result.x<<std::endl<<"Y:"<<result.y<<std::endl<<"Z:"<<result.z<<std::endl;
 
-    // 新投影点到原点的距离
-    double distance = std::sqrt(projected_pt.x * projected_pt.x + offset_y * offset_y + offset_z * offset_z);
-    projected_pt = cv::Point3d(distance, projected_pt.y, projected_pt.z);
-    // std::cout << "Original Point: " << pt << "\n";
-    // std::cout << "Track Direction: (" << dx << ", " << dy << ", " << dz << ")\n";
-    // std::cout << "Track chazhi: (" << offset_x << ", " << offset_y << ", " << offset_z << ")\n";
-    // std::cout << "Projection Axis: '" << axis << "' => t = " << t << "\n";
-    // std::cout << "Projected Point = pt + t * dir = " << projected_pt << "\n";
-    // std::cout << "Distance from projected point to origin: " << distance << "\n";
-    // std::cout << "-----------------------------\n";
-
-    return projected_pt;
+    return result;
 }
 //-----------------------------------------------获取结果----------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------
@@ -890,6 +929,7 @@ void FittingWorkpieceCoordinate::sortWorkpieceBoxInfo(workpieceBoxInWorld& boxIn
 }
 
 void FittingWorkpieceCoordinate::computeIOUsWithOverlap(workpieceBoxInWorld& boxInfo) {
+    if (boxInfo.workpieceInfoInWorld.empty()) return;
     auto& originalInfos = boxInfo.workpieceInfoInWorld;
     size_t n = originalInfos.size();
     std::vector<bool> visited(n, false);
@@ -998,9 +1038,7 @@ void FittingWorkpieceCoordinate::computeIOUsWithOverlap(workpieceBoxInWorld& box
             cv::Point2d ptSrc = projectAndRotateCenter(info.workpieceAreaRect.first, canvasMat, railMap.rows, railMap.cols, rotationAngle);
             cv::line(railMap, ptSrc, ptNewCenter, cv::Scalar(255, 0, 0), 1);
         }
-        if (newInfo.workpiece_weld_Obj.second.size() != 0) {
-            mergedInfos.push_back(std::move(newInfo));
-        }
+        mergedInfos.push_back(std::move(newInfo));
     }
 
     boxInfo.workpieceInfoInWorld = std::move(mergedInfos);
@@ -1014,24 +1052,24 @@ void FittingWorkpieceCoordinate::whenGetResultInfo(const std::vector<cv::Point3d
     }
 }
 void FittingWorkpieceCoordinate::applyTrackOffsetCompensation(workpieceBoxInWorld& info) {
-    if (!applyTrackCompensation || info.trackDirection.empty()) {
-        return;
-    }
+    qDebug() << "applyTrackComp:" << applyTrackCompensation << "xDirEmpty:" << info.xAxisTrackDirection.empty();
+    if (!applyTrackCompensation || info.xAxisTrackDirection.empty()) return;
 
     for (auto& wp : info.workpieceInfoInWorld) {
         auto& center = wp.workpieceAreaRect.first;
         auto& topLeft = wp.workpieceAreaRect.second;
 
-        center = computeProjectedOffset(center, info.trackDirection, "x");
-        topLeft = computeProjectedOffset(topLeft, info.trackDirection, "x");
+        center = computeTrackCompensation(center, info.xAxisTrackDirection,
+                                          info.yAxisTrackDirection, info.zAxisTrackDirection);
+        topLeft = computeTrackCompensation(topLeft, info.xAxisTrackDirection,
+                                           info.yAxisTrackDirection, info.zAxisTrackDirection);
 
-        // === 对每个焊缝区域 weldAreaRect 的左上角和中心做补偿（这里只对左上角做） ===
         for (auto& rect : wp.weldAreaRect) {
-            cv::Point3d topLeft3d(rect.x, rect.y, 0.0);  // 默认 z=0
-            cv::Point3d newTopLeft = computeProjectedOffset(topLeft3d, info.trackDirection, "x");
-
-            rect.x = newTopLeft.x;
-            rect.y = newTopLeft.y;
+            cv::Point3d pt3d(rect.x, rect.y, 0.0);
+            cv::Point3d newPt = computeTrackCompensation(pt3d, info.xAxisTrackDirection,
+                                                         info.yAxisTrackDirection, info.zAxisTrackDirection);
+            rect.x = newPt.x;
+            rect.y = newPt.y;
         }
     }
 }
@@ -1497,7 +1535,27 @@ void FittingWorkpieceCoordinate::computeBaseOffsetAndViewpointsFromMask(workpiec
 }
 
 void FittingWorkpieceCoordinate::whenGetWeldBoxInfo(const std::vector<std::vector<std::array<double, 4>>>& boxInfos) {
-    // 安全处理：避免超过已有工件数量
+    // workpieceFinalInfoInWorldAfterVerify = workpieceFinalInfoInWorld;
+    // whenVerifyWorkpieceCoordinates();
+
+    size_t numWp = std::min(categorizedObjects.size(), categoryWorldCenters.size());
+    numWp = std::min(numWp, categoryWorldLeftTopCenters.size());
+    numWp = std::min(numWp, workpieceFinalInfoInWorldAfterVerify.workpieceInfoInWorld.size());
+    for (size_t i = 0; i < numWp; ++i) {
+        workpieceFinalInfoInWorldAfterVerify.workpieceInfoInWorld[i].workpieceAreaRect =
+            std::make_pair(categoryWorldCenters[i], categoryWorldLeftTopCenters[i]);
+        workpieceFinalInfoInWorldAfterVerify.workpieceInfoInWorld.resize(numWp);
+    }
+
+    PLOGD << "=== whenGetWeldBoxInfo numWp=" << numWp << " total=" << workpieceFinalInfoInWorldAfterVerify.workpieceInfoInWorld.size();
+
+    // 检查 workpieceAreaRect 是否有效
+    for (auto& wp : workpieceFinalInfoInWorldAfterVerify.workpieceInfoInWorld) {
+        if (wp.workpieceAreaRect.first.x == 0 && wp.workpieceAreaRect.first.y == 0) {
+            PLOGE << "workpieceAreaRect not initialized for workpiece";
+        }
+    }
+
     size_t count = std::min(boxInfos.size(), workpieceFinalInfoInWorldAfterVerify.workpieceInfoInWorld.size());
 
     for (size_t i = 0; i < count; ++i) {
@@ -1521,8 +1579,11 @@ void FittingWorkpieceCoordinate::whenGetWeldBoxInfo(const std::vector<std::vecto
     }
 
     // 同时读取并设置地轨方向向量
-    MyMatrixTrackDirection Track;
-    workpieceFinalInfoInWorldAfterVerify.trackDirection = Track.readTrackDirectionFromJsonFile(trackFilePath);
+    if (!cameraParameters.empty()) {
+        workpieceFinalInfoInWorldAfterVerify.xAxisTrackDirection = cameraParameters[0].xAxisTrackDirection;
+        workpieceFinalInfoInWorldAfterVerify.yAxisTrackDirection = cameraParameters[0].yAxisTrackDirection;
+        workpieceFinalInfoInWorldAfterVerify.zAxisTrackDirection = cameraParameters[0].zAxisTrackDirection;
+    }
     // std::cout <<    "TrackDirection"
     //           <<    workpieceBoxInfoInWorld.TrackDirection  <<std::endl;
     // if (workpieceFinalInfoInWorldAfterVerify.workpieceAreaRect.size() != 0) {
@@ -1531,14 +1592,13 @@ void FittingWorkpieceCoordinate::whenGetWeldBoxInfo(const std::vector<std::vecto
     // }
     // emit sendFinalInfoToMain(workpieceFinalInfoInWorldAfterVerify);
     workpieceFinalInfoInWorldAfterIOU = workpieceFinalInfoInWorldAfterVerify;
-    // sortWorkpieceBoxInfo(workpieceFinalInfoInWorldAfterIOU, sortWorldAxis, sortWorldOrder);
+    sortWorkpieceBoxInfo(workpieceFinalInfoInWorldAfterIOU, sortWorldAxis, sortWorldOrder);
     computeIOUsWithOverlap(workpieceFinalInfoInWorldAfterIOU);
+    applyTrackOffsetCompensation(workpieceFinalInfoInWorldAfterIOU);
     sortWorkpieceBoxInfo(workpieceFinalInfoInWorldAfterIOU, sortWorldAxis, sortWorldOrder);
     whenDisplayWeldSeamArea(workpieceFinalInfoInWorldAfterIOU);
     // TODO 基座位置选解
     // computeBaseOffsetAndViewpointsFromMask(workpieceFinalInfoInWorldAfterIOU);
-    // TODO 下面的要进行修改，原逻辑是垂直投影，现在为求解三元一次方程；
-    applyTrackOffsetCompensation(workpieceFinalInfoInWorldAfterIOU);
 
     emit sendFinalInfoToMain(workpieceFinalInfoInWorldAfterIOU);
 }

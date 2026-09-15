@@ -4,6 +4,7 @@
     "handEyeType": "eye in hand",
     "primaryCameraSerialNum": "21939630",
     "secondaryCameraSerialNum": "00000000",
+    "thirdaryCameraSerialNum": "00000000",
     "projectorSerialNum": "00000000",
     "CameraHomography": {
       "_data": [

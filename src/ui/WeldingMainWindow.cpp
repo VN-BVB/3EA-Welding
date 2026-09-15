@@ -11,7 +11,6 @@
 #include "rail/RailWidget.h"
 #include "rail/concrete_axis/AxisManager.h"
 #include "robotFactory/AbstractRobot.h"
-#include "robotTrajectoryPlanning/config/TrajectoryPlanningConfig.h"
 #include "settingPara/SettingPara.h"
 #include "structLightCamera/StructLightCamera.h"
 #include "structLightCamera/reconstruction/PointCloudReconstruction.h"

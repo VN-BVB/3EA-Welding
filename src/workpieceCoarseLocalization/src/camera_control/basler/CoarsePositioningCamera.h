@@ -34,10 +34,6 @@
 enum COARES_LOC_CAMERA {
     CAMERA_1 = 0x01,           // 0000 0001
     CAMERA_2 = 0x02,           // 0000 0010
-    CAMERA_3 = 0x04,           // 0000 0100
-    CAMERA_4 = 0x08,           // 0000 1000
-    CAMERA_5 = 0x10,           // 0001 0000
-    CAMERA_6 = 0x20,           // 0010 0000
     CAMERA_UNCONNECTED = 0x00  // 0000 0000
 };
 using namespace MaskTransformConfig;

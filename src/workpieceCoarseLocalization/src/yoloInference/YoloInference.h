@@ -7,12 +7,13 @@
 
 #include <QDebug>
 #include <QObject>
+#include <limits>
 
 #include "workpieceCoarseLocalization/src/fittingWorkpieceCoordinate/Fittingworkpiececoordinate.h"
 
 using namespace MaskTransformConfig;
-#if defined(ROM_CONFIG) || defined(LI_CONFIG)
-const std::string CoarseSegEnginePath = "./data/DL_models/coaLocModel/workpieceSegRom.engine";
+#if defined(ROM_CONFIG) || defined(LI_CONFIG) || defined(ZHANG_CONFIG)
+const std::string CoarseSegEnginePath = "./data/DL_models/coaLocModel/best2.engine";
 const std::string CoarseObjDetEnginePath = "./data/DL_models/coaLocModel/weldAreaDetRom.engine";
 #elif GONG_RAIL_CONFIG
 const std::string CoarseSegEnginePath = "./data/DL_models/coaLocModel/workpieceSegRail.engine";
@@ -35,9 +36,10 @@ private:
     std::vector<segYolo11::ObjectYolo11Seg> objs;
     std::shared_ptr<AbstractSegment> WorkpieceSegmentation{nullptr};  // 分割算法类
     std::vector<SegResult> segRes;                                    // 分割结果
+    std::vector<std::vector<SegResult>> allSegResults;
 
     void initSegment();
-    void inferSingleImage(cv::Mat &inputImage);
+    void inferSingleImage(cv::Mat &inputImage, double yAxisEncoderValue = std::numeric_limits<double>::quiet_NaN());
     void whenImageNeedToSave(const cv::Mat &inferResult, const std::string &savePrefix);
     void parseSegResults(const std::vector<SegResult> &segResults, std::vector<segYolo11::ObjectYolo11Seg> &objs, cv::Mat &res);
     void sortSegObjects(std::vector<segYolo11::ObjectYolo11Seg> &objs, const std::string &axis, const std::string &order);
@@ -47,7 +49,8 @@ signals:
     void sendSignalTocalculate();
     void sendAppendInferLog(QString message);
     void sendInferResultToMainWindow(cv::Mat res);
-    void sendCoordinateTofit(std::vector<segYolo11::ObjectYolo11Seg> objs, int imgNum);
+    void sendCoordinateTofit(std::vector<segYolo11::ObjectYolo11Seg> objs, int imgNum, double yAxisEncoderValue);
+    void sendWeldBoxInfo(const std::vector<std::vector<std::array<double, 4>>> &boxInfos);
 };
 
 class YoloDetInference : public QObject {
@@ -63,6 +66,7 @@ private:
     std::vector<DetResult> detRes;                                  // 目标检测结果
     std::shared_ptr<AbstractObjectDetect> weldsDetection{nullptr};  // 目标检测算法类
     std::vector<cv::Point3d> maskWorldCenters;
+    std::vector<cv::Size> maskCanvasSizes;
     int rectRotationAngleYolo = rectRotationAngle;
     void initObjectDetect();
     void whenImageNeedToInfer(std::vector<cv::Mat> cvImages);

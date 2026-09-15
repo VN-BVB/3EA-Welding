@@ -57,7 +57,7 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_3">
       <property name="sizePolicy">
@@ -190,22 +190,27 @@
          </property>
          <item>
           <property name="text">
-           <string>相机手眼标定</string>
+           <string>内参/手眼图</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>平面拟合</string>
+           <string>平面图</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>地轨标定</string>
+           <string>X轴图</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>保存图像</string>
+           <string>Y轴图</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Z轴图</string>
           </property>
          </item>
         </widget>
@@ -324,6 +329,69 @@
           <font>
            <pointsize>26</pointsize>
           </font>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
+        <widget class="QComboBox" name="comboCalibration">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>20</pointsize>
+          </font>
+         </property>
+         <item>
+          <property name="text">
+           <string>内参标定</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>平面标定</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>手眼标定</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>X轴标定</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Y轴标定</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Z轴标定</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QPushButton" name="btnStartCalibration">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>26</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>开始标定</string>
          </property>
         </widget>
        </item>

@@ -1,17 +1,70 @@
 ﻿#include "YoloInference.h"
 
+#include <cereal/archives/json.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/vector.hpp>
+#include <fstream>
+#include <map>
+
+namespace {
+
+struct CaptureInfo {
+    std::string filename;
+    double yAxisEncoderValue = std::numeric_limits<double>::quiet_NaN();
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        ar(cereal::make_nvp("filename", filename),
+           cereal::make_nvp("yAxisEncoderValue", yAxisEncoderValue));
+    }
+};
+
+std::map<std::string, double> loadCaptureYAxisEncoderMap(const std::string& folderPath) {
+    std::map<std::string, double> captureYAxisMap;
+    std::ifstream captureFile(folderPath + "/captures.json");
+    if (!captureFile.is_open()) {
+        return captureYAxisMap;
+    }
+
+    try {
+        std::vector<CaptureInfo> captures;
+        cereal::JSONInputArchive archive(captureFile);
+        archive(cereal::make_nvp("captures", captures));
+        for (const auto& capture : captures) {
+            captureYAxisMap[capture.filename] = capture.yAxisEncoderValue;
+        }
+    } catch (const std::exception&) {
+        captureYAxisMap.clear();
+    }
+
+    return captureYAxisMap;
+}
+
+std::string extractFilename(const std::string& filePath) {
+    const size_t pos = filePath.find_last_of("/\\");
+    if (pos == std::string::npos) {
+        return filePath;
+    }
+    return filePath.substr(pos + 1);
+}
+
+}  // namespace
+
 YoloSegInference::YoloSegInference() { initSegment(); }
 YoloDetInference::YoloDetInference() { initObjectDetect(); }
 void YoloSegInference::initSegment() {
-    std::vector<std::string> classNames = {"WorkpieceCL"};
+    std::vector<std::string> classNames = {"Plate_Plate_F","TubeSide_Plate_F","Tube_Plate_F","Tube_Tube_F"};
     std::vector<std::vector<unsigned int>> colors = {
-        {0, 255, 0},
+        {0  , 255, 0  },
+        {128, 255, 0  },
+        {255, 0,   128},
+        {0  , 255, 128},
     };
     WorkpieceSegmentation = std::make_shared<Yolo11SegInference>();
     WorkpieceSegmentation->setEngine_path(CoarseSegEnginePath);
     WorkpieceSegmentation->setClassNames(classNames);  // 标签
     WorkpieceSegmentation->setColors(colors);          // 标签颜色
-    WorkpieceSegmentation->setScore_thres(0.25f);      // 置信度
+    WorkpieceSegmentation->setScore_thres(0.45f);      // 置信度
     WorkpieceSegmentation->setIou_thres(0.05f);        // 交并比
     WorkpieceSegmentation->setSeg_channels(32);        // 分割通道:seg_channels->num_classes = num_channels - seg_channels - 4;
     WorkpieceSegmentation->setSize(cv::Size(1024, 1024));
@@ -40,10 +93,13 @@ void YoloDetInference::initObjectDetect() {
     weldsDetection->initialization();  // 完成类的初始化 (读取模型文件, 移入显卡等)
 }
 
-void YoloSegInference::inferSingleImage(cv::Mat& inputImage) {
-    WorkpieceSegmentation->inference(inputImage, segRes);  // 实例分割推理
+void YoloSegInference::inferSingleImage(cv::Mat& inputImage, double yAxisEncoderValue) {
+    WorkpieceSegmentation->inference(inputImage, segRes);
     parseSegResults(segRes, objs, res);
-    emit sendAppendInferLog(QString(u8"相机%1检测工件数量:%2").arg(imgNum + 1).arg(objs.size()));
+    objs.erase(std::remove_if(objs.begin(), objs.end(), [](const segYolo11::ObjectYolo11Seg& obj) {
+                   return cv::countNonZero(obj.boxMask) < 2500;  // 掩膜像素数少于 2500 的丢弃
+               }), objs.end());
+    emit sendAppendInferLog(QString(u8"图片%1检测工件数量:%2").arg(imgNum + 1).arg(objs.size()));
     detectedWp += objs.size();
     sortSegObjects(objs, sortAxis, sortOrder);
     for (auto& obj : objs) {
@@ -56,22 +112,24 @@ void YoloSegInference::inferSingleImage(cv::Mat& inputImage) {
         info.workpiece_weld_Obj = std::make_pair(obj, std::vector<det::Object>());
         workpieceFinalInfoInWorld.workpieceInfoInWorld.push_back(info);
     }
-
-    emit sendCoordinateTofit(objs, imgNum);  // 发送图片序号
+    emit sendCoordinateTofit(objs, imgNum, yAxisEncoderValue);
     emit sendInferResultToMainWindow(res);
     if (saveEveryImg) {
         whenImageNeedToSave(res, segSavePath);
     }
     imgNum++;
     cvImagesWorkpieceSeg.emplace_back(res.clone());
+    allSegResults.push_back(segRes);
 }
 
 void YoloSegInference::whenPathNeedToInfer(std::string path) {
     imgNum = 0;
     detectedWp = 0;
+    allSegResults.clear();
     workpieceFinalInfoInWorld = workpieceBoxInWorld{};
     cvImagesCameraOri.clear();
     cvImagesWorkpieceSeg.clear();
+    const auto captureYAxisMap = loadCaptureYAxisEncoderMap(path);
     auto inferImagesFromPaths = [&](const std::string& suffix) {
         std::vector<std::string> imagePathList;
         cv::glob(path + "/*" + suffix, imagePathList);
@@ -80,19 +138,42 @@ void YoloSegInference::whenPathNeedToInfer(std::string path) {
             if (img.empty()) continue;
             image = img.clone();
             cvImagesCameraOri.push_back(img.clone());
-            inferSingleImage(img);
+            const std::string filename = extractFilename(imgPath);
+            const auto it = captureYAxisMap.find(filename);
+            auto encoderVal = (it != captureYAxisMap.end()) ? it->second : std::numeric_limits<double>::quiet_NaN();
+            inferSingleImage(img, encoderVal);
         }
     };
     inferImagesFromPaths(".jpg");
     inferImagesFromPaths(".bmp");
 
     emit sendAppendInferLog(QString(u8"共检测工件数量: %1").arg(detectedWp));
+    qDebug() << "=== emit sendSignalTocalculate, workpiece count =" ;
     emit sendSignalTocalculate();
+
+    // 遍历 allSegResults 发焊缝框
+    std::vector<std::vector<std::array<double, 4>>> allBoxes;
+    for (const auto& imgSegRes : allSegResults) {
+        std::vector<std::array<double, 4>> perImgBoxes;
+        for (const auto& seg : imgSegRes) {
+            if (seg.classId == 0) {
+                double cx = (seg.topLeftX + seg.bottomRightX) / 2.0;
+                double cy = (seg.topLeftY + seg.bottomRightY) / 2.0;
+                double w  = seg.bottomRightX - seg.topLeftX;
+                double h  = seg.bottomRightY - seg.topLeftY;
+                perImgBoxes.push_back({cx, cy, w, h});
+            }
+        }
+        allBoxes.push_back(perImgBoxes);
+    }
+    qDebug() << "=== allBoxes size=" << allBoxes.size();
+    emit sendWeldBoxInfo(allBoxes);
 }
 
 void YoloSegInference::whenImageNeedToInfer(std::vector<cv::Mat> cvImages) {
     imgNum = 0;
     detectedWp = 0;
+    allSegResults.clear();
     workpieceFinalInfoInWorld = workpieceBoxInWorld{};
     cvImagesCameraOri.clear();
     cvImagesWorkpieceSeg.clear();
@@ -103,6 +184,23 @@ void YoloSegInference::whenImageNeedToInfer(std::vector<cv::Mat> cvImages) {
     }
     emit sendAppendInferLog(QString(u8"共检测工件数量:%1").arg(detectedWp));
     emit sendSignalTocalculate();
+
+    // 遍历 allSegResults 发焊缝框
+    std::vector<std::vector<std::array<double, 4>>> allBoxes;
+    for (const auto& imgSegRes : allSegResults) {
+        std::vector<std::array<double, 4>> perImgBoxes;
+        for (const auto& seg : imgSegRes) {
+            if (seg.classId == 0) {
+                double cx = (seg.topLeftX + seg.bottomRightX) / 2.0;
+                double cy = (seg.topLeftY + seg.bottomRightY) / 2.0;
+                double w  = seg.bottomRightX - seg.topLeftX;
+                double h  = seg.bottomRightY - seg.topLeftY;
+                perImgBoxes.push_back({cx, cy, w, h});
+            }
+        }
+        allBoxes.push_back(perImgBoxes);
+    }
+    emit sendWeldBoxInfo(allBoxes);
 }
 
 void YoloSegInference::whenImageNeedToSave(const cv::Mat& inferResult, const std::string& savePrefix) {
@@ -211,6 +309,7 @@ void YoloDetInference::whenRecieveWpMaskInWorld(std::vector<cv::Point3d> worldCe
         return;
     }
     maskWorldCenters = worldCenters;
+    maskCanvasSizes.clear();
     std::vector<cv::Mat> expandedImages;
 
     for (size_t i = 0; i < worldMaskImages.size(); ++i) {
@@ -240,6 +339,8 @@ void YoloDetInference::whenRecieveWpMaskInWorld(std::vector<cv::Point3d> worldCe
         int xOffset = (canvas.cols - imageWidth) / 2;
         int yOffset = (canvas.rows - imageHeight) / 2;
         resizedImage.copyTo(canvas(cv::Rect(xOffset, yOffset, imageWidth, imageHeight)));
+        maskCanvasSizes.emplace_back(canvasWidth, canvasHeight);
+        rectRotationAngleYolo = rectRotationAngle;
         if (workbenchInsertGroup == "negative") {
             rectRotationAngleYolo = rectRotationAngle + 180;
         }
@@ -347,16 +448,15 @@ void YoloDetInference::parseDetResults(const std::vector<DetResult>& detResult, 
 }
 
 void YoloDetInference::whenCoordinatesNeedToProceed(std::vector<std::vector<cv::Rect_<float>>> rect_Dets, std::vector<cv::Point3d> worldCenters) {
-    // 计算画布的中心，使用 double 类型
-    const double canvasW = static_cast<double>(expandedWidth);
-    const double canvasH = static_cast<double>(expandedHeight);
-    const cv::Point2d canvasCenter(canvasW / 2.0, canvasH / 2.0);
-
     std::vector<std::vector<std::array<double, 4>>> boxInfos;
 
     for (size_t i = 0; i < rect_Dets.size(); ++i) {
         const auto& rects = rect_Dets[i];
         std::vector<std::array<double, 4>> infos;
+        const cv::Size canvasSize = i < maskCanvasSizes.size() ? maskCanvasSizes[i] : cv::Size(expandedWidth, expandedHeight);
+        const double canvasW = static_cast<double>(canvasSize.width);
+        const double canvasH = static_cast<double>(canvasSize.height);
+        const cv::Point2d canvasCenter(canvasW / 2.0, canvasH / 2.0);
 
         for (const auto& rect : rects) {
             // 检测框中心点（旋转后图像）
@@ -373,15 +473,15 @@ void YoloDetInference::whenCoordinatesNeedToProceed(std::vector<std::vector<cv::
                     break;
                 case 90:
                     origX = cy;
-                    origY = expandedWidth - cx;
+                    origY = canvasW - cx;
                     std::swap(w, h);
                     break;
                 case 180:
-                    origX = expandedWidth - cx;
-                    origY = expandedHeight - cy;
+                    origX = canvasW - cx;
+                    origY = canvasH - cy;
                     break;
                 case 270:
-                    origX = expandedHeight - cy;
+                    origX = canvasH - cy;
                     origY = cx;
                     std::swap(w, h);
                     break;
