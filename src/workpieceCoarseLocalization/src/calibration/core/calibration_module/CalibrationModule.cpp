@@ -232,6 +232,7 @@ public:
 
     virtual ExternalAxisType axisType() const = 0;
 
+    //末尾的const表示这是一个const成员函数，表示这个函数只能读取这个类
     bool solve(const ExternalAxisCalibrationRequest& calibrationRequest,
                ExternalAxisCalibrationResult& calibrationResult,
                std::string& errorMessage) const {
@@ -308,6 +309,7 @@ protected:
     }
 
 private:
+    //纯虚函数，子类必须实现这个函数
     virtual bool buildUpdatedCameraToBaseMatrix(const ExternalAxisCalibrationRequest& calibrationRequest,
                                                 const ExternalAxisCalibrationInput& axisInput,
                                                 const cv::Mat& unitDirectionMat,

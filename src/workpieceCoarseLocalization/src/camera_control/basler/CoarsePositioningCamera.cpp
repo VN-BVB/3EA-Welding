@@ -4,6 +4,7 @@
 #pragma execution_character_set("utf-8")
 int cameraIndex = 0;
 
+//创建相机工厂指针，调用loadCalibConfigFromFile读取粗精定位相机序列号至serialNum
 CoarsePositioningCamera::CoarsePositioningCamera() : cameraFactory(std::make_shared<BaslerCameraFactory>(nullptr)) {
     this->loadCalibConfigFromFile(configFilePath);
 }
@@ -50,6 +51,7 @@ void CoarsePositioningCamera::openCamera() {
             cam->setPara("ExposureTimeRaw", (int64_t)exposure);
             connect(cam.get(), &AbstractCamera::sendImage, this, &CoarsePositioningCamera::whenGetCameraImage);
             cameras.push_back(cam);
+            //将相机编号push进S_Ns
             S_Ns.push_back(devSerial);
             color[i] = MY_COLOR::GREEN;
             emit appendCameraLog(QString(u8"相机 %1 连接成功").arg(QString::fromStdString(devSerial)));
@@ -62,12 +64,14 @@ void CoarsePositioningCamera::openCamera() {
     emit sendCameraStatus(coaresLocCamera, color);
     emit sendSerialNumber(S_Ns);
 
+    //当前相机设置为相机编号群的第一个编号，默认为粗定位相机
     currentS_N = S_Ns[0];
     savedImages = nullptr;
     sharedCameraThread->start();
 }
 
 void CoarsePositioningCamera::whenCameraImageInfer() {
+    //创建一个QEventLoop，并在CoarsePositioningCamera发出imageReady的时候退出循环
     QEventLoop imageWaitLoop;
     connect(this, &CoarsePositioningCamera::imageReady, &imageWaitLoop, &QEventLoop::quit);
 
@@ -96,6 +100,7 @@ void CoarsePositioningCamera::whenCameraImageInfer() {
     imageSaverToInfer = 1;
     connect(this, &CoarsePositioningCamera::cameraStartGrabbing, cameras[idx].get(), &AbstractCamera::start);
     emit cameraStartGrabbing();
+    //开启循环等待，CoarsePositioningCamera发出imageReady的时候退出循环
     imageWaitLoop.exec();
     disconnect(this, &CoarsePositioningCamera::cameraStartGrabbing, cameras[idx].get(), &AbstractCamera::start);
     cameras[idx]->stop();
@@ -254,6 +259,7 @@ void CoarsePositioningCamera::loadCalibConfigFromFile(const std::string& filenam
 
 // 相机曝光改变
 void CoarsePositioningCamera::whenGetCameraExposure(int inputexposure) {
+    //std::shared_ptr 可以在条件判断中转换成布尔值：if (cam != nullptr)
     for (auto& cam : cameras) {
         if (cam) {
             cam->setPara("ExposureTimeRaw", (int64_t)inputexposure);

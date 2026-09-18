@@ -1,22 +1,22 @@
 ﻿
 #include "../include/others.h"
 
-std::vector<double> vecWorldX, vecWorldY, vecWorldZ;  // 鏍囧畾鏉垮湪鏈烘鑷傚熀鍧愭爣绯荤殑鍧愭爣
+std::vector<double> vecWorldX, vecWorldY, vecWorldZ;  // 标定板在机械臂基坐标系下的坐标
 void calc_stdev(vector<double> &vecWorld, double &stdev, double &mean) {
     double sum = std::accumulate(std::begin(vecWorld), std::end(vecWorld), 0.0);
-    mean = sum / vecWorld.size();  // 鍧囧€?
+    mean = sum / vecWorld.size();  // 均值
     double accum = 0.0;
     std::for_each(std::begin(vecWorld), std::end(vecWorld), [&](const double d) { accum += (d - mean) * (d - mean); });
-    stdev = sqrt(accum / (vecWorld.size() - 1));  // 鏍囧噯宸?
+    stdev = sqrt(accum / (vecWorld.size() - 1));  // 标准差
 }
-// RT杞琑鍜孴  浠嶳T涓妸 R鍜孴鏁村嚭鏉?
+// 将 RT 拆分为旋转矩阵 R 和平移向量 T
 void RT2R_T(cv::Mat &RT, cv::Mat &R, cv::Mat &T) {
     cv::Rect R_rect(0, 0, 3, 3);
     cv::Rect T_rect(3, 0, 1, 3);
     R = RT(R_rect);
     T = RT(T_rect);
 }
-// R鍜孴杞琑T
+// 将旋转矩阵 R 和平移向量 T 组合为 RT
 cv::Mat R_T2RT(cv::Mat &R, cv::Mat &T) {
     cv::Mat RT;
     cv::Mat_<double> R1 =
@@ -28,7 +28,7 @@ cv::Mat R_T2RT(cv::Mat &R, cv::Mat &T) {
     return RT;
 }
 
-// 鏍规嵁鏍囧畾鏉夸俊鎭紝杈撳嚭鍧愭爣鐐?
+// 根据标定板信息生成标定板坐标点
 void calculate_Object_Points(int board_width, int board_heignt, double circle_distance, vector<cv::Point3f> &objP) {
     for (int i = 0; i < board_heignt; i++) {
         for (int j = 0; j < board_width; j++) {
@@ -38,11 +38,11 @@ void calculate_Object_Points(int board_width, int board_heignt, double circle_di
 }
 bool calculate_Image_Points_ChessboardCorners(const std::string &path, cv::Size boardSize,
                                               std::vector<std::vector<cv::Point2f>> &imagePoints) {
-    // 浣跨敤 cv::glob 鑾峰彇鐩綍涓殑鎵€鏈?bmp鍥剧墖鏂囦欢璺緞
+    // 使用 cv::glob 获取目录中所有 BMP 图片的文件路径
     std::vector<cv::String> imageList;
-    cv::glob(path + "/*.bmp", imageList);  // 鏍规嵁璺緞鍜屾枃浠剁被鍨?.bmp)鑾峰彇鍥剧墖鍒楄〃
+    cv::glob(path + "/*.bmp", imageList);  // 根据路径和文件类型（.bmp）获取图片列表
 
-    // 妫€鏌ユ槸鍚︽壘鍒板浘鐗囨枃浠?
+    // 检查是否找到图片文件
     if (imageList.empty()) {
         std::cerr << "No images found in the directory!" << std::endl;
         return false;
@@ -51,14 +51,14 @@ bool calculate_Image_Points_ChessboardCorners(const std::string &path, cv::Size 
     int nframes = (int)imageList.size();
     int imageCount = 0;
 
-    // 閬嶅巻鎵€鏈夌殑鍥剧墖
+    // 遍历所有图片
     for (int i = 0; i < nframes; i++) {
         cv::Mat view, viewGray;
 
-        // 璇诲彇褰撳墠鍥剧墖
+        // 读取当前图片
         if (i < (int)imageList.size()) {
             std::cout << "Processing image: " << imageList[i] << std::endl;
-            view = cv::imread(imageList[i], cv::IMREAD_COLOR);  // 璇诲彇褰╄壊鍥剧墖
+            view = cv::imread(imageList[i], cv::IMREAD_COLOR);  // 读取彩色图片
         }
 
         if (view.empty()) {
@@ -68,20 +68,20 @@ bool calculate_Image_Points_ChessboardCorners(const std::string &path, cv::Size 
 
         std::vector<cv::Point2f> imagePointsBuf;
 
-        // 妫€鏌ュ浘鍍忔槸鍚﹀凡缁忔槸鐏板害鍥惧儚
+        // 检查图像是否已经是灰度图像
         if (view.channels() == 3) {
-            cv::cvtColor(view, viewGray, cv::COLOR_BGR2GRAY);  // 濡傛灉鏄僵鑹插浘鍍忥紝鍒欒浆鎹负鐏板害鍥惧儚
+            cv::cvtColor(view, viewGray, cv::COLOR_BGR2GRAY);  // 彩色图像转换为灰度图像
         } else {
-            viewGray = view;  // 濡傛灉宸茬粡鏄伆搴﹀浘鍍忥紝鐩存帴浣跨敤
+            viewGray = view;  // 已经是灰度图像，直接使用
         }
 
-        // 浣跨敤 cv::findChessboardCornersSB 鏌ユ壘妫嬬洏鏍艰鐐?
+        // 使用 cv::findChessboardCornersSB 查找棋盘格角点
         if (cv::findChessboardCornersSB(viewGray, boardSize, imagePointsBuf)) {
-            // 瀵硅鐐硅繘琛屼簹鍍忕礌绾х簿纭寲
+            // 对角点进行亚像素级精确化
             cv::cornerSubPix(viewGray, imagePointsBuf, cv::Size(5, 5), cv::Size(-1, -1),
                              cv::TermCriteria(cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS, 30, 0.1));
 
-            // 缁熶竴瑙掔偣椤哄簭锛岀‘淇濋『鏃堕拡椤哄簭
+            // 统一角点顺序，确保方向一致
             if (imagePointsBuf[0].x > imagePointsBuf[imagePointsBuf.size() - 1].x) {
                 std::vector<cv::Point2f> buf;
                 for (int i = 0; i < imagePointsBuf.size(); i++) {
@@ -91,7 +91,7 @@ bool calculate_Image_Points_ChessboardCorners(const std::string &path, cv::Size 
                 imagePointsBuf = buf;
             }
 
-            // 鍙鍖栬鐐瑰苟淇濆瓨
+            // 可视化角点并标注序号
             int pointIndex = 0;
             for (int j = 0; j < imagePointsBuf.size(); j++) {
                 cv::circle(view, cv::Point(imagePointsBuf[j].x, imagePointsBuf[j].y), 1, cv::Scalar(0, 0, 255), -1);
@@ -103,27 +103,27 @@ bool calculate_Image_Points_ChessboardCorners(const std::string &path, cv::Size 
                 cv::putText(view, std::to_string(pointIndex++), textPosition, fontFace, fontScale, fontColor, fontThickness);
             }
 
-            // 灏嗚鐐逛繚瀛樺埌 imagePoints 涓?
+            // 将角点保存到 imagePoints 中
             imagePoints.push_back(imagePointsBuf);
         } else {
             std::cout << "Num " << i << " can not find chessboard corners!\n";
         }
 
-        // 鏄剧ず澶勭悊鍚庣殑鍥惧儚
+        // 记录已处理的图像数量
         imageCount++;
         if (imageCount == 1) {
-            // 鑾峰彇绗竴寮犲浘鐗囩殑鍥惧儚瀹介珮淇℃伅
+            // 输出第一张图片的尺寸信息
             std::cout << "Image size: " << view.cols << "x" << view.rows << std::endl;
         }
     }
 
-    // 绛夊緟鏄剧ず绐楀彛鍏抽棴
+    // 所有图片处理完成
     return true;
 }
-// 鏍规嵁璇诲彇鐨勫浘鐗囷紝璁＄畻鍚勫紶鍥剧墖鐨勫渾蹇冮泦鍚?
+// 读取目录中的图片，计算每张图片的圆心集合
 bool calculate_Image_Points(std::string &path, cv::Size boardSize, std::vector<std::vector<cv::Point2f>> &imagePoints) {
     std::vector<cv::String> imageList;
-    cv::glob(path + "/*.bmp", imageList);  // 鍦嗙洏涓篵mp
+    cv::glob(path + "/*.bmp", imageList);  // 圆点标定板图片为 BMP 格式
     if (imageList.size() == 0) {
         std::cout << "no images." << std::endl;
         return false;
@@ -140,24 +140,24 @@ bool calculate_Image_Points(std::string &path, cv::Size boardSize, std::vector<s
         std::cout << "\n";
         std::vector<cv::Point2f> pointbuf;
         cvtColor(view, viewGray, cv::COLOR_BGR2GRAY);
-        cv::bitwise_not(viewGray, viewGray);  // 鍙嶈浆鐏板害鍥惧儚
-        // 瀹為檯鏍囧畾鍥剧墖锛屽簲鐏板害缈昏浆
+        cv::bitwise_not(viewGray, viewGray);  // 反转灰度图像
+        // 实际标定图片需要进行灰度反转
         for (int row = 0; row < viewGray.rows; row++) {
             for (int col = 0; col < viewGray.cols; col++) {
-                viewGray.at<uchar>(row, col) = 255 - viewGray.at<uchar>(row, col);  // 鐏板害鍙嶈浆
+                viewGray.at<uchar>(row, col) = 255 - viewGray.at<uchar>(row, col);  // 灰度反转
             }
         }
 
-        //// Blob绠楀瓙鍙傛暟
+        //// Blob 算子参数
         cv::SimpleBlobDetector::Params params;
         // params.filterByArea = true;
         params.maxArea = 10e4;  // 10e4
         params.minArea = 30;    // 30
         params.minDistBetweenBlobs = 10;
-        // params.minThreshold = 10;   //榛樿50
-        // params.maxThreshold = 250;  //榛樿220
-        params.filterByInertia = true;  // 鏂戠偣鎯€х巼鐨勯檺鍒跺彉閲? 鐭酱/闀胯酱
-        params.minInertiaRatio = 0.5f;  // 鏂戠偣鐨勬渶灏忔儻鎬х巼;
+        // params.minThreshold = 10;   // 默认值为 50
+        // params.maxThreshold = 250;  // 默认值为 220
+        params.filterByInertia = true;  // 启用斑点惯性率限制（短轴/长轴）
+        params.minInertiaRatio = 0.5f;  // 斑点的最小惯性率
 
         cv::Ptr<cv::FeatureDetector> blobDetector = cv::SimpleBlobDetector::create(params);
 
@@ -176,22 +176,22 @@ bool calculate_Image_Points(std::string &path, cv::Size boardSize, std::vector<s
             imagePoints.push_back(pointbuf);
         } else {
             std::cout << "Failed to find circle grid in current image." << std::endl;
-            // 鑾峰彇鏂囦欢璺緞鍜屾枃浠跺悕
+            // 获取文件路径和文件名
             std::string newFileName = imageList[i];
-            // 鍦ㄦ枃浠跺悕鏈熬娣诲姞 "_unfind" 鍚庣紑
+            // 在文件扩展名前添加“_unfind”后缀
             size_t lastDot = newFileName.find_last_of(".");
             if (lastDot != std::string::npos) {
                 newFileName.insert(lastDot, "_unfind");
             }
 
-            // 閲嶅懡鍚嶆枃浠?
+            // 重命名文件
             if (rename(imageList[i].c_str(), newFileName.c_str()) != 0) {
-                std::cerr << "鏃犳硶閲嶅懡鍚嶆枃浠? " << imageList[i] << std::endl;
+                std::cerr << "无法重命名文件：" << imageList[i] << std::endl;
             } else {
-                // std::cout << "閲嶅懡鍚嶄负: " << newFileName << std::endl;
+                // std::cout << "重命名为：" << newFileName << std::endl;
             }
         }
-        // 鍙鍖?
+        // 可视化检测结果
         drawChessboardCorners(view, boardSize, cv::Mat(pointbuf), found);
     }
     return true;
@@ -207,32 +207,32 @@ bool calculate_Image_Points_V(std::vector<cv::Mat> &dirImages, cv::Size boardSiz
     }
 
     for (int i = 0; i < nframes; i++) {
-        cv::Mat view = dirImages[i];  // 鐩存帴浠庝紶鍏ョ殑 dirImages 涓彇鍑哄浘鍍?
+        cv::Mat view = dirImages[i];  // 直接从传入的 dirImages 中取出图像
         cv::Mat viewGray;
 
         std::cout << "Processing image " << i + 1 << " / " << nframes << std::endl;
 
-        // 杞崲涓虹伆搴﹀浘鍍?
+        // 转换为灰度图像
         cvtColor(view, viewGray, cv::COLOR_BGR2GRAY);
-        cv::bitwise_not(viewGray, viewGray);  // 鍙嶈浆鐏板害鍥惧儚
-        // 鐏板害鍙嶈浆
+        cv::bitwise_not(viewGray, viewGray);  // 反转灰度图像
+        // 灰度反转
         for (int row = 0; row < viewGray.rows; row++) {
             for (int col = 0; col < viewGray.cols; col++) {
-                viewGray.at<uchar>(row, col) = 255 - viewGray.at<uchar>(row, col);  // 鐏板害鍙嶈浆
+                viewGray.at<uchar>(row, col) = 255 - viewGray.at<uchar>(row, col);  // 灰度反转
             }
         }
 
-        // Blob绠楀瓙鍙傛暟
+        // Blob 算子参数
         cv::SimpleBlobDetector::Params params;
-        params.maxArea = 10e4;            // 璁剧疆鏈€澶ч潰绉?
-        params.minArea = 30;              // 璁剧疆鏈€灏忛潰绉?
-        params.minDistBetweenBlobs = 10;  // 璁剧疆鏂戠偣涔嬮棿鐨勬渶灏忚窛绂?
-        params.filterByInertia = true;    // 鍚敤鏂戠偣鎯€х巼鐨勯檺鍒?
-        params.minInertiaRatio = 0.5f;    // 璁剧疆鏈€灏忔儻鎬х巼
+        params.maxArea = 10e4;            // 设置最大面积
+        params.minArea = 30;              // 设置最小面积
+        params.minDistBetweenBlobs = 10;  // 设置斑点之间的最小距离
+        params.filterByInertia = true;    // 启用斑点惯性率限制
+        params.minInertiaRatio = 0.5f;    // 设置最小惯性率
 
         cv::Ptr<cv::FeatureDetector> blobDetector = cv::SimpleBlobDetector::create(params);
 
-        // 鏌ユ壘妫嬬洏鏍兼爣瀹氭澘涓婄殑鍦嗙偣
+        // 查找圆点标定板上的圆心
         std::vector<cv::Point2f> pointbuf;
         bool found;
         if (1) {
@@ -251,34 +251,34 @@ bool calculate_Image_Points_V(std::vector<cv::Mat> &dirImages, cv::Size boardSiz
                 pointbuf.clear();
                 pointbuf = buf;
             }
-            imagePoints.push_back(pointbuf);  // 濡傛灉鎵惧埌浜嗗渾蹇冿紝瀛樺叆 imagePoints
+            imagePoints.push_back(pointbuf);  // 找到圆心后存入 imagePoints
         } else {
             std::cout << "Failed to find circle grid in current image." << std::endl;
         }
 
-        // 鍙鍖栫粨鏋?
+        // 可视化检测结果
         drawChessboardCorners(view, boardSize, cv::Mat(pointbuf), found);
     }
 
     return true;
 }
 
-// 宸茬煡鍐呭弬鏍囧畾澶栧弬
+// 使用已知相机内参求解标定板外参
 void Calibration_Solve_Extrinsics(cv::Mat &Kc, cv::Mat &distCoeffs, vector<cv::Point3f> &objPoints,
                                   std::vector<std::vector<cv::Point2f>> &imagePoints, std::vector<cv::Mat> &vecHc) {
     std::vector<double> camera_distortion(distCoeffs.begin<double>(), distCoeffs.end<double>());
     for (int i = 0; i < imagePoints.size(); i++) {
-        // 鍒涘缓鏃嬭浆鐭╅樀鍜屽钩绉荤煩闃?
+        // 创建旋转向量和平移向量
         cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
         cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
         cv::solvePnP(objPoints, imagePoints[i], Kc, camera_distortion, rvec, tvec);
         cv::Mat rotM = cv::Mat::eye(3, 3, CV_64F);
-        cv::Rodrigues(rvec, rotM);  // 灏嗘棆杞悜閲忓彉鎹㈡垚鏃嬭浆鐭╅樀
+        cv::Rodrigues(rvec, rotM);  // 将旋转向量转换为旋转矩阵
         cv::Mat RT_Mat_temp;
         hconcat(rotM, tvec, RT_Mat_temp);
-        cv::Mat last_line = (cv::Mat_<double>(1, 4) << 0, 0, 0, 1);  // 榻愭鐭╅樀鏈€鍚庝竴琛?
+        cv::Mat last_line = (cv::Mat_<double>(1, 4) << 0, 0, 0, 1);  // 齐次矩阵最后一行
         cv::Mat RT_Mat;
-        cv::vconcat(RT_Mat_temp, last_line, RT_Mat);  // 杈撳嚭澶栧弬鐭╅樀
+        cv::vconcat(RT_Mat_temp, last_line, RT_Mat);  // 输出外参矩阵
         vecHc.push_back(RT_Mat);
     }
 }
@@ -290,8 +290,8 @@ void draw_line_chart(vector<double> &X_data, vector<double> &Y_data, string stri
     plot_->setTitle(title);
     plot_->setXTitle("X");
     plot_->setYTitle("Y");
-    plot_->addPlotData(X_data, Y_data, "display", vtkChart::LINE);  // X,Y鍧囦负double鍨嬬殑鍚戦噺
-    plot_->plot();                                                  // 缁樺埗鏇茬嚎
+    plot_->addPlotData(X_data, Y_data, "display", vtkChart::LINE);  // X、Y 均为 double 类型的向量
+    plot_->plot();                                                  // 绘制曲线
 }
 
 void draw_line_chart_visualization(pcl::visualization::PCLPlotter *plot_, vector<double> &X_data, vector<double> &Y_data,
@@ -302,8 +302,8 @@ void draw_line_chart_visualization(pcl::visualization::PCLPlotter *plot_, vector
     plot_->setTitle(title);
     plot_->setXTitle("X");
     plot_->setYTitle("Y");
-    plot_->addPlotData(X_data, Y_data, "display", vtkChart::LINE);  // X,Y鍧囦负double鍨嬬殑鍚戦噺
-    plot_->plot();                                                  // 缁樺埗鏇茬嚎
+    plot_->addPlotData(X_data, Y_data, "display", vtkChart::LINE);  // X、Y 均为 double 类型的向量
+    plot_->plot();                                                  // 绘制曲线
 
     while (!plot_->wasStopped()) {
         plot_->spinOnce(100);

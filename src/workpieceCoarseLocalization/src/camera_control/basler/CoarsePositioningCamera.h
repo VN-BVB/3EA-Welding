@@ -48,8 +48,8 @@ public:
     void loadCalibConfigFromFile(const std::string& filename);
     void whenGetCameraImage(cv::Mat img, CAMERA_WORK_MODE workMode);
 
-    int imageSaverToInfer = 0;               // 需要保存的图象数
-    int imageNumberToSaveInCalibration = 0;  // 需要保存的图象数
+    int imageSaverToInfer = 0;               // 需要保存的推理图象数
+    int imageNumberToSaveInCalibration = 0;  // 需要保存的标定图象数（相机内参，畸变系数，平面，手眼，三轴方向向量）
     std::string currentS_N;                  // 当前选择相机编号
     std::vector<std::string> S_Ns;           // 相机编号群
     int saveTypeEnable;                      // 图像保存类型
