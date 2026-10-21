@@ -75,7 +75,7 @@ void CoarseCalibration::whenCalibratePlane(const QString& calibrationRootPath, c
         return;
     }
 
-    //提取内参
+    //从calibrationConfig中提取内参
     CameraCalibration::Result cameraResult;
     if (!calibrationConfig.getCameraIntrinsics(cameraResult)) {
         emit sendCalibrationResult(QStringLiteral("plane"), false);
@@ -120,11 +120,13 @@ void CoarseCalibration::whenCalibratePlane(const QString& calibrationRootPath, c
  * @param resultFilePath 标定结果 JSON 文件路径（含文件名），本项目为 ./data/config/workpiece_localization_calib.json
  */
 void CoarseCalibration::whenCalibrateHandEye(const QString& calibrationRootPath, const QString& resultFilePath) {
+    //从本地JSON中将标定好的数据读到内存中
     if (!calibrationConfig.readConfig(resultFilePath.toStdString())) {
         emit sendCalibrationResult(QStringLiteral("handeye"), false);
         return;
     }
 
+    //从calibrationConfig中提取内参
     CameraCalibration::Result cameraResult;
     if (!calibrationConfig.getCameraIntrinsics(cameraResult)) {
         emit sendCalibrationResult(QStringLiteral("handeye"), false);
@@ -133,6 +135,8 @@ void CoarseCalibration::whenCalibrateHandEye(const QString& calibrationRootPath,
 
     const QString imageDirectory = QDir::cleanPath(calibrationRootPath + "/img");
     const QString poseDirectory = QDir::cleanPath(calibrationRootPath + "/pos");
+
+    //手眼标定结果保存结构体
     HandEyeCalculation::Result handEyeResult;
     if (!HandEyeCalculation::calibrate(imageDirectory.toStdString(), poseDirectory.toStdString(), cameraResult.cameraMatrix, cameraResult.distCoeffs,
                                        boardConfig, handEyeResult)) {
@@ -183,6 +187,8 @@ void CoarseCalibration::whenCalibrateAxis(const QString& calibrationRootPath, co
             return;
     }
 
+
+    //从本地JSON读取标定数据
     if (!calibrationConfig.readConfig(resultFilePath.toStdString())) {
         emit sendCalibrationResult(QStringLiteral("external_axis"), false);
         return;

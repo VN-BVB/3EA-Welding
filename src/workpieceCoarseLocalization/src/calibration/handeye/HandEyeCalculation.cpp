@@ -36,16 +36,20 @@ bool calibrate(const std::string& imagePath, const std::string& posePath, const 
         return false;
     }
 
+    //构建世界点，装进objectPoints
     BoardDetection::createObjectPoints(boardConfig.boardWidth, boardConfig.boardHeight, boardConfig.circleDistance, objectPoints);
+    //检测角点，装进imagePoints
     if (!BoardDetection::findCirclesInFolder(imagePath, boardSize, imagePoints)) {
         return false;
     }
 
+    //计算外参
     PoseCalculation::solveBoardPoses(cameraMatrixCopy, distCoeffsCopy, objectPoints, imagePoints, boardToCameraTransforms);
     if (boardToCameraTransforms.empty()) {
         return false;
     }
 
+    //读取机器臂位姿
     if (!HandEyeCalibration::readRobotDatasFromFile(posePath, gripperToBaseTransforms, false)) {
         return false;
     }
@@ -53,17 +57,21 @@ bool calibrate(const std::string& imagePath, const std::string& posePath, const 
         return false;
     }
 
+    //拆机器人的旋转与平移
     for (cv::Mat& transform : gripperToBaseTransforms) {
         PoseCalculation::splitTransform(transform, rotation, translation);
         gripperToBaseRotations.push_back(rotation);
         gripperToBaseTranslations.push_back(translation);
     }
+
+    //拆上面PnP求出来的标定板位姿（标定板到相机）
     for (cv::Mat& transform : boardToCameraTransforms) {
         PoseCalculation::splitTransform(transform, rotation, translation);
         targetToCameraRotations.push_back(rotation);
         targetToCameraTranslations.push_back(translation);
     }
 
+    //计算手眼矩阵，眼在手外
     cv::calibrateHandEye(gripperToBaseRotations, gripperToBaseTranslations, targetToCameraRotations, targetToCameraTranslations,
                          cameraToGripperRotation, cameraToGripperTranslation, cv::CALIB_HAND_EYE_PARK);
 
