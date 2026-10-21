@@ -23,6 +23,12 @@ CoarseCalibration::~CoarseCalibration() = default;
 
 void CoarseCalibration::whenUpdateCurrentXAxisEncoderValue(double encoderValue) { currentXAxisEncoderValue = encoderValue; }
 
+
+/**
+ * @brief 执行相机内参、畸变系数标定并保存相机内参、畸变系数
+ * @param calibrationRootPath 标定数据根目录，本项目为 ./data/workpieceCoaLoc/Calib
+ * @param resultFilePath 标定结果 JSON 文件路径（含文件名），本项目为 ./data/config/workpiece_localization_calib.json
+ */
 void CoarseCalibration::whenCalibrateCamera(const QString& calibrationRootPath, const QString& resultFilePath) {
     const std::string imageDirectory = calibrationRootPath.toStdString() + "\\img";
     std::vector<std::string> imagePaths;
@@ -43,24 +49,33 @@ void CoarseCalibration::whenCalibrateCamera(const QString& calibrationRootPath, 
         return;
     }
 
-    // 首次标定允许结果文件不存在，此时从空结果开始保存相机内参。
+    // 首次标定允许结果文件不存在，此时从空结果开始保存相机内参
     calibrationConfig.readConfig(resultFilePath.toStdString());
+    //将计算出的内参及畸变系数结果写入calibrationConfig中的calibrationResult，先保存在内存中
     calibrationConfig.updateCameraResult(cameraResult);
+    //将计算结果写入本地JSON文件
     if (!calibrationConfig.writeConfig(resultFilePath.toStdString())) {
         emit sendCalibrationResult(QStringLiteral("camera"), false);
         return;
     }
 
-    emit sendMessage(QStringLiteral("相机内参标定误差：%1 mm").arg(cameraResult.totalErr, 0, 'f', 6));
+    emit sendMessage(QStringLiteral("相机内参标定误差（opencvRms）：%1 像素").arg(cameraResult.totalErr, 0, 'f', 6));
     emit sendCalibrationResult(QStringLiteral("camera"), true);
 }
 
+/**
+ * @brief 执行平面标定并保存平面结果
+ * @param calibrationRootPath 标定数据根目录，本项目为 ./data/workpieceCoaLoc/Calib/plane
+ * @param resultFilePath 标定结果 JSON 文件路径（含文件名），本项目为 ./data/config/workpiece_localization_calib.json
+ */
 void CoarseCalibration::whenCalibratePlane(const QString& calibrationRootPath, const QString& resultFilePath) {
+    //从本地JSON中将标定好的数据读到内存中
     if (!calibrationConfig.readConfig(resultFilePath.toStdString())) {
         emit sendCalibrationResult(QStringLiteral("plane"), false);
         return;
     }
 
+    //提取内参
     CameraCalibration::Result cameraResult;
     if (!calibrationConfig.getCameraIntrinsics(cameraResult)) {
         emit sendCalibrationResult(QStringLiteral("plane"), false);
@@ -99,6 +114,11 @@ void CoarseCalibration::whenCalibratePlane(const QString& calibrationRootPath, c
     emit sendCalibrationResult(QStringLiteral("plane"), true);
 }
 
+/**
+ * @brief 执行手眼标定并保存手眼矩阵
+ * @param calibrationRootPath 标定数据根目录，本项目为 ./data/workpieceCoaLoc/Calib
+ * @param resultFilePath 标定结果 JSON 文件路径（含文件名），本项目为 ./data/config/workpiece_localization_calib.json
+ */
 void CoarseCalibration::whenCalibrateHandEye(const QString& calibrationRootPath, const QString& resultFilePath) {
     if (!calibrationConfig.readConfig(resultFilePath.toStdString())) {
         emit sendCalibrationResult(QStringLiteral("handeye"), false);
@@ -132,6 +152,12 @@ void CoarseCalibration::whenCalibrateHandEye(const QString& calibrationRootPath,
     emit sendCalibrationResult(QStringLiteral("handeye"), true);
 }
 
+/**
+ * @brief 执行外部三轴方向向量标定，每次标定一个轴
+ * @param calibrationRootPath 标定数据根目录，本项目为 ./data/workpieceCoaLoc/Calib/x_axis、y_axis 、 z_axis
+ * @param resultFilePath 标定结果 JSON 文件路径（含文件名），本项目为 ./data/config/workpiece_localization_calib.json
+ * @param axisTypeValue 标定轴类型：0 为 X 轴，1 为 Y 轴，2 为 Z 轴。
+ */
 void CoarseCalibration::whenCalibrateAxis(const QString& calibrationRootPath, const QString& resultFilePath, int axisTypeValue) {
     AxisCalibration::Type axisType = AxisCalibration::Type::XAxis;
     QString axisName;
@@ -266,7 +292,9 @@ void CoarseCalibration::whenQueryCoordinate(const QString& calibrationRootPath, 
 
 void CoarseCalibration::listBmpImages(const std::string& directory, std::vector<std::string>& imagePaths) {
     const std::string searchPath = directory + "\\*";
+    //windows提供的文件查找接口，用findData存放找到的文件信息
     WIN32_FIND_DATAA findData;
+    //在searchPath.c_str()查找文件，结果保存在findData中，后续可用FindNextFileA查找下一个
     HANDLE handle = FindFirstFileA(searchPath.c_str(), &findData);
 
     imagePaths.clear();

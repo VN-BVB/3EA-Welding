@@ -128,7 +128,8 @@ void CameraPlaneAlgorithms::calibrateCamera(std::vector<std::string>& files, cv:
      * TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON)  // 迭代终止准则
      * );
      */
-    cv::calibrateCamera(objectPoints, imagePointsSeq, imageSize, cameraMatrix, distCoeffs, rvecsMat, tvecsMat,
+    double totalErrRms = 0.0;
+    totalErrRms = cv::calibrateCamera(objectPoints, imagePointsSeq, imageSize, cameraMatrix, distCoeffs, rvecsMat, tvecsMat,
                         cv::CALIB_FIX_K3);  //
 
     // std::cout << "标定成功" << std::endl;
@@ -172,7 +173,8 @@ void CameraPlaneAlgorithms::calibrateCamera(std::vector<std::string>& files, cv:
             tempImagePointMat.at<cv::Vec2f>(0, j) = cv::Vec2f(tempImagePoint[j].x, tempImagePoint[j].y);
         }
         err = cv::norm(imagePoints2Mat, tempImagePointMat, cv::NORM_L2);
-        totalErr += err /= pointCounts[i];
+        // totalErr += err /= pointCounts[i];
+        totalErr = totalErrRms;
     }
 }
 void CameraPlaneAlgorithms::calibratePlane(std::vector<std::string>& files, cv::Mat& cameraMatrix, cv::Mat& distCoeffs,
