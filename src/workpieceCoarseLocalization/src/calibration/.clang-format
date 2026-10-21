@@ -1,0 +1,17 @@
+﻿# 仅作用于标定目录：沿用项目 README 中的排版约定。
+BasedOnStyle: Google
+IndentWidth: 4
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+ColumnLimit: 150
+UseTab: Never
+BreakBeforeBraces: Attach
+AlignAfterOpenBracket: Align
+AlignArrayOfStructures: Left
+DerivePointerAlignment: false
+PointerAlignment: Left
+SortIncludes: Never
+IncludeBlocks: Preserve
+ReflowComments: false
+FixNamespaceComments: false
+LineEnding: CRLF

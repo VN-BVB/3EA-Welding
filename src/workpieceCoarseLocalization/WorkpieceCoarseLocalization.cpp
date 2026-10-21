@@ -76,8 +76,9 @@ WorkpieceCoarseLocalization::WorkpieceCoarseLocalization(QWidget* parent) : QWid
     connect(baslerControl, &CoarsePositioningCamera::appendCameraLog, this, &WorkpieceCoarseLocalization::whenAppendLog);
 
     //标定模块
-    calibrationWorker->moveToThread(calibrationThread);
-    connect(calibrationWorker, &CalibrationWorker::messageRaised, this, &WorkpieceCoarseLocalization::whenAppendLog);
+    coarseCalibration->moveToThread(calibrationThread);
+    connect(coarseCalibration, &CoarseCalibration::sendMessage, this, &WorkpieceCoarseLocalization::whenAppendLog);
+    connect(calibrationThread, &QThread::finished, coarseCalibration, &QObject::deleteLater);
     calibrationThread->start();
 
     // inferenceSubThread->start();
@@ -86,11 +87,14 @@ WorkpieceCoarseLocalization::WorkpieceCoarseLocalization(QWidget* parent) : QWid
 }
 
 WorkpieceCoarseLocalization::~WorkpieceCoarseLocalization() {
+    calibrationThread->quit();
+    calibrationThread->wait();
+
     delete ui;
     delete yolo11SegInference;
     delete yolo11RectInference;
     delete fittingWorkpieceCoordinate;
-    delete calibrationWorker;
+    delete calibrationThread;
 }
 
 void WorkpieceCoarseLocalization::whenGetImage(cv::Mat res) { ui->qImageWidget->setOpenCVImage(res); }
@@ -527,23 +531,24 @@ void WorkpieceCoarseLocalization::on_btnStartCalibration_clicked() {
     QString calibPath = "./data/workpieceCoaLoc/Calib";          // 标定图片存放目录
     QString resultPath = QString::fromStdString(configFilePath); // 结果保存路径
 
+    //选用invokeMethod执行一次调用，不用connect去建立长期连接
     if (selected == u8"内参标定") {
-        QMetaObject::invokeMethod(calibrationWorker, "runCameraCalibration",
+        QMetaObject::invokeMethod(coarseCalibration, "whenCalibrateCamera",
                                   Q_ARG(QString, calibPath), Q_ARG(QString, resultPath));
     } else if (selected == u8"平面标定") {
-        QMetaObject::invokeMethod(calibrationWorker, "runPlaneCalibration",
+        QMetaObject::invokeMethod(coarseCalibration, "whenCalibratePlane",
                                   Q_ARG(QString, calibPath), Q_ARG(QString, resultPath));
     } else if (selected == u8"手眼标定") {
-        QMetaObject::invokeMethod(calibrationWorker, "runHandEyeCalibration",
+        QMetaObject::invokeMethod(coarseCalibration, "whenCalibrateHandEye",
                                   Q_ARG(QString, calibPath), Q_ARG(QString, resultPath));
     } else if (selected == u8"X轴标定") {
-        QMetaObject::invokeMethod(calibrationWorker, "runExternalAxisCalibration",
+        QMetaObject::invokeMethod(coarseCalibration, "whenCalibrateAxis",
                                   Q_ARG(QString, calibPath), Q_ARG(QString, resultPath), Q_ARG(int, 0));
     } else if (selected == u8"Y轴标定") {
-        QMetaObject::invokeMethod(calibrationWorker, "runExternalAxisCalibration",
+        QMetaObject::invokeMethod(coarseCalibration, "whenCalibrateAxis",
                                   Q_ARG(QString, calibPath), Q_ARG(QString, resultPath), Q_ARG(int, 1));
     } else if (selected == u8"Z轴标定") {
-        QMetaObject::invokeMethod(calibrationWorker, "runExternalAxisCalibration",
+        QMetaObject::invokeMethod(coarseCalibration, "whenCalibrateAxis",
                                   Q_ARG(QString, calibPath), Q_ARG(QString, resultPath), Q_ARG(int, 2));
     }
 }

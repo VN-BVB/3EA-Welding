@@ -10,7 +10,7 @@
 #include "src/fittingWorkpieceCoordinate/Fittingworkpiececoordinate.h"
 #include "src/utils/image_widget/ScalableGraphicsView.h"
 #include "src/yoloInference/YoloInference.h"
-#include "src/calibration/worker/CalibrationWorker.h"
+#include "src/calibration/CoarseCalibration.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -31,7 +31,7 @@ private:
     YoloDetInference *yolo11RectInference = new YoloDetInference;                             // 目标检测类
     FittingWorkpieceCoordinate *fittingWorkpieceCoordinate = new FittingWorkpieceCoordinate;  // 工件拟合
     CoarsePositioningCamera *baslerControl = new CoarsePositioningCamera;                     // 相机类
-    CalibrationWorker *calibrationWorker = new CalibrationWorker;                             // 标定类
+    CoarseCalibration *coarseCalibration = new CoarseCalibration;                             // 标定类
 
     // QThread *inferenceSubThread = new QThread;         // 深度学习推理线程
     QThread *cameraControlSubThread = new QThread;     // 相机线程

@@ -1,70 +1,53 @@
-﻿#include "CameraAndLaserPlaneCalibration.h"
+﻿#include "CameraPlaneAlgorithms.h"
 
 #include <algorithm>
+#include <cmath>
+#include <ctime>
+#include <exception>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+
 #include <direct.h>
 #include <sys/stat.h>
 
+#include <Eigen/Dense>
+#include <Eigen/Eigenvalues>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
 namespace {
 
-bool directoryExists(const std::string& path) {
-    struct _stat info;
-    if (_stat(path.c_str(), &info) != 0) {
-        return false;
-    }
-    return (info.st_mode & _S_IFDIR) != 0;
-}
+// 内参旧算法的标定板参数；长度单位为毫米。手眼/外轴使用 BoardConfig 中的米制参数。
+constexpr int BOARD_SCALE = 60;
+constexpr int BOARD_HEIGHT = 9;
+constexpr int BOARD_WIDTH = 6;
 
-std::string normalizedPath(std::string path) {
-    std::replace(path.begin(), path.end(), '/', '\\');
-    return path;
-}
+const std::string planePointCloudPath = "./data/plane/planeData.pcd";
 
-std::string parentDirectoryPath(const std::string& filename) {
-    const std::string path = normalizedPath(filename);
-    const size_t slashPos = path.find_last_of('\\');
-    if (slashPos == std::string::npos) {
-        return std::string();
-    }
-    return path.substr(0, slashPos);
-}
+bool directoryExists(const std::string& path);
+std::string parentDirectoryPath(const std::string& filename);
+void createDirectoryRecursive(const std::string& path);
+bool hasSuffix(const std::string& str, const std::string& suffix);
 
-void createDirectoryRecursive(const std::string& path) {
-    if (path.empty() || directoryExists(path)) {
-        return;
-    }
-
-    const std::string parentPath = parentDirectoryPath(path);
-    if (!parentPath.empty() && parentPath != path) {
-        createDirectoryRecursive(parentPath);
-    }
-
-    _mkdir(path.c_str());
-}
-
-bool hasSuffix(const std::string& str, const std::string& suffix) {
-    if (str.length() < suffix.length()) {
-        return false;
-    }
-    return str.substr(str.length() - suffix.length()) == suffix;
-}
-
-std::string resolvePlanePointCloudPath() {
-    return "./data/plane/planeData.pcd";
-}
-
-}  // namespace
+}  // 匿名命名空间
 
 /**
- * @brief CamraCalibration  相机标定
+ * @brief 相机内参标定
  * @param files             文件名
  * @param cameraMatrix      内参矩阵
  * @param distCoeffs        畸变系数
  * @param tvecsMat          平移矩阵
  * @param rvecsMat          旋转矩阵
  */
-void CameraAndLaserPlaneCalibration::cameraCalibration(std::vector<std::string>& files, cv::Mat& cameraMatrix,
-                                                       cv::Mat& distCoeffs, std::vector<cv::Mat>& tvecsMat,
-                                                       std::vector<cv::Mat>& rvecsMat, int& imageCount, double& totalErr) {
+void CameraPlaneAlgorithms::calibrateCamera(std::vector<std::string>& files, cv::Mat& cameraMatrix, cv::Mat& distCoeffs,
+                                            std::vector<cv::Mat>& tvecsMat, std::vector<cv::Mat>& rvecsMat, int& imageCount, double& totalErr) {
     // 读取每一幅图像，从中提取出角点，然后对角点进行亚像素精确化
     imageCount = 0;  // 图像数量
     tvecsMat.clear();
@@ -78,14 +61,14 @@ void CameraAndLaserPlaneCalibration::cameraCalibration(std::vector<std::string>&
         cv::Mat imageInput = cv::imread(files[i]);
         /* 提取角点 */
         // imageInput:输入图片, board_size:角点尺寸, image_points_buf:检测结果
-        // cv::imshow("Input Image", imageInput);
+        // cv::imshow("输入图片", imageInput);
         // cv::waitKey(100);
         // if (0 == cv::findChessboardCorners(imageInput, boardSize, imagePointsBuf)) {
-        //     std::cout << "Num " << i << " can not find chessboard corners!\n";  // 找不到角点
+        //     std::cout << "第 " << i << " 张图片未找到棋盘格角点！\n";  // 找不到角点
         //     continue;
         // }
         // 求图像特征点
-        whenCalculateImagePoints(i, imageInput, boardSize, imagePointsBuf);
+        detectAndAnnotateBoardPoints(i, imageInput, boardSize, imagePointsBuf);
         imageCount++;
         if (imageCount == 1) {  // 读入第一张图片时获取图像宽高信息
             imageSize.width = imageInput.cols;
@@ -95,15 +78,15 @@ void CameraAndLaserPlaneCalibration::cameraCalibration(std::vector<std::string>&
     }
 
     // int total = imagePointsSeq.size();
-    // std::cout << "Total num is" << total << std::endl;
-    // std::cout << "get corner suc";
+    // std::cout << "总数量为 " << total << std::endl;
+    // std::cout << "角点提取成功";
 
     /* 棋盘三维信息 */
     // cv::Size2f squareSize = cv::Size2f(BOARD_SCALE, BOARD_SCALE);  // 实际测量得到的标定板上每个棋盘格的大小
     cv::Size2f squareSize = cv::Size2f(BOARD_SCALE, BOARD_SCALE);  // 实际测量得到的标定板上每个棋盘格的大小
     std::vector<std::vector<cv::Point3f>> objectPoints;            // 保存标定板上角点的三维坐标
     cameraMatrix = cv::Mat(3, 3, CV_64FC1, cv::Scalar::all(0));    // 摄像机内参数矩阵
-    std::vector<int> pointCounts;                                // 每幅图像中角点的数量
+    std::vector<int> pointCounts;                                  // 每幅图像中角点的数量
     distCoeffs = cv::Mat(1, 5, CV_64FC1,
                          cv::Scalar::all(0));  // 摄像机的畸变系数：k1,k2,p1,p2,k3
 
@@ -111,8 +94,8 @@ void CameraAndLaserPlaneCalibration::cameraCalibration(std::vector<std::string>&
     int i, j, t;
     for (t = 0; t < imageCount; t++) {
         std::vector<cv::Point3f> tempPointSet;
-        //        qDebug() << "board_size.height:" << board_size.height;
-        //        qDebug() << "board_size.width:" << board_size.width;
+        //        qDebug() << "标定板高度：" << board_size.height;
+        //        qDebug() << "标定板宽度：" << board_size.width;
         for (i = 0; i < boardSize.height; i++) {
             for (j = 0; j < boardSize.width; j++) {
                 cv::Point3f realPoint;
@@ -148,7 +131,7 @@ void CameraAndLaserPlaneCalibration::cameraCalibration(std::vector<std::string>&
     cv::calibrateCamera(objectPoints, imagePointsSeq, imageSize, cameraMatrix, distCoeffs, rvecsMat, tvecsMat,
                         cv::CALIB_FIX_K3);  //
 
-    // std::cout << "calibration succ" << std::endl;
+    // std::cout << "标定成功" << std::endl;
 
     /* 对标定结果进行评价 */
     /*
@@ -169,13 +152,13 @@ void CameraAndLaserPlaneCalibration::cameraCalibration(std::vector<std::string>&
          */
 
         // 打印三维点坐标
-        // std::cout << "tempPointSet for image " << i << ":\n";
+        // std::cout << "第 " << i << ":\n";
         // for (const auto& pt : tempPointSet) {
         //     std::cout << "(" << pt.x << ", " << pt.y << ", " << pt.z << ")\n";
         //}
         cv::projectPoints(tempPointSet, rvecsMat[i], tvecsMat[i], cameraMatrix, distCoeffs, imagePoints2);
 
-        // std::cout << "imagePoints2 for image " << i << ":\n";
+        // std::cout << "第 " << i << ":\n";
         // for (const auto& pt : imagePoints2) {
         //     std::cout << "(" << pt.x << ", " << pt.y << ")\n";
         // }
@@ -192,9 +175,8 @@ void CameraAndLaserPlaneCalibration::cameraCalibration(std::vector<std::string>&
         totalErr += err /= pointCounts[i];
     }
 }
-void CameraAndLaserPlaneCalibration::planeCalibration(std::vector<std::string>& files, cv::Mat& cameraMatrix, cv::Mat& distCoeffs,
-                                                      std::vector<double>& globalPlane,
-                                                      CameraAndLaserPlaneCalibration::ErrorMetrics& errorMetrics) {
+void CameraPlaneAlgorithms::calibratePlane(std::vector<std::string>& files, cv::Mat& cameraMatrix, cv::Mat& distCoeffs,
+                                           std::vector<double>& globalPlane, CameraPlaneAlgorithms::ErrorMetrics& errorMetrics) {
     cv::Size boardSize = cv::Size(6, 9);  // 标定板上每行、列的角点数
     cv::Size2f squareSize = cv::Size2f(60, 60);
     // cv::Size boardSize = cv::Size(BOARD_HEIGHT, BOARD_WIDTH);  // 标定板上每行、列的角点数
@@ -218,11 +200,11 @@ void CameraAndLaserPlaneCalibration::planeCalibration(std::vector<std::string>& 
         imagePointsBuf.clear();
 
         if (imageInput.empty()) {
-            std::cout << "Num " << i << " can not read image!\n";
+            std::cout << "第 " << i << " 张图片无法读取！\n";
             continue;
         }
         // 求图像特征点
-        //  whenCalculateImagePoints(i,imageInput,boardSize,imagePointsBuf);
+        //  detectAndAnnotateBoardPoints(i,imageInput,boardSize,imagePointsBuf);
         //  if (i == files.size() - 1) {  // 处理最后一张图片后
         //      cv::waitKey(500);
         //      cv::destroyAllWindows();
@@ -230,7 +212,7 @@ void CameraAndLaserPlaneCalibration::planeCalibration(std::vector<std::string>& 
         //-------------------------------------------------------------------
 #ifdef findChessboardCorner
         if (0 == cv::findChessboardCornersSB(imageInput, boardSize, imagePointsBuf, cv::CALIB_CB_NORMALIZE_IMAGE)) {
-            std::cout << "Num " << i << " can not find chessboard corners!\n";  // 找不到角点
+            std::cout << "第 " << i << " 张图片未找到棋盘格角点！\n";  // 找不到角点
             continue;
         }
         cv::Mat viewGray;
@@ -242,8 +224,8 @@ void CameraAndLaserPlaneCalibration::planeCalibration(std::vector<std::string>& 
                          cv::TermCriteria(cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS, 30, 0.1));
 #else
         cv::bitwise_not(imageInput, imageInput);  // 反转灰度图像
-        if (0 == calculate_Image_Points(imageInput, boardSize, imagePointsBuf)) {
-            std::cout << "Num " << i << " can not  find CirclesGrid !\n";  // 找不到角点
+        if (0 == detectCircleGridPoints(imageInput, boardSize, imagePointsBuf)) {
+            std::cout << "第 " << i << " 张图片未找到圆点阵列！\n";  // 找不到角点
             continue;
         }
 
@@ -251,7 +233,7 @@ void CameraAndLaserPlaneCalibration::planeCalibration(std::vector<std::string>& 
 
         // 统一角点顺序
         if (imagePointsBuf.empty()) {
-            std::cout << "Num " << i << " has empty image points!\n";
+            std::cout << "第 " << i << " 张图片的角点为空！\n";
             continue;
         }
 
@@ -278,13 +260,12 @@ void CameraAndLaserPlaneCalibration::planeCalibration(std::vector<std::string>& 
             cv::putText(imageInput, std::to_string(pointIndex++), textPosition, fontFace, fontScale, fontColor, fontThickness);
         }
         // // 打印当前图像的角点坐标
-        // std::cout << "Image " << i << " corner points:\n";
+        // std::cout << "图片 " << i << " 的角点：\n";
         // for (int j = 0; j < imagePointsBuf.size(); j++) {
-        //     std::cout << "Point " << j << ": ("
+        //     std::cout << "点 " << j << ": ("
         //               << imagePointsBuf[j].x << ", "
         //               << imagePointsBuf[j].y << ")\n";
         // }
-
     }
     if (imagePointsSeq.empty()) {
         globalPlane.clear();
@@ -293,8 +274,8 @@ void CameraAndLaserPlaneCalibration::planeCalibration(std::vector<std::string>& 
     }
 
     std::vector<cv::Mat> extrinsicMatrices;
-    calibrationSolveExtrinsics(cameraMatrix, distCoeffs, objectCornerPoints, imagePointsSeq,
-                               extrinsicMatrices);  // 已知内参求外参
+    solveBoardExtrinsics(cameraMatrix, distCoeffs, objectCornerPoints, imagePointsSeq,
+                         extrinsicMatrices);  // 已知内参求外参
     if (extrinsicMatrices.empty()) {
         globalPlane.clear();
         errorMetrics = {0.0, 0.0, 0.0, 0.0};
@@ -302,20 +283,19 @@ void CameraAndLaserPlaneCalibration::planeCalibration(std::vector<std::string>& 
     }
 
     if (!extrinsicMatrices.empty()) {
-        std::cout << "extrinsicMatrices[0] =\n"
-                  << extrinsicMatrices[0] << std::endl;
+        std::cout << "第一个外参矩阵 =\n" << extrinsicMatrices[0] << std::endl;
     }
-    CameraAndLaserPlaneCalibration::computePlaneEquations(extrinsicMatrices, objectCornerPoints, globalPlane);
+    CameraPlaneAlgorithms::computePlaneEquations(extrinsicMatrices, objectCornerPoints, globalPlane);
     // 验证平面拟合是否能正确反应到世界坐标系
-    errorMetrics = CameraAndLaserPlaneCalibration::evaluatePlaneFittingError(
-        imagePointsSeq, objectCornerPoints, extrinsicMatrices, cameraMatrix, distCoeffs, globalPlane);
+    errorMetrics = CameraPlaneAlgorithms::evaluatePlaneFittingError(imagePointsSeq, objectCornerPoints, extrinsicMatrices, cameraMatrix, distCoeffs,
+                                                                    globalPlane);
 }
 
-void CameraAndLaserPlaneCalibration::whenCalculateImagePoints(int i, const cv::Mat& imageInput, cv::Size boardSize,
-                                                              std::vector<cv::Point2f>& imagePointsBuf) {
+void CameraPlaneAlgorithms::detectAndAnnotateBoardPoints(int i, const cv::Mat& imageInput, cv::Size boardSize,
+                                                         std::vector<cv::Point2f>& imagePointsBuf) {
 #ifdef findChessboardCorner
     if (0 == cv::findChessboardCornersSB(imageInput, boardSize, imagePointsBuf)) {
-        std::cout << "Num " << i << " can not find chessboard corners!\n";  // 找不到角点
+        std::cout << "第 " << i << " 张图片未找到棋盘格角点！\n";  // 找不到角点
         return;
     }
     cv::Mat viewGray;
@@ -328,8 +308,8 @@ void CameraAndLaserPlaneCalibration::whenCalculateImagePoints(int i, const cv::M
 
 #else
     cv::bitwise_not(imageInput, imageInput);  // 反转灰度图像
-    if (0 == calculate_Image_Points(imageInput, boardSize, imagePointsBuf)) {
-        std::cout << "Num " << i << " can not  find CirclesGrid !\n";  // 找不到角点
+    if (0 == detectCircleGridPoints(imageInput, boardSize, imagePointsBuf)) {
+        std::cout << "第 " << i << " 张图片未找到圆点阵列！\n";  // 找不到角点
         return;
     }
 
@@ -355,9 +335,9 @@ void CameraAndLaserPlaneCalibration::whenCalculateImagePoints(int i, const cv::M
         cv::putText(imageInput, std::to_string(pointIndex++), textPosition, fontFace, fontScale, fontColor, fontThickness);
     }
     // // 打印当前图像的角点坐标
-    // std::cout << "Image " << i << " corner points:\n";
+    // std::cout << "图片 " << i << " 的角点：\n";
     // for (int j = 0; j < imagePointsBuf.size(); j++) {
-    //     std::cout << "Point " << j << ": ("
+    //     std::cout << "点 " << j << ": ("
     //               << imagePointsBuf[j].x << ", "
     //               << imagePointsBuf[j].y << ")\n";
     // }
@@ -365,42 +345,34 @@ void CameraAndLaserPlaneCalibration::whenCalculateImagePoints(int i, const cv::M
     //            std::string outputFilename = std::to_string(i) + "output_image.bmp";
     //            bool result = cv::imwrite(outputFilename, imageInput);
     //            if (!result) {
-    //                std::cerr << "Failed to save image." << std::endl;
+    //                std::cerr << "图片保存失败。" << std::endl;
     //                return;
     //            }
     return;
 }
 /**
- * @brief GetImage  取得原图
- * @param imgSrc   图像名称
- * @param srcImage 原始图像
- */
-void CameraAndLaserPlaneCalibration::GetImage(std::string imgSrc, cv::Mat& srcImage) { srcImage = cv::imread(imgSrc, 0); }
-
-/**
- * @brief Correction   畸变校正
+ * @brief undistortImage   畸变校正
  * @param srcImage     原始图像
- * @param dstImage     结果图像
+ * @param dst图片     结果图像
  * @param cameraMatrix 内参矩阵
  * @param distCoeffs   畸变系数
  */
-void CameraAndLaserPlaneCalibration::Correction(cv::Mat& srcImage, cv::Mat& dstImage, cv::Mat& cameraMatrix,
-                                                cv::Mat& distCoeffs) {
+void CameraPlaneAlgorithms::undistortImage(cv::Mat& srcImage, cv::Mat& dstImage, cv::Mat& cameraMatrix, cv::Mat& distCoeffs) {
     // distCoeffs.at<double>(0, 4) = 0;
     undistort(srcImage, dstImage, cameraMatrix, distCoeffs);
 }
 
 /**
- * @brief RemoveSmallRegion 去除面积小于给定值的连通域
- * @param InputImage        输入图像
- * @param OutputImage       输出图像
+ * @brief removeSmallRegions 去除面积小于给定值的连通域
+ * @param inputImage        输入图像
+ * @param outputImage       输出图像
  * @param pixel             像素值
  */
-void CameraAndLaserPlaneCalibration::RemoveSmallRegion(cv::Mat& InputImage, cv::Mat& OutputImage, int pixel) {
-    InputImage.copyTo(OutputImage);
+void CameraPlaneAlgorithms::removeSmallRegions(cv::Mat& inputImage, cv::Mat& outputImage, int pixel) {
+    inputImage.copyTo(outputImage);
     std::vector<cv::Vec4i> hierarchy;
     std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(InputImage, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+    cv::findContours(inputImage, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
     // 计算每个轮廓的面积
     double temp = 0;
@@ -411,18 +383,18 @@ void CameraAndLaserPlaneCalibration::RemoveSmallRegion(cv::Mat& InputImage, cv::
     // 去除小轮廓，保留大轮廓
     for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]) {
         if (fabs(cv::contourArea(contours[idx])) < pixel) {
-            cv::drawContours(OutputImage, contours, idx, cv::Scalar(0), cv::FILLED, 8, hierarchy);
+            cv::drawContours(outputImage, contours, idx, cv::Scalar(0), cv::FILLED, 8, hierarchy);
         }
     }
 }
 
 /**
- * @brief CameraAndLaserPlaneCalibration::PointSortRule 对点的坐标按 x从小到大排序，若 x值相同则按 y从小到大排序
+ * @brief CameraPlaneAlgorithms::pointLessByXThenY 对点的坐标按 x从小到大排序，若 x值相同则按 y从小到大排序
  * @param pt1 第一个点
  * @param pt2 第二个点
  * @return    第一个点小，则返回 1，反之返回 0
  */
-bool CameraAndLaserPlaneCalibration::PointSortRule(const cv::Point2d pt1, const cv::Point2d pt2) {
+bool CameraPlaneAlgorithms::pointLessByXThenY(const cv::Point2d pt1, const cv::Point2d pt2) {
     if (pt1.x != pt2.x) {
         return pt1.x < pt2.x;
     } else {
@@ -431,13 +403,13 @@ bool CameraAndLaserPlaneCalibration::PointSortRule(const cv::Point2d pt1, const 
 }
 
 /**
- * @brief Point2dSperate 分离坐标点
+ * @brief separatePlaneAndObjectPoints 分离坐标点
  * @param P              中心点坐标值
  * @param pPlane         平面上的中心点
  * @param pObject        物体上的中心点
  */
-void CameraAndLaserPlaneCalibration::Point2dSperate(std::vector<cv::Point2d>& P, std::vector<cv::Point2d>& pPlane,
-                                                    std::vector<cv::Point2d>& pObject) {
+void CameraPlaneAlgorithms::separatePlaneAndObjectPoints(std::vector<cv::Point2d>& P, std::vector<cv::Point2d>& pPlane,
+                                                         std::vector<cv::Point2d>& pObject) {
     pPlane.clear();
     pObject.clear();
 
@@ -469,22 +441,21 @@ void CameraAndLaserPlaneCalibration::Point2dSperate(std::vector<cv::Point2d>& P,
 }
 
 /**
- * @brief Point2dto3d  二维像素坐标转三维图像坐标
+ * @brief pixelsToPointsOnPlane  二维像素坐标转三维图像坐标
  * @param plane        平面方程系数
  * @param cameraMatrix 内参矩阵
  * @param distCoeffs   畸变系数
- * @param Pt2ds        二维点集
- * @param Pt3ds        三维点集
+ * @param pixelPoints        二维点集
+ * @param cameraPoints        三维点集
  */
-void CameraAndLaserPlaneCalibration::Point2dto3d(const std::vector<double> plane, const cv::Mat& cameraMatrix,
-                                                 const cv::Mat& distCoeffs, const std::vector<cv::Point2d>& Pt2ds,
-                                                 std::vector<cv::Point3d>& Pt3ds) {
+void CameraPlaneAlgorithms::pixelsToPointsOnPlane(const std::vector<double> plane, const cv::Mat& cameraMatrix, const cv::Mat& distCoeffs,
+                                                  const std::vector<cv::Point2d>& pixelPoints, std::vector<cv::Point3d>& cameraPoints) {
     if (plane.size() < 4) {
-        std::cerr << "Error: plane has fewer than 4 coefficients!" << std::endl;
+        std::cerr << "错误：平面系数少于 4 个！" << std::endl;
         return;
     }
     if (std::abs(plane[3]) < 1e-12) {
-        std::cerr << "Error: plane[3] is too close to zero!" << std::endl;
+        std::cerr << "错误：平面第 4 个系数过于接近零！" << std::endl;
         return;
     }
     // Q_UNUSED(distCoeffs)
@@ -496,16 +467,16 @@ void CameraAndLaserPlaneCalibration::Point2dto3d(const std::vector<double> plane
 
     std::vector<cv::Point2d> undistortedPts;
     // 使用cv::undistortPoints进行去畸变
-    cv::undistortPoints(Pt2ds, undistortedPts, cameraMatrix, distCoeffs);
+    cv::undistortPoints(pixelPoints, undistortedPts, cameraMatrix, distCoeffs);
     // for (const auto& pt : undistortedPts) {
-    //     std::cout << "Undistorted Point: (" << pt.x << ", " << pt.y << ")" << std::endl;
+    //     std::cout << "去畸变后的点： (" << pt.x << ", " << pt.y << ")" << std::endl;
     // }
     for (int i = 0; i < undistortedPts.size(); ++i) {
         double x1 = undistortedPts[i].x, y1 = undistortedPts[i].y;
 
         //----------------------------像素点不去畸变情况下的运算------------------------------
-        // for (int i = 0; i < Pt2ds.size(); ++i) {
-        //     double u = Pt2ds[i].x, v = Pt2ds[i].y;
+        // for (int i = 0; i < pixelPoints.size(); ++i) {
+        //     double u = pixelPoints[i].x, v = pixelPoints[i].y;
         //     /*
         //      * 图像坐标系转换到相机坐标系，得到的是归一化坐标值，也就是在 z = 1
         //      * 平面上的投影点， 所以求得的相机坐标系下的点其实是(x1, y1, 1)，
@@ -524,7 +495,7 @@ void CameraAndLaserPlaneCalibration::Point2dto3d(const std::vector<double> plane
         pt.z = (1 / (A * x1 + B * y1 + C));
         pt.x = x1 * pt.z;
         pt.y = y1 * pt.z;
-        Pt3ds.push_back(pt);
+        cameraPoints.push_back(pt);
         // fout << std::setprecision(16) << pt.x << " " << pt.y << " " << pt.z << std::endl;
         // std::cout<< pt.x << " " << pt.y << " " << pt.z << std::endl;
     }
@@ -532,37 +503,36 @@ void CameraAndLaserPlaneCalibration::Point2dto3d(const std::vector<double> plane
 }
 
 /**
- * @brief PointtoPlaneEvaluation 点到面精度评价
- * @param Pt3ds                  三维点集
+ * @brief evaluatePointToPlaneDistances 点到面精度评价
+ * @param cameraPoints                  三维点集
  * @param plane                  平面方程系数
  */
-void CameraAndLaserPlaneCalibration::PointtoPlaneEvaluation(const std::vector<cv::Point3d>& Pt3ds, std::vector<double> plane) {
+void CameraPlaneAlgorithms::evaluatePointToPlaneDistances(const std::vector<cv::Point3d>& cameraPoints, std::vector<double> plane) {
     double a = plane[0], b = plane[1], c = plane[2];  // 平面方程系数
     std::vector<double> distance;                     // 存储每个点到平面的距离
 
     // 计算所有点到平面的平均距离
     double distanceMean = 0;
-    for (int i = 0; i < Pt3ds.size(); ++i) {
+    for (int i = 0; i < cameraPoints.size(); ++i) {
         // 计算点到平面的距离公式：|ax + by + cz - 1| / sqrt(a^2 + b^2 + c^2)
-        double dis = abs(a * Pt3ds[i].x + b * Pt3ds[i].y + c * Pt3ds[i].z - 1) / sqrt(a * a + b * b + c * c);
+        double dis = abs(a * cameraPoints[i].x + b * cameraPoints[i].y + c * cameraPoints[i].z - 1) / sqrt(a * a + b * b + c * c);
         distance.push_back(dis);
         distanceMean += dis;
     }
-    distanceMean /= Pt3ds.size();  // 计算平均距离
+    distanceMean /= cameraPoints.size();  // 计算平均距离
     std::cout << "\n距离平均值：" << distanceMean << std::endl;
 
     // 计算距离的标准差
     double sigma = 0;
-    for (int i = 0; i < Pt3ds.size(); ++i) {
+    for (int i = 0; i < cameraPoints.size(); ++i) {
         sigma += (distance[i] - distanceMean) * (distance[i] - distanceMean);
     }
-    sigma /= Pt3ds.size();
+    sigma /= cameraPoints.size();
     std::cout << "距离标准差：" << sqrt(sigma) << std::endl;
 }
 // 相机坐标系下的平面方程求解
-void CameraAndLaserPlaneCalibration::computePlaneEquations(std::vector<cv::Mat>& extrinsicMatrices,
-                                                           std::vector<cv::Point3f>& objectPoints,
-                                                           std::vector<double>& globalPlane) {
+void CameraPlaneAlgorithms::computePlaneEquations(std::vector<cv::Mat>& extrinsicMatrices, std::vector<cv::Point3f>& objectPoints,
+                                                  std::vector<double>& globalPlane) {
     // 遍历每张图像
     std::vector<cv::Point3d> allPoints;  // 存储所有的相机坐标系下的点
     std::vector<std::vector<double>> planeEquations;
@@ -572,7 +542,7 @@ void CameraAndLaserPlaneCalibration::computePlaneEquations(std::vector<cv::Mat>&
 
         // // 添加边界检查
         // if (i >= objectPoints.size() || objectPoints[i].empty()) {
-        //     std::cerr << "Error: objectPoints[" << i << "] is out of range or empty!" << std::endl;
+        //     std::cerr << "错误：objectPoints[" << i << "] 越界或为空。" << std::endl;
         //     continue;
         // }
         // 获取外参矩阵（旋转矩阵 + 平移向量）
@@ -586,13 +556,12 @@ void CameraAndLaserPlaneCalibration::computePlaneEquations(std::vector<cv::Mat>&
             // 将世界坐标点转换为相机坐标系下的点
             cv::Mat worldPoint = (cv::Mat_<double>(3, 1) << point.x, point.y, point.z);
             cv::Mat cameraPoint = rotationMatrix * worldPoint + translationVector;
-            // std::cout << "//worldPoint: \n" << worldPoint << std::endl;
-            // std::cout << "//rotationMatrix: \n" << rotationMatrix << std::endl;
-            // std::cout << "//tvecsMat: \n" << translationVector << std::endl;
-            // std::cout << "//cameraPoint: \n" << cameraPoint << std::endl;
+            // std::cout << "//世界坐标点：\n" << worldPoint << std::endl;
+            // std::cout << "//旋转矩阵：\n" << rotationMatrix << std::endl;
+            // std::cout << "//平移向量：\n" << translationVector << std::endl;
+            // std::cout << "//相机坐标点：\n" << cameraPoint << std::endl;
             allPoints.push_back(cv::Point3d(cameraPoint.at<double>(0), cameraPoint.at<double>(1), cameraPoint.at<double>(2)));
-            cameraCoordinates.push_back(
-                cv::Point3d(cameraPoint.at<double>(0), cameraPoint.at<double>(1), cameraPoint.at<double>(2)));
+            cameraCoordinates.push_back(cv::Point3d(cameraPoint.at<double>(0), cameraPoint.at<double>(1), cameraPoint.at<double>(2)));
         }
         // 存储相机坐标系下的标定板的点
         allCameraCoordinates.push_back(cameraCoordinates);
@@ -604,7 +573,7 @@ void CameraAndLaserPlaneCalibration::computePlaneEquations(std::vector<cv::Mat>&
     // planeEquations.push_back(planeEquation);
 
     // //打印平面方程系数
-    // std::cout << "plane equation in camera coordinates: "
+    // std::cout << "相机坐标系中的平面方程： "
     //           << planeEquation[0] << " * X + " << planeEquation[1] << " * Y + " << planeEquation[2] << " * Z + " <<
     //           planeEquation[3]
     //           << " = 0" << std::endl;
@@ -616,14 +585,14 @@ void CameraAndLaserPlaneCalibration::computePlaneEquations(std::vector<cv::Mat>&
 
     //     std::cout <<"原来反向拟合"<< "(" << pt.x << ", " << pt.y << ", " << pt.z << ")\n";
     // }
-    // std::cout << "globalPlane equation in camera coordinates: "
+    // std::cout << "相机坐标系中的全局平面方程： "
     //            << globalPlane[0] << " * X + " << globalPlane[1] << " * Y + " << globalPlane[2] << " * Z + " << globalPlane[3]
     //            << " = 0" << std::endl;
     // for (const auto& cameraCoordinates : allCameraCoordinates) {
-    //     PointtoPlaneEvaluation(cameraCoordinates, globalPlane);  // 直接调用，输出误差
+    //     evaluatePointToPlaneDistances(cameraCoordinates, globalPlane);  // 直接调用，输出误差
     // }
 
-    std::string filename = resolvePlanePointCloudPath();
+    std::string filename = planePointCloudPath;
     savePointCloud(allCameraCoordinates, filename);
 }
 /**
@@ -631,7 +600,7 @@ void CameraAndLaserPlaneCalibration::computePlaneEquations(std::vector<cv::Mat>&
  * @param pts       输入三维点集
  * @return          平面方程系数
  */
-std::vector<double> CameraAndLaserPlaneCalibration::planeLeastSquareFitting(std::vector<cv::Point3d>& pts) {
+std::vector<double> CameraPlaneAlgorithms::planeLeastSquareFitting(std::vector<cv::Point3d>& pts) {
     // 最小二乘法
     double A, B, C, D;
     std::vector<double> parameters;
@@ -715,7 +684,7 @@ std::vector<double> CameraAndLaserPlaneCalibration::planeLeastSquareFitting(std:
     return parameters;
 }
 
-cv::Vec4d CameraAndLaserPlaneCalibration::fitPlaneToPoints(const std::vector<cv::Point3d>& points) {
+cv::Vec4d CameraPlaneAlgorithms::fitPlaneToPoints(const std::vector<cv::Point3d>& points) {
     // 将点集转换为OpenCV的Mat格式
     cv::Mat pointsMat(points.size(), 3, CV_64F);
     for (size_t i = 0; i < points.size(); ++i) {
@@ -744,7 +713,7 @@ cv::Vec4d CameraAndLaserPlaneCalibration::fitPlaneToPoints(const std::vector<cv:
  * @param plane     世界坐标系下的平面方程系数
  * @return          相机坐标系下平面方程系数
  */
-cv::Vec4f CameraAndLaserPlaneCalibration::calculatePlaneSquareWithVecs(std::vector<double> plane, cv::Mat& extrinsicMatrix) {
+cv::Vec4f CameraPlaneAlgorithms::calculatePlaneSquareWithVecs(std::vector<double> plane, cv::Mat& extrinsicMatrix) {
     cv::Mat rotationMatrix = extrinsicMatrix(cv::Rect(0, 0, 3, 3));  // 3x3旋转矩阵
     cv::Mat normal_w = (cv::Mat_<double>(3, 1) << plane[0], plane[1], plane[2]);
     cv::Mat translationVector = extrinsicMatrix(cv::Rect(3, 0, 1, 3));  // 3x1平移向量
@@ -761,9 +730,8 @@ cv::Vec4f CameraAndLaserPlaneCalibration::calculatePlaneSquareWithVecs(std::vect
     return planeCoeff;
 }
 // 求取外参矩阵
-void CameraAndLaserPlaneCalibration::calculateExtrinsicMatrices(int imageCount, std::vector<cv::Mat>& tvecsMat,
-                                                                std::vector<cv::Mat>& rvecsMat,
-                                                                std::vector<cv::Mat>& extrinsicMatrices) {
+void CameraPlaneAlgorithms::calculateExtrinsicMatrices(int imageCount, std::vector<cv::Mat>& tvecsMat, std::vector<cv::Mat>& rvecsMat,
+                                                       std::vector<cv::Mat>& extrinsicMatrices) {
     extrinsicMatrices.clear();
     // 保存定标结果
     for (int i = 0; i < imageCount; i++) {
@@ -782,7 +750,7 @@ void CameraAndLaserPlaneCalibration::calculateExtrinsicMatrices(int imageCount, 
     }
     // std::cout << "\n所有外参矩阵:\n";
     // for (const auto& pt : extrinsicMatrices) {
-    //     std::cout << "extrinsicMatrices: \n" << pt << std::endl;
+    //     std::cout << "外参矩阵： \n" << pt << std::endl;
     // }
     // 拟合多个平面方程并计算误差
     // cv::Vec4f fittedPlaneCoeff;
@@ -790,7 +758,7 @@ void CameraAndLaserPlaneCalibration::calculateExtrinsicMatrices(int imageCount, 
     // fitPlaneToMultipleEquations(planeCoefficients, fittedPlaneCoeff, meanError);
 }
 
-std::vector<double> CameraAndLaserPlaneCalibration::fitPlaneToMultipleEquations(const std::vector<std::vector<double>>& planes) {
+std::vector<double> CameraPlaneAlgorithms::fitPlaneToMultipleEquations(const std::vector<std::vector<double>>& planes) {
     double A = 0, B = 0, C = 0, D = 0;
 
     // 计算平均法向量
@@ -837,8 +805,7 @@ std::vector<double> CameraAndLaserPlaneCalibration::fitPlaneToMultipleEquations(
  * @param extrinsicMatrix 相机外参矩阵
  * @return 基座标系下的点集
  */
-std::vector<cv::Point3d> CameraAndLaserPlaneCalibration::transformCameraToBase(const std::vector<cv::Point3d>& cameraPoints,
-                                                                               const cv::Mat& extrinsicMatrix) {
+std::vector<cv::Point3d> CameraPlaneAlgorithms::transformCameraToBase(const std::vector<cv::Point3d>& cameraPoints, const cv::Mat& extrinsicMatrix) {
     std::vector<cv::Point3d> basePoints;
 
     // 从外参矩阵中提取旋转矩阵和平移向量
@@ -850,7 +817,7 @@ std::vector<cv::Point3d> CameraAndLaserPlaneCalibration::transformCameraToBase(c
         // 将点转换为Mat格式
         cv::Mat cameraPointMat = (cv::Mat_<double>(3, 1) << cameraPoint.x, cameraPoint.y, cameraPoint.z);
 
-        // 转换公式：basePoint = R^T * (cameraPoint - t)
+        // 转换公式：base点 = R^T * (cameraPoint - t)
         cv::Mat basePointMat = rotationMatrix.t() * (cameraPointMat - translationVector);
 
         // 将结果转换回Point3d格式
@@ -860,8 +827,7 @@ std::vector<cv::Point3d> CameraAndLaserPlaneCalibration::transformCameraToBase(c
     return basePoints;
 }
 // 保存点云
-void CameraAndLaserPlaneCalibration::savePointCloud(const std::vector<std::vector<cv::Point3d>>& objectPoints,
-                                                    const std::string& filename) {
+void CameraPlaneAlgorithms::savePointCloud(const std::vector<std::vector<cv::Point3d>>& objectPoints, const std::string& filename) {
     try {
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
         cloud->points.emplace_back(0.0f, 0.0f, 0.0f);  // 原点
@@ -885,41 +851,42 @@ void CameraAndLaserPlaneCalibration::savePointCloud(const std::vector<std::vecto
         } else if (hasSuffix(filename, ".ply")) {
             saveResult = pcl::io::savePLYFileASCII(filename, *cloud);
         } else {
-            std::cerr << "Unsupported file format: " << filename << std::endl;
+            std::cerr << "不支持的文件格式：" << filename << std::endl;
             return;
         }
 
         if (saveResult == 0) {
-            std::cout << "Saved " << cloud->points.size() << " points to " << filename << std::endl;
+            std::cout << "已保存 " << cloud->points.size() << " 个点至 " << filename << std::endl;
         } else {
-            std::cerr << "Failed to save point cloud: " << filename << std::endl;
+            std::cerr << "点云保存失败：" << filename << std::endl;
         }
     } catch (const std::exception& e) {
-        std::cerr << "savePointCloud exception: " << e.what() << std::endl;
+        std::cerr << "保存点云时发生异常：" << e.what() << std::endl;
     } catch (...) {
-        std::cerr << "savePointCloud exception: unknown error" << std::endl;
+        std::cerr << "保存点云时发生异常：未知错误" << std::endl;
     }
 }
 
-CameraAndLaserPlaneCalibration::ErrorMetrics CameraAndLaserPlaneCalibration::evaluatePlaneFittingError(
-    const std::vector<std::vector<cv::Point2f>>& imageCornerPoints, const std::vector<cv::Point3f>& objectCornerPoints,
-    const std::vector<cv::Mat>& extrinsicMatrices, const cv::Mat& cameraMatrix, const cv::Mat& distCoeffs,
-    const std::vector<double>& globalPlane) {
+CameraPlaneAlgorithms::ErrorMetrics CameraPlaneAlgorithms::evaluatePlaneFittingError(const std::vector<std::vector<cv::Point2f>>& imageCornerPoints,
+                                                                                     const std::vector<cv::Point3f>& objectCornerPoints,
+                                                                                     const std::vector<cv::Mat>& extrinsicMatrices,
+                                                                                     const cv::Mat& cameraMatrix, const cv::Mat& distCoeffs,
+                                                                                     const std::vector<double>& globalPlane) {
     double totalErrorX = 0.0, totalErrorY = 0.0, totalErrorZ = 0.0, totalError = 0.0;
     int totalPoints = 0;
 
     // 遍历每张图像
     for (size_t i = 0; i < imageCornerPoints.size(); i++) {
         if (i >= extrinsicMatrices.size()) {
-            std::cerr << "Warning: extrinsicMatrices size (" << extrinsicMatrices.size()
-                      << ") < imageCornerPoints size (" << imageCornerPoints.size() << "), skipping image " << i << std::endl;
+            std::cerr << "警告：外参矩阵数量（" << extrinsicMatrices.size() << "）小于图像角点集数量（" << imageCornerPoints.size() << "），跳过第 "
+                      << i << std::endl;
             continue;
         }
         std::vector<cv::Point3d> camera3DPoints;
         std::vector<cv::Point3d> world3DPoints;
         // 2D → 相机 3D 坐标
         std::vector<cv::Point2d> imagePoints2d(imageCornerPoints[i].begin(), imageCornerPoints[i].end());
-        Point2dto3d(globalPlane, cameraMatrix, distCoeffs, imagePoints2d, camera3DPoints);
+        pixelsToPointsOnPlane(globalPlane, cameraMatrix, distCoeffs, imagePoints2d, camera3DPoints);
 
         // 相机 3D → 世界 3D 坐标
         world3DPoints = transformCameraToBase(camera3DPoints, extrinsicMatrices[i]);
@@ -945,8 +912,7 @@ CameraAndLaserPlaneCalibration::ErrorMetrics CameraAndLaserPlaneCalibration::eva
     // 计算平均误差
     return {totalErrorX / totalPoints, totalErrorY / totalPoints, totalErrorZ / totalPoints, totalError / totalPoints};
 }
-bool CameraAndLaserPlaneCalibration::calculate_Image_Points(cv::Mat imageInput, cv::Size boardSize,
-                                                            std::vector<cv::Point2f>& imagePoints) {
+bool CameraPlaneAlgorithms::detectCircleGridPoints(cv::Mat imageInput, cv::Size boardSize, std::vector<cv::Point2f>& imagePoints) {
     cv::Mat viewGray;
     std::vector<cv::Point2f> pointbuf;
     cvtColor(imageInput, viewGray, cv::COLOR_RGB2GRAY);
@@ -958,11 +924,11 @@ bool CameraAndLaserPlaneCalibration::calculate_Image_Points(cv::Mat imageInput, 
         }
     }
 
-    //// Blob算子参数
+    // 斑点检测参数
     cv::SimpleBlobDetector::Params params;
     // params.filterByArea = true;
     params.maxArea = 3000;  // 10e4
-    params.minArea = 300;    // 30
+    params.minArea = 300;   // 30
     params.minDistBetweenBlobs = 10;
     // params.minThreshold = 10;   //默认50
     // params.maxThreshold = 250;  //默认220
@@ -982,66 +948,7 @@ bool CameraAndLaserPlaneCalibration::calculate_Image_Points(cv::Mat imageInput, 
     }
     return true;
 }
-// bool CameraAndLaserPlaneCalibration::calculate_Image_Points2(cv::Mat imageInput, cv::Size boardSize,
-//                                                              std::vector<cv::Point2f>& imagePoints) {
-//     cv::Mat gray;
-//     cv::cvtColor(imageInput, gray, cv::COLOR_BGR2GRAY);
-//     cv::bitwise_not(gray, gray);
-
-//     cv::SimpleBlobDetector::Params params;
-//     params.minArea = 1e4;
-//     params.maxArea = 3e5;
-//     params.minCircularity = 0.7f;
-//     params.filterByCircularity = true;
-//     params.filterByColor = false;
-//     params.filterByConvexity = false;
-//     params.filterByInertia = false;
-
-//     cv::Ptr<cv::FeatureDetector> blobDetector = cv::SimpleBlobDetector::create(params);
-
-//     std::vector<cv::KeyPoint> keypoints;
-//     blobDetector->detect(gray, keypoints);
-
-//     // 生成当前时间字符串（格式：YYYYMMDD_HHMMSS）
-//     std::time_t t = std::time(nullptr);
-//     std::tm tm;
-// #ifdef _WIN32
-//     localtime_s(&tm, &t);
-// #else
-//     localtime_r(&t, &tm);
-// #endif
-//     std::ostringstream oss;
-//     oss << std::put_time(&tm, "%Y%m%d_%H%M%S");
-//     std::string timestamp = oss.str();
-
-//     // 保存 Blob 检测结果
-//     cv::Mat blobView;
-//     cv::drawKeypoints(gray, keypoints, blobView, cv::Scalar(0, 0, 255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-//     std::string blobFile = "Detected_Blobs_" + timestamp + ".png";
-//     cv::imwrite(blobFile, blobView);
-
-//     // 棋盘圆点检测
-//     bool found =
-//         cv::findCirclesGrid(gray, boardSize, imagePoints, cv::CALIB_CB_SYMMETRIC_GRID | cv::CALIB_CB_CLUSTERING, blobDetector);
-
-//     if (!found) {
-//         std::cout << "未检测到圆心，结果图已保存为: " << blobFile << std::endl;
-//         return false;
-//     }
-
-//     // 保存圆心检测结果
-//     cv::Mat drawImg = imageInput.clone();
-//     cv::drawChessboardCorners(drawImg, boardSize, imagePoints, found);
-//     std::string gridFile = "Detected_Grid_" + timestamp + ".png";
-//     cv::imwrite(gridFile, drawImg);
-
-//     std::cout << "检测完成，结果文件已保存：\n"
-//               << "  - Blob检测结果: " << blobFile << "\n"
-//               << "  - 圆心检测结果: " << gridFile << std::endl;
-//     return true;
-// }
-bool CameraAndLaserPlaneCalibration::calculate_Image_Points2(cv::Mat imageInput, cv::Size boardSize,
-                                                             std::vector<cv::Point2f>& imagePoints) {
+bool CameraPlaneAlgorithms::detectRefinedCircleGridPoints(cv::Mat imageInput, cv::Size boardSize, std::vector<cv::Point2f>& imagePoints) {
     // ---------- 1. 灰度化与反色 ----------
     cv::Mat gray;
     if (imageInput.channels() == 3)
@@ -1050,7 +957,7 @@ bool CameraAndLaserPlaneCalibration::calculate_Image_Points2(cv::Mat imageInput,
         gray = imageInput.clone();
     cv::bitwise_not(gray, gray);  // 若圆为黑底白点可省略
 
-    // ---------- 2. Blob 检测参数 ----------
+    // ---------- 2. 斑点检测参数 ----------
     cv::SimpleBlobDetector::Params params;
     params.minArea = 1e5;
     params.maxArea = 8e5;
@@ -1075,12 +982,11 @@ bool CameraAndLaserPlaneCalibration::calculate_Image_Points2(cv::Mat imageInput,
     std::string timestamp = oss.str();
 
     // ---------- 4. 圆阵检测 ----------
-    bool found =
-        cv::findCirclesGrid(gray, boardSize, imagePoints, cv::CALIB_CB_SYMMETRIC_GRID | cv::CALIB_CB_CLUSTERING, blobDetector);
+    bool found = cv::findCirclesGrid(gray, boardSize, imagePoints, cv::CALIB_CB_SYMMETRIC_GRID | cv::CALIB_CB_CLUSTERING, blobDetector);
 
     if (!found) {
         std::cout << "未检测到圆心，结果图已保存为: " << std::endl;
-        // 仍按原逻辑提示，但不保存图（保持与你原代码一致的行为）
+        // 保留既有提示行为，此处不写入结果图。
         return false;
     }
 
@@ -1094,15 +1000,15 @@ bool CameraAndLaserPlaneCalibration::calculate_Image_Points2(cv::Mat imageInput,
     const int W = boardSize.width;
     const int H = boardSize.height;
     if (imagePoints.size() == static_cast<size_t>(W * H)) {
-        auto mean_row_y = [&](int r, const std::vector<cv::Point2f>& P) -> double {
+        auto meanRowY = [&](int r, const std::vector<cv::Point2f>& P) -> double {
             double s = 0.0;
             for (int c = 0; c < W; ++c) s += P[r * W + c].y;
             return s / W;
         };
-        auto row_y_variance_sum = [&](const std::vector<cv::Point2f>& P) -> double {
+        auto rowYVarianceSum = [&](const std::vector<cv::Point2f>& P) -> double {
             double total = 0.0;
             for (int r = 0; r < H; ++r) {
-                double mu = mean_row_y(r, P);
+                double mu = meanRowY(r, P);
                 double var = 0.0;
                 for (int c = 0; c < W; ++c) {
                     double dy = P[r * W + c].y - mu;
@@ -1114,12 +1020,12 @@ bool CameraAndLaserPlaneCalibration::calculate_Image_Points2(cv::Mat imageInput,
         };
 
         // 6.1 列优先 → 行优先（必要时做转置）
-        double rowVar_A = row_y_variance_sum(imagePoints);
+        double rowVariance = rowYVarianceSum(imagePoints);
         std::vector<cv::Point2f> transposed(imagePoints.size());
         for (int r = 0; r < H; ++r)
             for (int c = 0; c < W; ++c) transposed[r * W + c] = imagePoints[c * H + r];
-        double rowVar_B = row_y_variance_sum(transposed);
-        if (rowVar_B + 1e-6 < rowVar_A) {
+        double transposedRowVariance = rowYVarianceSum(transposed);
+        if (transposedRowVariance + 1e-6 < rowVariance) {
             imagePoints.swap(transposed);
             std::cout << " 检测到列优先 → 已转置为行优先\n";
         }
@@ -1137,14 +1043,14 @@ bool CameraAndLaserPlaneCalibration::calculate_Image_Points2(cv::Mat imageInput,
         }
 
         // 6.3 整体保证第一行为“更靠上”（上→下）
-        double mean_top_y = 0.0, mean_bottom_y = 0.0;
+        double meanTopY = 0.0, meanBottomY = 0.0;
         for (int c = 0; c < W; ++c) {
-            mean_top_y += imagePoints[c].y;
-            mean_bottom_y += imagePoints[(H - 1) * W + c].y;
+            meanTopY += imagePoints[c].y;
+            meanBottomY += imagePoints[(H - 1) * W + c].y;
         }
-        mean_top_y /= W;
-        mean_bottom_y /= W;
-        if (mean_top_y > mean_bottom_y) {
+        meanTopY /= W;
+        meanBottomY /= W;
+        if (meanTopY > meanBottomY) {
             // 反转所有行的顺序（上下翻转）
             for (int r = 0; r < H / 2; ++r) {
                 for (int c = 0; c < W; ++c) {
@@ -1155,16 +1061,14 @@ bool CameraAndLaserPlaneCalibration::calculate_Image_Points2(cv::Mat imageInput,
         }
     }
 
-    // ---------- 7. 绘制结果（保存路径与命名按你的原程序） ----------
+    // 检测与点序整理完成；此处不额外绘制或保存结果图。
     return true;
 }
 
 // 已知内参求外参
-void CameraAndLaserPlaneCalibration::calibrationSolveExtrinsics(cv::Mat& Kc, cv::Mat& distCoeffs,
-                                                                std::vector<cv::Point3f>& objPoints,
-                                                                std::vector<std::vector<cv::Point2f>>& imagePoints,
-                                                                std::vector<cv::Mat>& vecHc) {
-    std::vector<double> camera_distortion(distCoeffs.begin<double>(), distCoeffs.end<double>());
+void CameraPlaneAlgorithms::solveBoardExtrinsics(cv::Mat& Kc, cv::Mat& distCoeffs, std::vector<cv::Point3f>& objPoints,
+                                                 std::vector<std::vector<cv::Point2f>>& imagePoints, std::vector<cv::Mat>& vecHc) {
+    std::vector<double> distortionCoefficients(distCoeffs.begin<double>(), distCoeffs.end<double>());
     for (int i = 0; i < imagePoints.size(); i++) {
         if (imagePoints[i].empty()) {
             continue;
@@ -1172,17 +1076,58 @@ void CameraAndLaserPlaneCalibration::calibrationSolveExtrinsics(cv::Mat& Kc, cv:
         // 创建旋转矩阵和平移矩阵
         cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
         cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
-        if (!cv::solvePnP(objPoints, imagePoints[i], Kc, camera_distortion, rvec, tvec)) {
+        if (!cv::solvePnP(objPoints, imagePoints[i], Kc, distortionCoefficients, rvec, tvec)) {
             continue;
         }
         cv::Mat rotM = cv::Mat::eye(3, 3, CV_64F);
         cv::Rodrigues(rvec, rotM);  // 将旋转向量变换成旋转矩阵
-        cv::Mat RT_Mat_temp;
-        hconcat(rotM, tvec, RT_Mat_temp);
-        cv::Mat last_line = (cv::Mat_<double>(1, 4) << 0, 0, 0, 1);  // 齐次矩阵最后一行
-        cv::Mat RT_Mat;
-        cv::vconcat(RT_Mat_temp, last_line, RT_Mat);  // 输出外参矩阵
-        vecHc.push_back(RT_Mat);
+        cv::Mat transformTop;
+        hconcat(rotM, tvec, transformTop);
+        cv::Mat bottomRow = (cv::Mat_<double>(1, 4) << 0, 0, 0, 1);  // 齐次矩阵最后一行
+        cv::Mat transformMatrix;
+        cv::vconcat(transformTop, bottomRow, transformMatrix);  // 输出外参矩阵
+        vecHc.push_back(transformMatrix);
     }
 }
 
+namespace {
+
+bool directoryExists(const std::string& path) {
+    struct _stat info;
+    if (_stat(path.c_str(), &info) != 0) {
+        return false;
+    }
+    return (info.st_mode & _S_IFDIR) != 0;
+}
+
+std::string parentDirectoryPath(const std::string& filename) {
+    std::string path = filename;
+    std::replace(path.begin(), path.end(), '/', '\\');
+    const size_t slashPos = path.find_last_of('\\');
+    if (slashPos == std::string::npos) {
+        return std::string();
+    }
+    return path.substr(0, slashPos);
+}
+
+void createDirectoryRecursive(const std::string& path) {
+    if (path.empty() || directoryExists(path)) {
+        return;
+    }
+
+    const std::string parentPath = parentDirectoryPath(path);
+    if (!parentPath.empty() && parentPath != path) {
+        createDirectoryRecursive(parentPath);
+    }
+
+    _mkdir(path.c_str());
+}
+
+bool hasSuffix(const std::string& str, const std::string& suffix) {
+    if (str.length() < suffix.length()) {
+        return false;
+    }
+    return str.substr(str.length() - suffix.length()) == suffix;
+}
+
+}  // 匿名命名空间

@@ -1,19 +1,29 @@
 INCLUDEPATH += $$PWD
 INCLUDEPATH += $$PWD/include
 INCLUDEPATH += $$PWD/src
+INCLUDEPATH += $$PWD/src/calibration
+INCLUDEPATH += $$PWD/../..
 
 SOURCES += \
     $$PWD/WorkpieceCoarseLocalization.cpp \
     $$PWD/include/CoarseLocalizationMatrix.cpp \
     $$PWD/src/camera_control/basler/CoarsePositioningCamera.cpp \
     $$PWD/src/fittingWorkpieceCoordinate/Fittingworkpiececoordinate.cpp \
-    $$PWD/src/calibration/worker/CalibrationWorker.cpp \
-    $$PWD/src/calibration/core/calibration_module/CalibrationModule.cpp \
-    $$PWD/src/calibration/core/calibration_module/calibration/CameraAndLaserPlaneCalibration.cpp \
-    $$PWD/src/calibration/core/calibration_module/handeye/src/calibration.cpp \
-    $$PWD/src/calibration/core/calibration_module/handeye/src/handEyeCalibration.cpp \
-    $$PWD/src/calibration/core/calibration_module/handeye/src/others.cpp \
-    $$PWD/src/yoloInference/YoloInference.cpp
+    $$PWD/src/yoloInference/YoloInference.cpp \
+    $$PWD/src/calibration/config/CalibrationConfig.cpp \
+    $$PWD/src/calibration/calculation/CameraCalibration.cpp \
+    $$PWD/src/calibration/calculation/PlaneCalibration.cpp \
+    $$PWD/src/calibration/calculation/AxisCalibration.cpp \
+    $$PWD/src/calibration/calculation/CoordinateCalculation.cpp \
+    $$PWD/src/calibration/CoarseCalibration.cpp \
+    $$PWD/src/calibration/handeye/Calibration.cpp \
+    $$PWD/src/calibration/handeye/HandEyeCalibration.cpp \
+    $$PWD/src/calibration/handeye/HandEyeCalculation.cpp \
+    $$PWD/src/calibration/common/BoardDetection.cpp \
+    $$PWD/src/calibration/common/PoseCalculation.cpp \
+    $$PWD/src/calibration/common/CalibrationStatistics.cpp \
+    $$PWD/src/calibration/common/CalibrationPlot.cpp \
+    $$PWD/src/calibration/common/CameraPlaneAlgorithms.cpp
 
 HEADERS += \
     $$PWD/WorkpieceCoarseLocalization.h \
@@ -21,15 +31,22 @@ HEADERS += \
     $$PWD/include/maskImageProcessConfig.hpp \
     $$PWD/src/camera_control/basler/CoarsePositioningCamera.h \
     $$PWD/src/fittingWorkpieceCoordinate/Fittingworkpiececoordinate.h \
-    $$PWD/src/calibration/worker/CalibrationWorker.h \
-    $$PWD/src/calibration/core/calibration_module/CalibrationModule.h \
-    $$PWD/src/calibration/core/calibration_module/model/CoreTypes.h \
-    $$PWD/src/calibration/core/calibration_module/calibration/CameraAndLaserPlaneCalibration.h \
-    $$PWD/src/calibration/core/calibration_module/handeye/include/calibration.h \
-    $$PWD/src/calibration/core/calibration_module/handeye/include/Camera_Calibration.h \
-    $$PWD/src/calibration/core/calibration_module/handeye/include/handEyeCalibration.h \
-    $$PWD/src/calibration/core/calibration_module/handeye/include/others.h \
-    $$PWD/src/yoloInference/YoloInference.h
+    $$PWD/src/yoloInference/YoloInference.h \
+    $$PWD/src/calibration/CalibrationData.h \
+    $$PWD/src/calibration/config/CalibrationConfig.h \
+    $$PWD/src/calibration/calculation/CameraCalibration.h \
+    $$PWD/src/calibration/calculation/PlaneCalibration.h \
+    $$PWD/src/calibration/calculation/AxisCalibration.h \
+    $$PWD/src/calibration/calculation/CoordinateCalculation.h \
+    $$PWD/src/calibration/CoarseCalibration.h \
+    $$PWD/src/calibration/handeye/Calibration.h \
+    $$PWD/src/calibration/handeye/HandEyeCalibration.h \
+    $$PWD/src/calibration/handeye/HandEyeCalculation.h \
+    $$PWD/src/calibration/common/BoardDetection.h \
+    $$PWD/src/calibration/common/PoseCalculation.h \
+    $$PWD/src/calibration/common/CalibrationStatistics.h \
+    $$PWD/src/calibration/common/CalibrationPlot.h \
+    $$PWD/src/calibration/common/CameraPlaneAlgorithms.h
 
 FORMS += \
     $$PWD/WorkpieceCoarseLocalization.ui
