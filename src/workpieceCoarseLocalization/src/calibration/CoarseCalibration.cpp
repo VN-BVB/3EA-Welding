@@ -188,24 +188,27 @@ void CoarseCalibration::whenCalibrateAxis(const QString& calibrationRootPath, co
     }
 
 
-    //从本地JSON读取标定数据
+    //从本地JSON读取标定数据到内存
     if (!calibrationConfig.readConfig(resultFilePath.toStdString())) {
         emit sendCalibrationResult(QStringLiteral("external_axis"), false);
         return;
     }
 
+    //从内存读取内参标定信息
     CameraCalibration::Result cameraResult;
     if (!calibrationConfig.getCameraIntrinsics(cameraResult)) {
         emit sendCalibrationResult(QStringLiteral("external_axis"), false);
         return;
     }
 
+    //从内存读取手眼标定信息
     cv::Mat cameraToBaseMatrix;
     if (!calibrationConfig.getHandEyeMatrixInMeters(cameraToBaseMatrix)) {
         emit sendCalibrationResult(QStringLiteral("external_axis"), false);
         return;
     }
 
+    //准备标定外部轴需要的数据结构体input
     const QString imageDirectory = QDir::cleanPath(calibrationRootPath + "/" + imageFolder);
     AxisCalibration::Input input;
     input.boardConfig = boardConfig;
@@ -213,8 +216,10 @@ void CoarseCalibration::whenCalibrateAxis(const QString& calibrationRootPath, co
     input.distCoeffs = cameraResult.distCoeffs.clone();
     input.cameraToBaseMatrix = cameraToBaseMatrix;
     input.imagePath = imageDirectory.toStdString();
+    //拍摄标定图片时的编码器值，y，z轴时将标定板固定在机械臂上，然后y，z轴动；x轴为标定板放在地上，立柱沿x轴动
     input.referenceEncoderValue = calibrationConfig.referenceEncoderValue(axisType);
 
+    //执行单轴标定
     AxisCalibration::Result axisResult;
     std::string errorMessage;
     if (!AxisCalibration::calibrate(input, axisType, axisResult, errorMessage)) {

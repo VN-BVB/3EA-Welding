@@ -194,6 +194,7 @@ void WeldingMainWindow::whenStructLightStatusRenew(std::vector<DEVICE> device, s
     for (int i = 0; i < device.size(); ++i) {
         if (device[i] == DEVICE::PRIMARY_CAMERA) {
             ui->labelPrimaryCameraStatusLight->setStyleSheet(color[i]);
+            ui->labelFineLocCameraStatusLight->setStyleSheet(color[i]);
         } else if (device[i] == DEVICE::SECONDARY_CAMERA) {
             ui->labelSecondaryCameraStatusLight->setStyleSheet(color[i]);
         } else if (device[i] == DEVICE::PROJECTOR) {
